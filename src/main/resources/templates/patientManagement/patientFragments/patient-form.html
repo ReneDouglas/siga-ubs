@@ -1,37 +1,39 @@
 <div th:fragment="patientForm">
 
-    <form
+    <form class="grid grid-flow-row grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 gap-x-4 py-4 px-4 w-full"
           th:attr="hx-post=${patient.id == null} ? @{/patient-management/create} : @{/patient-management/update}"
           hx-target="this"
           hx-swap="outerHTML"
           hx-indicator=".animate-pulse"
           th:object="${patient}">
-        <!--    th:attr="${patient.id == null} ? hx-post=@{/patient-management/create} : hx-post=@{/patient-management/update}"-->
-        <!--      th:action="${patient.id == null} ? @{/patient-management/create} : @{/patient-management/update}"-->
 
-        <div>
-            <label for="name">Nome completo:</label>
-            <input type="text" id="name" th:field="*{name}" name="name" autocomplete="off" required>
+        <div class="flex flex-col w-full col-span-2">
+            <label class="text-sm" for="name">Nome completo:</label>
+            <input class="text-sm w-full rounded-lg border border-stroke py-2 pl-4 mt-1 outline-none focus:ring-2 hover:ring-gray-400 hover:ring-2 hover:border-white focus:border-white focus:ring-blue-500 transition duration-200"
+                   type="text" id="name" th:field="*{name}" name="name" autocomplete="off" required>
         </div>
-        <div>
-            <label for="susNumber">Cartão SUS:</label>
-            <input type="text" id="susNumber" th:field="*{susNumber}" th:disabled="${patient.susNumber != null}"
+        <div class="flex flex-col w-full">
+            <label class="text-sm" for="susNumber">Cartão SUS:</label>
+            <input class="text-sm w-full rounded-lg border border-stroke py-2 pl-4 mt-1 outline-none focus:ring-2 hover:ring-gray-400 hover:ring-2 hover:border-white focus:border-white focus:ring-blue-500 transition duration-200"
+                   type="text" id="susNumber" th:field="*{susNumber}" th:disabled="${patient.susNumber != null}"
                    name="susNumber" autocomplete="off" required>
             <th:block th:if="${patient.susNumber != null}">
                 <input type="hidden" th:field="*{susNumber}"/>
             </th:block>
         </div>
-        <div>
-            <label for="cpf">CPF:</label>
-            <input type="text" id="cpf" th:field="*{cpf}" th:disabled="${patient.cpf != null}"
+        <div class="flex flex-col w-full">
+            <label class="text-sm" for="cpf">CPF:</label>
+            <input class="text-sm w-full rounded-lg border border-stroke py-2 pl-4 mt-1 outline-none focus:ring-2 hover:ring-gray-400 hover:ring-2 hover:border-white focus:border-white focus:ring-blue-500 transition duration-200"
+                   type="text" id="cpf" th:field="*{cpf}" th:disabled="${patient.cpf != null}"
                    name="cpf" autocomplete="off" required>
             <th:block th:if="${patient.cpf != null}">
                 <input type="hidden" th:field="*{cpf}"/>
             </th:block>
         </div>
-        <div>
-            <label for="gender">Sexo:</label>
-            <select id="gender" name="gender" th:field="*{gender}" required>
+        <div class="flex flex-col w-full">
+            <label class="text-sm" for="gender">Sexo:</label>
+            <select class="text-sm w-full rounded-lg border border-stroke py-2 pl-4 mt-1 outline-none focus:ring-2 hover:ring-gray-400 hover:ring-2 hover:border-white focus:border-white focus:ring-blue-500 transition duration-200"
+                    id="gender" name="gender" th:field="*{gender}" required>
                 <option th:value="${null}" th:selected="${patient.id == null}">Selecione</option>
                 <option value="Feminino" th:selected="${patient.id != null ? patient.gender == 'Feminino' : false}">
                     Feminino
@@ -41,13 +43,15 @@
                 </option>
             </select>
         </div>
-        <div>
-            <label for="birthDate">Data de Nascimento:</label>
-            <input type="date" id="birthDate" name="birthDate" th:field="*{birthDate}" required>
+        <div class="flex flex-col w-full">
+            <label class="text-sm" for="birthDate">Data de Nascimento:</label>
+            <input class="text-sm w-full rounded-lg border border-stroke py-2 pl-4 mt-1 outline-none focus:ring-2 hover:ring-gray-400 hover:ring-2 hover:border-white focus:border-white focus:ring-blue-500 transition duration-200"
+                   type="date" id="birthDate" name="birthDate" th:field="*{birthDate}" required>
         </div>
-        <div>
-            <label for="socialSituationRating">Situação Social:</label>
-            <select id="socialSituationRating" name="socialSituationRating" th:field="*{socialSituationRating}"
+        <div class="flex flex-col w-full">
+            <label class="text-sm" for="socialSituationRating">Situação Social:</label>
+            <select class="text-sm w-full rounded-lg border border-stroke py-2 pl-4 mt-1 outline-none focus:ring-2 hover:ring-gray-400 hover:ring-2 hover:border-white focus:border-white focus:ring-blue-500 transition duration-200"
+                    id="socialSituationRating" name="socialSituationRating" th:field="*{socialSituationRating}"
                     required>
                 <option th:value="${null}" th:selected="${patient.id == null}">Selecione</option>
                 <option th:each="situation : ${T(br.com.tecsus.sigaubs.enums.SocialSituationRating).values()}"
@@ -56,40 +60,47 @@
                         th:selected="*{socialSituationRating == null} ? ${situation} == null  : ${situation} == *{socialSituationRating}"></option>
             </select>
         </div>
-        <div>
-            <label for="phoneNumber">Telefone:</label>
-            <input type="text" id="phoneNumber"
+        <div class="flex flex-col w-full">
+            <label class="text-sm" for="phoneNumber">Telefone:</label>
+            <input class="text-sm w-full rounded-lg border border-stroke py-2 pl-4 mt-1 outline-none focus:ring-2 hover:ring-gray-400 hover:ring-2 hover:border-white focus:border-white focus:ring-blue-500 transition duration-200"
+                   type="text" id="phoneNumber"
                    name="phoneNumber"
                    th:field="*{phoneNumber}"
                    autocomplete="off"
                    maxlength="15"
                    required>
         </div>
-        <div>
-            <label for="addressStreet">Logradouro: (rua, lote, comunidade ou sítio para zona rural):</label>
-            <input type="text" id="addressStreet" name="addressStreet" th:field="*{addressStreet}" autocomplete="off" required>
+        <div class="flex flex-col w-full col-span-2">
+            <label class="text-sm" for="addressStreet">Logradouro: (rua, lote, comunidade ou sítio para zona rural):</label>
+            <input class="text-sm w-full rounded-lg border border-stroke py-2 pl-4 mt-1 outline-none focus:ring-2 hover:ring-gray-400 hover:ring-2 hover:border-white focus:border-white focus:ring-blue-500 transition duration-200"
+                   type="text" id="addressStreet" name="addressStreet" th:field="*{addressStreet}" autocomplete="off" required>
         </div>
-        <div>
-            <label for="addressNumber">Número:</label>
-            <input type="text" id="addressNumber" name="addressNumber" autocomplete="off" th:field="*{addressNumber}">
+        <div class="flex flex-col w-full">
+            <label class="text-sm" for="addressNumber">Número:</label>
+            <input class="text-sm w-full rounded-lg border border-stroke py-2 pl-4 mt-1 outline-none focus:ring-2 hover:ring-gray-400 hover:ring-2 hover:border-white focus:border-white focus:ring-blue-500 transition duration-200"
+                   type="text" id="addressNumber" name="addressNumber" autocomplete="off" th:field="*{addressNumber}">
         </div>
-        <div>
-            <label for="addressComplement">Complemento:</label>
-            <input type="text" id="addressComplement" name="addressComplement" autocomplete="off" th:field="*{addressComplement}">
+        <div class="flex flex-col w-full">
+            <label class="text-sm" for="addressComplement">Complemento:</label>
+            <input class="text-sm w-full rounded-lg border border-stroke py-2 pl-4 mt-1 outline-none focus:ring-2 hover:ring-gray-400 hover:ring-2 hover:border-white focus:border-white focus:ring-blue-500 transition duration-200"
+                   type="text" id="addressComplement" name="addressComplement" autocomplete="off" th:field="*{addressComplement}">
         </div>
-        <div>
-            <label for="addressReference">Referência:</label>
-            <input type="text" id="addressReference" name="addressReference" autocomplete="off" th:field="*{addressReference}">
+        <div class="flex flex-col w-full">
+            <label class="text-sm" for="addressReference">Referência:</label>
+            <input class="text-sm w-full rounded-lg border border-stroke py-2 pl-4 mt-1 outline-none focus:ring-2 hover:ring-gray-400 hover:ring-2 hover:border-white focus:border-white focus:ring-blue-500 transition duration-200"
+                   type="text" id="addressReference" name="addressReference" autocomplete="off" th:field="*{addressReference}">
         </div>
-        <div>
-            <label for="acsName">ACS Responsável:</label>
-            <input type="text" id="acsName" name="acsName" th:field="*{acsName}">
+        <div class="flex flex-col w-full">
+            <label class="text-sm" for="acsName">ACS Responsável:</label>
+            <input class="text-sm w-full rounded-lg border border-stroke py-2 pl-4 mt-1 outline-none focus:ring-2 hover:ring-gray-400 hover:ring-2 hover:border-white focus:border-white focus:ring-blue-500 transition duration-200"
+                   type="text" id="acsName" name="acsName" th:field="*{acsName}">
         </div>
-        <div>
-            <label for="basicHealthUnit">UBS:</label>
+        <div class="flex flex-col w-full">
+            <label class="text-sm" for="basicHealthUnit">UBS:</label>
 
             <th:block sec:authorize="hasAnyRole('ADMIN','SMS')">
-                <select id="ubs" th:name="basicHealthUnit.id"
+                <select class="text-sm w-full rounded-lg border border-stroke py-2 pl-4 mt-1 outline-none focus:ring-2 hover:ring-gray-400 hover:ring-2 hover:border-white focus:border-white focus:ring-blue-500 transition duration-200"
+                        id="ubs" th:name="basicHealthUnit.id"
                         required>
                     <option th:value="${null}">Selecione</option>
                     <option th:each="ubs : ${basicHealthUnits}"
@@ -100,9 +111,8 @@
                 </select>
             </th:block>
             <th:block sec:authorize="!hasAnyRole('ADMIN','SMS')">
-                <!--            Como o select está desabilitado, o thymeleaf não leva o id da UBS no form ao submeter. -->
-                <!--            É preciso utilizar um input hidden (ver 'ubsid') levando o id da UBS -->
-                <select id="basicHealthUnit" th:name="basicHealthUnit.id" disabled>
+                <select class="text-sm w-full rounded-lg border border-stroke py-2 pl-4 mt-1 outline-none focus:ring-2 hover:ring-gray-400 hover:ring-2 hover:border-white focus:border-white focus:ring-blue-500 transition duration-200"
+                        id="basicHealthUnit" th:name="basicHealthUnit.id" disabled>
                     <th:block th:if="${patient.id == null}">
                         <option th:value="${systemUserUBS.id}" th:text="${systemUserUBS.name}"></option>
                     </th:block>
@@ -110,7 +120,6 @@
                         <option th:value="${patient.basicHealthUnit.id}" th:text="${patient.basicHealthUnit.name}" th:selected="${patient.id != null}"></option>
                     </th:block>
                 </select>
-
             </th:block>
 
         </div>
@@ -119,31 +128,11 @@
             <input type="hidden" id="ubsid" th:field="*{basicHealthUnit.id}"/>
         </th:block>
         <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
-        <div>
-            <button type="submit">Enviar</button>
-            <button>Cancelar</button>
+        <div class="flex items-center justify-center sm:justify-end sm:items-end space-x-4 mt-2 sm:mt-0 col-span-2 lg:col-span-4 w-full">
+            <button type="submit"
+                    class="text-sm inline-block rounded-lg bg-slate-900 py-2.5 px-8 text-white cursor-pointer active:bg-blue-400 hover:bg-blue-500 transition duration-300">Enviar</button>
+            <button type="reset"
+                    class="text-sm inline-block rounded-lg bg-slate-900 py-2.5 px-8 text-white cursor-pointer active:bg-blue-400 hover:bg-red-500 transition duration-300">Cancelar</button>
         </div>
     </form>
-    <th:block th:if="${error != null and error == false}">
-        <div class="text-white px-6 py-4 border-0 rounded relative mb-4 bg-emerald-500">
-            <span class="text-xl inline-block mr-5 align-middle">
-                <i class="fas fa-bell"></i>
-            </span>
-            <span class="inline-block align-middle mr-8" th:text="${message}"></span>
-            <button class="absolute bg-transparent text-2xl font-semibold leading-none right-0 top-0 mt-4 mr-6 outline-none focus:outline-none" onclick="closeAlert(event)">
-                <span>×</span>
-            </button>
-        </div>
-    </th:block>
-    <th:block th:if="${error != null and error == true}">
-        <div class="text-white px-6 py-4 border-0 rounded relative mb-4 bg-red-500">
-            <span class="text-xl inline-block mr-5 align-middle">
-                <i class="fas fa-bell"></i>
-            </span>
-            <span class="inline-block align-middle mr-8" th:text="${message}"></span>
-            <button class="absolute bg-transparent text-2xl font-semibold leading-none right-0 top-0 mt-4 mr-6 outline-none focus:outline-none" onclick="closeAlert(event)">
-                <span>×</span>
-            </button>
-        </div>
-    </th:block>
 </div>

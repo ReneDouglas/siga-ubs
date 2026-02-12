@@ -7,7 +7,7 @@
 
     <div th:fragment="dropdownUser"
          th:each="user : ${users}"
-         class="w-full p-2 hover:bg-gray-200" style="cursor: pointer">
+         class="w-full p-2 text-sm text-slate-700 hover:bg-slate-100 cursor-pointer transition duration-200">
         <span th:text="${user.name}"></span>
         <input type="hidden" th:value="${user.id}">
     </div>

@@ -39,6 +39,11 @@ public class SessionController {
         this.basicHealthUnitService = basicHealthUnitService;
     }
 
+    @GetMapping("/")
+    public String getHomePage(){
+        return "home";
+    }
+
     @GetMapping("/login")
     public String getLoginPage() {
         return "sessionManagement/login";
@@ -53,11 +58,6 @@ public class SessionController {
     public String getLoginErrorPage(Model model) {
         model.addAttribute("loginError", true);
         return "sessionManagement/login";
-    }
-
-    @GetMapping("/")
-    public String getHomePage() {
-        return "home";
     }
 
     @GetMapping("/error")

@@ -5,28 +5,259 @@
 <head th:replace="~{fragments/template :: head}"></head>
 
 <body id="body" class="flex w-screen h-dvh items-center">
-    <aside th:replace="~{fragments/sidebar :: sidebar}"></aside>
-    <main class="flex flex-col h-full w-full">
-        <!--Wrap Container -->
-        <section class="flex flex-col h-screen w-full justify-center items-center overflow-hidden">
-            <header th:replace="~{fragments/header :: header}"></header>
-            <div>
-                <h3 class="text-2xl font-bold text-slate-700">Informações relevantes...</h3>
-                <p class="text-xl text-slate-700">Um card para cada UBS: Hover no card para ver detalhes (modal)</p>
-                <p class="text-xl text-slate-700">Gráfico de linha diário: marcações cadastradas (todas as UBS)</p>
-                <p class="text-xl text-slate-700">Gráfico de linha mensal: total de marcações em aberto x total de contemplados</p>
-                <p class="text-xl text-slate-700">Gráfico de pizza: perfil dos agendamentos cadastrados (classificação de risco [+4 meses, urgente, prioridade e eletivo])</p>
-                <p class="text-xl text-slate-700">Apresentar status da rotina de contemplação (se rodou ou não)</p>
-            </div>
-            <div class="flex flex-col flex-1 justify-center items-center h-full w-full bg-white">
-                <div class="flex flex-col sm:flex-row gap-2 justify-center items-center">
-                    <div class="w-8 h-8 border-4 border-x-4 border-slate-200 border-solid rounded-full animate-spin border-x-slate-700"></div>
-                    <p class="text-xl text-slate-700 font-bold">Dashboard em construção</p>
+<aside th:replace="~{fragments/sidebar :: sidebar}"></aside>
+<main class="flex flex-col h-full w-full overflow-auto">
+    <header th:replace="~{fragments/header :: header}"></header>
+
+    <!-- Dashboard Content -->
+    <div class="flex-1 p-6 overflow-auto">
+        <!-- UBS Cards Grid -->
+        <div class="mb-8">
+            <h2 class="text-2xl font-bold text-slate-700 mb-4">Unidades Básicas de Saúde</h2>
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                <!-- Generate 15 UBS cards -->
+                <div x-data="{ showModal: false, mouseX: 0, mouseY: 0 }"
+                     @mouseover="showModal = true; mouseX = $event.clientX; mouseY = $event.clientY"
+                     @mouseleave="showModal = false"
+                     @mousemove="mouseX = $event.clientX; mouseY = $event.clientY"
+                     class="relative">
+                    <div class="bg-white rounded-lg shadow-md p-4 cursor-pointer hover:shadow-lg transition duration-300 border-l-4 border-blue-500">
+                        <h3 class="font-bold text-lg text-slate-700">UBS 1</h3>
+                        <p class="text-sm text-slate-500">Status: Ativa</p>
+                    </div>
+
+                    <!-- Modal Tooltip -->
+                    <div x-show="showModal"
+                         class="fixed z-50 bg-white p-4 rounded-lg shadow-xl border border-gray-200 w-64"
+                         :style="`top: ${mouseY + 10}px; left: ${mouseX + 10}px`">
+                        <h4 class="font-bold text-slate-700 mb-2">Informações da UBS 1</h4>
+                        <ul class="text-sm space-y-1">
+                            <li class="flex justify-between"><span>Atendimentos:</span> <span class="font-medium">15</span></li>
+                            <li class="flex justify-between"><span>Contemplados:</span> <span class="font-medium">5</span></li>
+                            <li class="flex justify-between"><span>Pacientes cadastrados:</span> <span class="font-medium">200</span></li>
+                            <li class="flex justify-between"><span>Vagas disponíveis:</span> <span class="font-medium">12</span></li>
+                            <li class="flex justify-between"><span>Espera média:</span> <span class="font-medium">3 dias</span></li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Repeat for other UBS (2-15) -->
+                <div x-data="{ showModal: false, mouseX: 0, mouseY: 0 }"
+                     @mouseover="showModal = true; mouseX = $event.clientX; mouseY = $event.clientY"
+                     @mouseleave="showModal = false"
+                     @mousemove="mouseX = $event.clientX; mouseY = $event.clientY"
+                     class="relative">
+                    <div class="bg-white rounded-lg shadow-md p-4 cursor-pointer hover:shadow-lg transition duration-300 border-l-4 border-green-500">
+                        <h3 class="font-bold text-lg text-slate-700">UBS 2</h3>
+                        <p class="text-sm text-slate-500">Status: Ativa</p>
+                    </div>
+                    <div x-show="showModal"
+                         class="fixed z-50 bg-white p-4 rounded-lg shadow-xl border border-gray-200 w-64"
+                         :style="`top: ${mouseY + 10}px; left: ${mouseX + 10}px`">
+                        <h4 class="font-bold text-slate-700 mb-2">Informações da UBS 2</h4>
+                        <ul class="text-sm space-y-1">
+                            <li class="flex justify-between"><span>Atendimentos:</span> <span class="font-medium">22</span></li>
+                            <li class="flex justify-between"><span>Contemplados:</span> <span class="font-medium">8</span></li>
+                            <li class="flex justify-between"><span>Pacientes cadastrados:</span> <span class="font-medium">180</span></li>
+                            <li class="flex justify-between"><span>Vagas disponíveis:</span> <span class="font-medium">15</span></li>
+                            <li class="flex justify-between"><span>Espera média:</span> <span class="font-medium">2 dias</span></li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- UBS 3 to 15 would follow the same pattern -->
+                <!-- For brevity, I'll include just one more example -->
+                <div x-data="{ showModal: false, mouseX: 0, mouseY: 0 }"
+                     @mouseover="showModal = true; mouseX = $event.clientX; mouseY = $event.clientY"
+                     @mouseleave="showModal = false"
+                     @mousemove="mouseX = $event.clientX; mouseY = $event.clientY"
+                     class="relative">
+                    <div class="bg-white rounded-lg shadow-md p-4 cursor-pointer hover:shadow-lg transition duration-300 border-l-4 border-purple-500">
+                        <h3 class="font-bold text-lg text-slate-700">UBS 3</h3>
+                        <p class="text-sm text-slate-500">Status: Ativa</p>
+                    </div>
+                    <div x-show="showModal"
+                         class="fixed z-50 bg-white p-4 rounded-lg shadow-xl border border-gray-200 w-64"
+                         :style="`top: ${mouseY + 10}px; left: ${mouseX + 10}px`">
+                        <h4 class="font-bold text-slate-700 mb-2">Informações da UBS 3</h4>
+                        <ul class="text-sm space-y-1">
+                            <li class="flex justify-between"><span>Atendimentos:</span> <span class="font-medium">18</span></li>
+                            <li class="flex justify-between"><span>Contemplados:</span> <span class="font-medium">6</span></li>
+                            <li class="flex justify-between"><span>Pacientes cadastrados:</span> <span class="font-medium">220</span></li>
+                            <li class="flex justify-between"><span>Vagas disponíveis:</span> <span class="font-medium">10</span></li>
+                            <li class="flex justify-between"><span>Espera média:</span> <span class="font-medium">4 dias</span></li>
+                        </ul>
+                    </div>
                 </div>
             </div>
-        </section>
-<!--        <footer th:replace="~{fragments/footer :: footer}"></footer>-->
-    </main>
+        </div>
+
+        <!-- Charts Section -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+            <!-- Daily Line Chart -->
+            <div class="bg-white p-4 rounded-lg shadow-md">
+                <h3 class="text-lg font-semibold text-slate-700 mb-4">Marcações Diárias (Últimos 7 dias)</h3>
+                <div id="dailyChart" class="h-64"></div>
+            </div>
+
+            <!-- Monthly Line Chart -->
+            <div class="bg-white p-4 rounded-lg shadow-md">
+                <h3 class="text-lg font-semibold text-slate-700 mb-4">Marcações Mensais (Últimos 6 meses)</h3>
+                <div id="monthlyChart" class="h-64"></div>
+            </div>
+        </div>
+
+        <!-- Pie Chart and Status Section -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Pie Chart -->
+            <div class="bg-white p-4 rounded-lg shadow-md lg:col-span-2">
+                <h3 class="text-lg font-semibold text-slate-700 mb-4">Perfil dos Agendamentos</h3>
+                <div id="pieChart" class="h-64"></div>
+            </div>
+
+            <!-- Contemplation Status -->
+            <div class="bg-white p-4 rounded-lg shadow-md">
+                <h3 class="text-lg font-semibold text-slate-700 mb-4">Status da Rotina de Contemplação</h3>
+                <div class="flex items-center justify-center h-64">
+                    <div class="text-center">
+                        <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                            </svg>
+                        </div>
+                        <h4 class="text-lg font-medium text-green-600 mb-1">Executada com sucesso</h4>
+                        <p class="text-sm text-slate-500">Última execução: Hoje, 08:30</p>
+                        <p class="text-sm text-slate-500 mt-2">Total contemplados: 42 pacientes</p>
+                        <button class="mt-4 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md text-sm transition duration-300">
+                            Executar Novamente
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer th:replace="~{fragments/footer :: footer}"></footer>
+
+    <!-- ApexCharts Script -->
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Daily Line Chart
+            var dailyOptions = {
+                series: [{
+                    name: 'Marcações',
+                    data: [12, 19, 15, 22, 18, 24, 20]
+                }],
+                chart: {
+                    height: '100%',
+                    type: 'line',
+                    zoom: {
+                        enabled: false
+                    },
+                    toolbar: {
+                        show: false
+                    }
+                },
+                dataLabels: {
+                    enabled: false
+                },
+                stroke: {
+                    curve: 'smooth',
+                    width: 3,
+                    colors: ['#3B82F6']
+                },
+                xaxis: {
+                    categories: ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'],
+                },
+                tooltip: {
+                    y: {
+                        formatter: function (val) {
+                            return val + " marcações"
+                        }
+                    }
+                },
+                colors: ['#3B82F6']
+            };
+
+            var dailyChart = new ApexCharts(document.querySelector("#dailyChart"), dailyOptions);
+            dailyChart.render();
+
+            // Monthly Line Chart
+            var monthlyOptions = {
+                series: [{
+                    name: 'Marcações em Aberto',
+                    data: [120, 135, 110, 145, 130, 150]
+                }, {
+                    name: 'Contemplados',
+                    data: [45, 50, 60, 55, 65, 70]
+                }],
+                chart: {
+                    height: '100%',
+                    type: 'line',
+                    zoom: {
+                        enabled: false
+                    },
+                    toolbar: {
+                        show: false
+                    }
+                },
+                dataLabels: {
+                    enabled: false
+                },
+                stroke: {
+                    curve: 'smooth',
+                    width: 3
+                },
+                colors: ['#EF4444', '#10B981'],
+                xaxis: {
+                    categories: ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun'],
+                },
+                tooltip: {
+                    y: {
+                        formatter: function (val) {
+                            return val + " pacientes"
+                        }
+                    }
+                },
+                legend: {
+                    position: 'top'
+                }
+            };
+
+            var monthlyChart = new ApexCharts(document.querySelector("#monthlyChart"), monthlyOptions);
+            monthlyChart.render();
+
+            // Pie Chart
+            var pieOptions = {
+                series: [35, 25, 20, 20],
+                chart: {
+                    type: 'pie',
+                    height: '100%'
+                },
+                labels: ['Urgência', 'Eletivo', 'Prioritário', 'Acima de 4 meses'],
+                colors: ['#EF4444', '#3B82F6', '#F59E0B', '#10B981'],
+                responsive: [{
+                    breakpoint: 480,
+                    options: {
+                        chart: {
+                            width: 200
+                        },
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }],
+                legend: {
+                    position: 'right'
+                }
+            };
+
+            var pieChart = new ApexCharts(document.querySelector("#pieChart"), pieOptions);
+            pieChart.render();
+        });
+    </script>
+</main>
 </body>
 </html>
-

@@ -3,178 +3,230 @@
 
 <head th:replace="~{fragments/template :: head}"></head>
 
-<body class="flex w-full min-h-screen justify-between bg-slate-900">
+<body class="flex w-full flex-1 h-dvh justify-between items-center bg-slate-300">
     <nav th:replace="~{fragments/sidebar :: sidebar}"></nav>
-    <main class="flex flex-col w-full mx-auto bg-slate-100">
+    <main class="flex flex-col h-full w-full overflow-hidden">
         <header th:replace="~{fragments/header :: header}"></header>
 
         <th:block th:replace="~{fragments/dialogs :: confirmDialog}"></th:block>
 
-        <div class="flex flex-1 bg-slate-100 my-8 flex-col space-y-4">
-            <div class="w-full">
-                <input type="checkbox" id="panel1" class="peer hidden" th:checked="${true}">
-                <label for="panel1" class="block bg-gray-700 text-white p-4 cursor-pointer">
-                    Agendar paciente
-                </label>
-                <div class="peer-checked:max-h-screen max-h-0 overflow-hidden transition-max-height duration-500 ease-in-out">
-                    <div class="p-4 bg-white border border-gray-300">
-                        <div class="relative w-3/4">
-                            <label for="patientSearch">Buscar paciente:</label>
-                            <div class="relative w-full">
+        <section class="flex flex-col flex-1 overflow-auto">
+            <div class="flex flex-col mx-4 justify-start items-center">
+
+                <!--Panel 1 - Agendar paciente-->
+                <div class="w-full bg-white rounded-lg mt-4">
+                    <input type="checkbox" id="panel1" class="peer hidden" th:checked="${true}">
+                    <label for="panel1"
+                           class="text-slate-200 tracking-wide block bg-slate-900 py-4 px-4 rounded-lg cursor-pointer border-2 border-slate-600 hover:bg-slate-800 hover:border-blue-500">
+                        <div class="flex items-center">
+                            <span class="material-symbols-outlined mr-4">heart_plus</span>Agendar paciente
+                        </div>
+                    </label>
+                    <div class="flex flex-col justify-center peer-checked:max-h-full max-h-0 overflow-hidden overscroll-contain transition-max-height duration-500 ease-in-out">
+                        <div class="py-4 px-4">
+                            <div class="flex flex-col w-full sm:w-3/4 relative">
+                                <label class="text-sm" for="patientSearch">Buscar paciente:</label>
                                 <input type="search" id="patientSearch" name="name"
-                                       class="w-full p-2 border border-gray-300 rounded"
+                                       class="text-sm w-full rounded-lg border border-stroke py-2 pl-4 mt-1 outline-none focus:ring-2 hover:ring-gray-400 hover:ring-2 hover:border-white focus:border-white focus:ring-blue-500 transition duration-200"
                                        placeholder="Digite um nome, Cartão SUS ou CPF"
                                        hx-get="/patient-list/search"
                                        hx-trigger="input changed delay:500ms, patientSearch"
                                        hx-target="#dropdown"
                                        hx-swap="outerHTML"/>
-                                <div id="dropdown"
-                                     class="absolute bg-white border border-gray-300 w-full mt-1 rounded shadow-lg hidden z-10"></div>
-                            </div>
-                        </div>
-                        <br>
-                        <form th:action="@{/appointment-management/create}" method="post" th:object="${appointment}">
-                            <div>
-                                <label>Nome completo: </label><span th:text="*{patient.name}"></span>
-                            </div>
-                            <div>
-                                <label>Cartão SUS: </label><span th:text="*{patient.susNumber}"></span>
-                            </div>
-                            <div>
-                                <label>CPF: </label><span th:text="*{patient.cpf}"></span>
-                            </div>
-                            <div>
-                                <label>Data de Nascimento: </label><span
-                                    th:text="*{patient.formattedBirthDate()}"></span>
-                            </div>
-                            <div>
-                                <label>Situação Social: </label><span
-                                    th:text="*{patient.socialSituationRating != null ? patient.socialSituationRating.description : null}"></span>
-                            </div>
-                            <div>
-                                <label>Telefone: </label><span th:text="*{patient.phoneNumber}"></span>
-                            </div>
-                            <div>
-                                <label>Logradouro: </label><span th:text="*{patient.addressStreet}"></span>
-                            </div>
-                            <div>
-                                <label for="specialty">Especialidade: </label>
-                                <select id="specialty" name="specialty" required>
-                                    <option th:value="${null}">Selecione</option>
-                                    <option th:each="specialty : ${specialties}"
-                                            th:value="${specialty.id}"
-                                            th:text="${specialty.title}"></option>
-                                </select>
-                                <label for="procedureType">Marcação: </label>
-                                <select id="procedureType" name="procedureType"
-                                        hx-get="/appointment-management/procedures"
-                                        hx-target="#selectProcedureAndPriority"
-                                        hx-include="[name='specialty']" disabled required>
-                                    <option th:value="${null}">Selecione</option>
-                                    <option th:each="type : ${T(br.com.tecsus.sigaubs.enums.ProcedureType).values()}"
-                                            th:value="${type.toString()}"
-                                            th:text="${type.description}"></option>
-                                </select>
-                                <div id="selectProcedureAndPriority">
-                                    <label for="medicalProcedure">Procedimento: </label>
-                                    <select id="medicalProcedure" th:name="medicalProcedure.id" th:field="*{medicalProcedure}" disabled required>
-                                        <option th:value="${null}">Selecione</option>
-                                    </select>
-                                    <label for="priority">Prioridade: </label>
-                                    <select id="priority" th:name="priority" th:field="*{priority}" disabled required>
-                                        <option th:value="${null}">Selecione</option>
-                                    </select>
+                                <div class="absolute top-full w-full z-50">
+                                    <div id="dropdown"
+                                         class="bg-white border border-gray-300 rounded shadow-lg hidden"></div>
                                 </div>
                             </div>
-                            <div>
-                                <label for="observation">Observações: </label>
-                                <textarea id="observation" name="observation" th:field="*{observation}" rows="4" cols="70"></textarea>
-                            </div>
-                            <input type="hidden" id="id" th:field="*{patient.id}"/>
-                            <button>Agendar</button>
-                        </form>
-                    </div>
-                </div>
-            </div>
 
-            <div class="w-full">
-                <input type="checkbox" id="panel2" class="peer hidden" th:checked="${loaded}">
-                <label for="panel2" class="block bg-gray-700 text-white p-4 cursor-pointer">
-                    Agendamentos em aberto
-                </label>
-                <div class="peer-checked:max-h-screen max-h-0 overflow-hidden transition-max-height duration-500 ease-in-out">
-                    <div class="p-4 bg-white border border-gray-300">
-                        <table>
-                            <thead>
-                            <tr>
-                                <th>Data da Requisição</th>
-                                <th>Prioridade</th>
-                                <th>Marcação</th>
-                                <th>Especialidade</th>
-                                <th>Procedimento</th>
-                                <th>Ações</th>
-                            </tr>
-                            </thead>
-                            <tbody>
-                            <tr th:each="openAppt : ${patientOpenAppointments}">
-                                <td th:text="${openAppt.formattedRequestDate()}"></td>
-                                <td th:text="${openAppt.priority().getDescription()}"></td>
-                                <td th:text="${openAppt.procedureType().getDescription()}"></td>
-                                <td th:text="${openAppt.specialty()}"></td>
-                                <td th:text="${openAppt.medicalProcedureDescription()}"></td>
-                                <td>
-                                    <form th:action="@{/appointment-management/{id}/cancel(id=${openAppt.appointmentId}, patientId=${openAppt.patientId})}"
-                                          th:method="put">
-                                        <button type="submit">Cancelar</button>
-                                    </form>
-                                    <button type="button" th:onclick="openModal([[${openAppt.observations()}]])" >
-                                        Observações
-                                    </button>
-                                </td>
-                            </tr>
-                            </tbody>
-                        </table>
-                        <!-- Main modal -->
-                        <div id="default-modal" tabindex="-1" aria-hidden="true" class="hidden overflow-y-auto overflow-x-hidden fixed top-0 right-0 left-0 z-50 justify-center items-center w-full md:inset-0 h-[calc(100%-1rem)] max-h-full">
-                            <div class="relative p-4 w-full max-w-2xl max-h-full">
-                                <!-- Modal content -->
-                                <div class="relative bg-white rounded-lg shadow dark:bg-gray-700">
-                                    <!-- Modal header -->
-                                    <div class="flex items-center justify-between p-4 md:p-5 border-b rounded-t dark:border-gray-600">
-                                        <h3 class="text-xl font-semibold text-gray-900 dark:text-white">
-                                            Observações
-                                        </h3>
-                                        <button type="button" onclick="closeModal()" class="text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm w-8 h-8 ms-auto inline-flex justify-center items-center dark:hover:bg-gray-600 dark:hover:text-white" data-modal-hide="default-modal">
-                                            <svg class="w-3 h-3" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 14 14">
-                                                <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m1 1 6 6m0 0 6 6M7 7l6-6M7 7l-6 6"/>
-                                            </svg>
-                                            <span class="sr-only">Close modal</span>
-                                        </button>
-                                    </div>
-                                    <!-- Modal body -->
-                                    <div class="p-4 md:p-5 space-y-4">
-                                        <p class="text-base leading-relaxed text-gray-900 dark:text-gray-100" id="modal-observacoes"></p>
+                            <form class="grid grid-flow-row grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 gap-x-4 mt-4 w-full"
+                                  th:action="@{/appointment-management/create}" method="post" th:object="${appointment}">
+                                <div class="flex flex-col w-full">
+                                    <label class="text-sm font-semibold text-slate-700">Nome completo:</label>
+                                    <span class="text-sm px-4 py-2 bg-slate-100 rounded-lg mt-1" th:text="*{patient.name}"></span>
+                                </div>
+                                <div class="flex flex-col w-full">
+                                    <label class="text-sm font-semibold text-slate-700">Cartão SUS:</label>
+                                    <span class="text-sm px-4 py-2 bg-slate-100 rounded-lg mt-1" th:text="*{patient.susNumber}"></span>
+                                </div>
+                                <div class="flex flex-col w-full">
+                                    <label class="text-sm font-semibold text-slate-700">CPF:</label>
+                                    <span class="text-sm px-4 py-2 bg-slate-100 rounded-lg mt-1" th:text="*{patient.cpf}"></span>
+                                </div>
+                                <div class="flex flex-col w-full">
+                                    <label class="text-sm font-semibold text-slate-700">Data de Nascimento:</label>
+                                    <span class="text-sm px-4 py-2 bg-slate-100 rounded-lg mt-1" th:text="*{patient.formattedBirthDate()}"></span>
+                                </div>
+                                <div class="flex flex-col w-full">
+                                    <label class="text-sm font-semibold text-slate-700">Situação Social:</label>
+                                    <span class="text-sm px-4 py-2 bg-slate-100 rounded-lg mt-1" th:text="*{patient.socialSituationRating != null ? patient.socialSituationRating.description : null}"></span>
+                                </div>
+                                <div class="flex flex-col w-full">
+                                    <label class="text-sm font-semibold text-slate-700">Telefone:</label>
+                                    <span class="text-sm px-4 py-2 bg-slate-100 rounded-lg mt-1" th:text="*{patient.phoneNumber}"></span>
+                                </div>
+                                <div class="flex flex-col w-full col-span-2">
+                                    <label class="text-sm font-semibold text-slate-700">Logradouro:</label>
+                                    <span class="text-sm px-4 py-2 bg-slate-100 rounded-lg mt-1" th:text="*{patient.addressStreet}"></span>
+                                </div>
+                                <div class="flex flex-col w-full">
+                                    <label class="text-sm" for="specialty">Especialidade:</label>
+                                    <select class="text-sm w-full rounded-lg border border-stroke py-2 pl-4 mt-1 outline-none focus:ring-2 hover:ring-gray-400 hover:ring-2 hover:border-white focus:border-white focus:ring-blue-500 transition duration-200"
+                                            id="specialty" name="specialty" required>
+                                        <option th:value="${null}">Selecione</option>
+                                        <option th:each="specialty : ${specialties}"
+                                                th:value="${specialty.id}"
+                                                th:text="${specialty.title}"></option>
+                                    </select>
+                                </div>
+                                <div class="flex flex-col w-full">
+                                    <label class="text-sm" for="procedureType">Marcação:</label>
+                                    <select class="text-sm w-full rounded-lg border border-stroke py-2 pl-4 mt-1 outline-none focus:ring-2 hover:ring-gray-400 hover:ring-2 hover:border-white focus:border-white focus:ring-blue-500 transition duration-200"
+                                            id="procedureType" name="procedureType"
+                                            hx-get="/appointment-management/procedures"
+                                            hx-target="#selectProcedureAndPriority"
+                                            hx-include="[name='specialty']" disabled required>
+                                        <option th:value="${null}">Selecione</option>
+                                        <option th:each="type : ${T(br.com.tecsus.sigaubs.enums.ProcedureType).values()}"
+                                                th:value="${type.toString()}"
+                                                th:text="${type.description}"></option>
+                                    </select>
+                                </div>
+                                <div id="selectProcedureAndPriority" class="flex flex-col w-full col-span-2 sm:col-span-2 lg:col-span-2">
+                                    <div class="grid grid-cols-2 gap-2 gap-x-4">
+                                        <div class="flex flex-col w-full">
+                                            <label class="text-sm" for="medicalProcedure">Procedimento:</label>
+                                            <select class="text-sm w-full rounded-lg border border-stroke py-2 pl-4 mt-1 outline-none focus:ring-2 hover:ring-gray-400 hover:ring-2 hover:border-white focus:border-white focus:ring-blue-500 transition duration-200"
+                                                    id="medicalProcedure" th:name="medicalProcedure.id" th:field="*{medicalProcedure}" disabled required>
+                                                <option th:value="${null}">Selecione</option>
+                                            </select>
+                                        </div>
+                                        <div class="flex flex-col w-full">
+                                            <label class="text-sm" for="priority">Prioridade:</label>
+                                            <select class="text-sm w-full rounded-lg border border-stroke py-2 pl-4 mt-1 outline-none focus:ring-2 hover:ring-gray-400 hover:ring-2 hover:border-white focus:border-white focus:ring-blue-500 transition duration-200"
+                                                    id="priority" th:name="priority" th:field="*{priority}" disabled required>
+                                                <option th:value="${null}">Selecione</option>
+                                            </select>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
+                                <div class="flex flex-col w-full col-span-2 lg:col-span-4">
+                                    <label class="text-sm" for="observation">Observações:</label>
+                                    <textarea class="text-sm w-full rounded-lg border border-stroke py-2 pl-4 mt-1 outline-none focus:ring-2 hover:ring-gray-400 hover:ring-2 hover:border-white focus:border-white focus:ring-blue-500 transition duration-200"
+                                              id="observation" name="observation" th:field="*{observation}" rows="3"></textarea>
+                                </div>
+                                <input type="hidden" id="id" th:field="*{patient.id}"/>
+                                <div class="col-span-2 lg:col-span-4 text-center mt-2">
+                                    <button type="submit"
+                                            class="text-sm inline-block rounded-lg bg-slate-900 py-2.5 px-8 text-white cursor-pointer active:bg-blue-400 hover:bg-blue-500 transition duration-300">Agendar</button>
+                                </div>
+                            </form>
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <div class="w-full">
-                <input type="checkbox" id="panel3" class="peer hidden" th:checked="${loaded}">
-                <label for="panel3" class="block bg-gray-700 text-white p-4 cursor-pointer">
-                    Histórico do paciente
-                </label>
-                <div class="peer-checked:max-h-screen max-h-0 overflow-hidden transition-max-height duration-500 ease-in-out">
-                    <div class="p-4 bg-white border border-gray-300">
-                        <p>Conteúdo de Histórico do paciente.</p>
+                <!--Panel 2 - Agendamentos em aberto-->
+                <div class="w-full bg-white rounded-lg mt-4">
+                    <input type="checkbox" id="panel2" class="peer hidden" th:checked="${loaded}">
+                    <label for="panel2"
+                           class="text-slate-200 tracking-wide block bg-slate-900 py-4 px-4 rounded-lg cursor-pointer border-2 border-slate-600 hover:bg-slate-800 hover:border-blue-500">
+                        <div class="flex items-center">
+                            <span class="material-symbols-outlined mr-4">patient_list</span>Agendamentos em aberto
+                        </div>
+                    </label>
+                    <div class="flex flex-col justify-center peer-checked:max-h-full max-h-0 overflow-hidden overscroll-contain transition-max-height duration-500 ease-in-out">
+                        <div class="p-4 rounded-lg">
+                            <div class="overflow-x-auto">
+                            <table class="min-w-full bg-white">
+                                <thead class="font-light text-sm text-slate-600 text-left tracking-wide">
+                                <tr class="bg-slate-200">
+                                    <th class="text-sm rounded-l-lg py-2 px-4">Data da Requisição</th>
+                                    <th class="text-sm pl-4">Prioridade</th>
+                                    <th class="text-sm pl-4">Marcação</th>
+                                    <th class="text-sm pl-4">Especialidade</th>
+                                    <th class="text-sm pl-4">Procedimento</th>
+                                    <th class="text-sm rounded-r-lg py-2 px-4">Ações</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                <tr th:each="openAppt : ${patientOpenAppointments}"
+                                    class="overflow-hidden border-slate-200 text-slate-600 w-full hover:bg-slate-50 active:bg-slate-200">
+                                    <td class="border-b text-sm py-2 px-4" th:text="${openAppt.formattedRequestDate()}"></td>
+                                    <td class="border-b text-sm pl-4" th:text="${openAppt.priority().getDescription()}"></td>
+                                    <td class="border-b text-sm pl-4" th:text="${openAppt.procedureType().getDescription()}"></td>
+                                    <td class="border-b text-sm pl-4" th:text="${openAppt.specialty()}"></td>
+                                    <td class="border-b text-sm pl-4" th:text="${openAppt.medicalProcedureDescription()}"></td>
+                                    <td class="border-b text-sm py-2 px-4">
+                                        <div class="flex items-center space-x-1">
+                                            <div class="relative group">
+                                                <form th:action="@{/appointment-management/{id}/cancel(id=${openAppt.appointmentId}, patientId=${openAppt.patientId})}"
+                                                      th:method="put">
+                                                    <button type="submit" class="inline-flex p-2 rounded-lg hover:bg-slate-200 cursor-pointer transition duration-300">
+                                                        <span class="material-symbols-outlined hover:text-red-500">cancel</span>
+                                                    </button>
+                                                </form>
+                                                <div class="absolute right-full top-1/2 transform -translate-y-1/2 -translate-x-1 hidden group-hover:block bg-slate-800 text-white text-sm rounded px-2 py-1 whitespace-nowrap">
+                                                    Cancelar
+                                                </div>
+                                            </div>
+                                            <div class="relative group">
+                                                <a class="inline-flex p-2 rounded-lg hover:bg-slate-200 cursor-pointer transition duration-300"
+                                                   th:onclick="openModal([[${openAppt.observations()}]])">
+                                                    <span class="material-symbols-outlined hover:text-blue-500">description</span>
+                                                </a>
+                                                <div class="absolute right-full top-1/2 transform -translate-y-1/2 -translate-x-1 hidden group-hover:block bg-slate-800 text-white text-sm rounded px-2 py-1 whitespace-nowrap">
+                                                    Observações
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                                </tbody>
+                            </table>
+                            </div>
+                            <!-- Main modal -->
+                            <div id="default-modal" tabindex="-1" aria-hidden="true" class="hidden overflow-y-auto overflow-x-hidden fixed top-0 right-0 left-0 z-50 justify-center items-center w-full md:inset-0 h-[calc(100%-1rem)] max-h-full">
+                                <div class="relative p-4 w-full max-w-2xl max-h-full">
+                                    <div class="relative bg-white rounded-lg shadow">
+                                        <div class="flex items-center justify-between p-4 md:p-5 bg-slate-900 rounded-t border-2 border-slate-600">
+                                            <h3 class="text-xl font-semibold text-slate-200">
+                                                Observações
+                                            </h3>
+                                            <button type="button" onclick="closeModal()" class="text-slate-400 bg-transparent hover:bg-slate-700 hover:text-white rounded-lg text-sm w-8 h-8 ms-auto inline-flex justify-center items-center">
+                                                <svg class="w-3 h-3" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 14 14">
+                                                    <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m1 1 6 6m0 0 6 6M7 7l6-6M7 7l-6 6"/>
+                                                </svg>
+                                                <span class="sr-only">Close modal</span>
+                                            </button>
+                                        </div>
+                                        <div class="p-4 md:p-5 space-y-4">
+                                            <p class="text-base leading-relaxed text-gray-900" id="modal-observacoes"></p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
+
+                <!--Panel 3 - Histórico do paciente-->
+                <div class="w-full bg-white rounded-lg my-4">
+                    <input type="checkbox" id="panel3" class="peer hidden" th:checked="${loaded}">
+                    <label for="panel3"
+                           class="text-slate-200 tracking-wide block bg-slate-900 py-4 px-4 rounded-lg cursor-pointer border-2 border-slate-600 hover:bg-slate-800 hover:border-blue-500">
+                        <div class="flex items-center">
+                            <span class="material-symbols-outlined mr-4">demography</span>Histórico do paciente
+                        </div>
+                    </label>
+                    <div class="flex flex-col justify-center peer-checked:max-h-full max-h-0 overflow-hidden overscroll-contain transition-max-height duration-500 ease-in-out">
+                        <div class="p-4 rounded-lg">
+                            <p class="text-sm text-slate-600">Conteúdo de Histórico do paciente.</p>
+                        </div>
+                    </div>
+                </div>
+
             </div>
-        </div>
-        <footer th:replace="~{fragments/footer :: footer}"></footer>
+        </section>
     </main>
 </body>
 
@@ -228,9 +280,4 @@
 
 
 </script>
-<style>
-    .transition-max-height {
-        transition-property: max-height;
-    }
-</style>
 </html>

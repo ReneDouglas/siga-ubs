@@ -4,72 +4,73 @@
       xmlns:sec="https://www.thymeleaf.org/thymeleaf-extras-springsecurity6">
 <body>
 
-    <!--    <div th:fragment="contemplationContentPanel" id="contemplationContentPanel">-->
-    <div id="consultas" th:fragment="consultas-datatable" class="tab-content p-4 bg-gray-100">
-        <table class="min-w-full bg-white divide-y divide-gray-200">
-            <thead class="bg-gray-50">
-            <tr class="bg-gray-700 text-white">
-                <th class="px-4 py-2 text-left text-sm font-medium uppercase tracking-wider">N.</th>
-                <th class="px-4 py-2 text-left text-sm font-medium uppercase tracking-wider">Paciente</th>
-                <th class="px-4 py-2 text-left text-sm font-medium uppercase tracking-wider">CPF</th>
+    <div id="consultas" th:fragment="consultas-datatable" class="tab-content">
+        <div class="overflow-x-auto">
+        <table class="min-w-full bg-white">
+            <thead class="font-light text-sm text-slate-600 text-left tracking-wide">
+            <tr class="bg-slate-200">
+                <th class="text-sm rounded-l-lg py-2 px-4">N.</th>
+                <th class="text-sm pl-4">Paciente</th>
+                <th class="text-sm pl-4">CPF</th>
                 <th:block th:if="${selectedSpecialty == null}">
-                    <th class="px-4 py-2 text-left text-sm font-medium uppercase tracking-wider">Esp.</th>
+                    <th class="text-sm pl-4">Esp.</th>
                 </th:block>
-                <th class="px-4 py-2 text-left text-sm font-medium uppercase tracking-wider">Prioridade</th>
-                <th class="px-4 py-2 text-left text-sm font-medium uppercase tracking-wider">Contemplado por</th>
-<!--                <th class="px-4 py-2 text-left text-sm font-medium uppercase tracking-wider">Agendamento</th>-->
-                <th class="px-4 py-2 text-left text-sm font-medium uppercase tracking-wider">Contemplação</th>
-                <th class="px-4 py-2 text-left text-sm font-medium uppercase tracking-wider">Status</th>
-                <th class="px-4 py-2 text-left text-sm font-medium uppercase tracking-wider">UBS</th>
-                <th class="px-4 py-2 text-left text-sm font-medium uppercase tracking-wider">Ações</th>
+                <th class="text-sm pl-4">Prioridade</th>
+                <th class="text-sm pl-4">Contemplado por</th>
+                <th class="text-sm pl-4">Contemplação</th>
+                <th class="text-sm pl-4">Status</th>
+                <th class="text-sm pl-4">UBS</th>
+                <th class="text-sm rounded-r-lg py-2 px-4">Ações</th>
             </tr>
             </thead>
-            <tbody class="divide-y divide-gray-200">
+            <tbody>
             <tr th:each="cp, iStat : ${consultasPage}"
-                class="hover:bg-gray-200 transition-colors duration-200">
-                <td class="px-4 py-2 text-gray-700"
+                class="overflow-hidden border-slate-200 text-slate-600 w-full hover:bg-slate-50 active:bg-slate-200">
+                <td class="border-b text-sm py-2 px-4"
                     th:text="${consultasPage.number eq 0 ? iStat.index + 1 : (iStat.index + 1) + (consultasPage.number * consultasPage.size)}"></td>
-                <td class="px-4 py-2 text-gray-700" th:text="${cp.appointment.patient.name}"></td>
-                <td class="px-4 py-2 text-gray-700" th:text="${cp.appointment.patient.cpf}"></td>
+                <td class="border-b text-sm pl-4" th:text="${cp.appointment.patient.name}"></td>
+                <td class="border-b text-sm pl-4" th:text="${cp.appointment.patient.cpf}"></td>
                 <th:block th:if="${selectedSpecialty == null}">
-                    <td class="px-4 py-2 text-gray-700" th:text="${cp.appointment.medicalProcedure.specialty.title}"></td>
+                    <td class="border-b text-sm pl-4" th:text="${cp.appointment.medicalProcedure.specialty.title}"></td>
                 </th:block>
-                <td class="px-4 py-2 text-gray-700" th:text="${cp.appointment.priority.getDescription()}"></td>
-                <td class="px-4 py-2 text-gray-700" th:text="${cp.contemplatedBy.getDescription()}"></td>
-<!--                <td class="px-4 py-2 text-gray-700" th:text="${#temporals.format(cp.appointment.requestDate, 'dd/MM/yyyy HH:mm')}"></td>-->
-                <td class="px-4 py-2 text-gray-700" th:text="${#temporals.format(cp.contemplationDate, 'dd/MM/yyyy')}"></td>
-                <td class="px-4 py-2 text-gray-700" th:text="${cp.appointment.status.description}"></td>
-                <td class="px-4 py-2 text-gray-700" th:text="${cp.medicalSlot.basicHealthUnit.name}"></td>
-                <td class="px-4 py-2 text-gray-700">
-                    <a th:attrappend="hx-get=@{/contemplation-management/{id}/load(id = ${cp.id}, ubs = ${selectedUBS}, specialty = ${selectedSpecialty}, month = ${selectedMonth})}"
-                       hx-target="#patientAppointment-modal"
-                       hx-swap="outerHTML"
-                       href=""
-                       class="flex items-center bg-indigo-500 text-white px-2 py-1 rounded-md hover:bg-indigo-400 focus:outline-none transition-colors duration-300"
-                       title="Ver Detalhes">
-                        <div class="flex items-center w-full">
-                            <span class="material-symbols-outlined px-2">edit_note</span>
+                <td class="border-b text-sm pl-4" th:text="${cp.appointment.priority.getDescription()}"></td>
+                <td class="border-b text-sm pl-4" th:text="${cp.contemplatedBy.getDescription()}"></td>
+                <td class="border-b text-sm pl-4" th:text="${#temporals.format(cp.contemplationDate, 'dd/MM/yyyy')}"></td>
+                <td class="border-b text-sm pl-4" th:text="${cp.appointment.status.description}"></td>
+                <td class="border-b text-sm pl-4" th:text="${cp.medicalSlot.basicHealthUnit.name}"></td>
+                <td class="border-b text-sm py-2 px-4">
+                    <div class="relative group">
+                        <a th:attrappend="hx-get=@{/contemplation-management/{id}/load(id = ${cp.id}, ubs = ${selectedUBS}, specialty = ${selectedSpecialty}, month = ${selectedMonth})}"
+                           hx-target="#patientAppointment-modal"
+                           hx-swap="outerHTML"
+                           href=""
+                           class="inline-flex p-2 rounded-lg hover:bg-slate-200 cursor-pointer transition duration-300">
+                            <span class="material-symbols-outlined hover:text-blue-500">edit_note</span>
+                        </a>
+                        <div class="absolute right-full top-1/2 transform -translate-y-1/2 -translate-x-1 hidden group-hover:block bg-slate-800 text-white text-sm rounded px-2 py-1 whitespace-nowrap">
+                            Ver Detalhes
                         </div>
-                    </a>
+                    </div>
                 </td>
             </tr>
             </tbody>
         </table>
+        </div>
         <div id="consultasPaginationPanel" th:if="${consultasPage.totalPages > 0}"
-             class="flex items-center justify-between mt-4 p-4 bg-white border border-gray-300 rounded-lg shadow-md">
-            <div class="flex items-center space-x-2">
-                <label for="consultasPageSize" class="text-sm font-medium text-gray-700">Linhas por página:</label>
+             class="flex flex-1 mt-4 justify-between items-center bg-white">
+            <div>
+                <label class="text-sm text-slate-500">Linhas por página:</label>
                 <select id="consultasPageSize" name="consultasPageSize"
                         th:attrappend="hx-get=@{/contemplation-management/paginated(page = ${consultasPage.number}, ubs = ${selectedUBS}, specialty = ${selectedSpecialty}, month = ${selectedMonth}, type = 'CONSULTA', status = ${selectedStatus})}"
                         hx-target="#consultas"
                         hx-swap="outerHTML"
-                        class="border-gray-300 rounded-md shadow-md focus:ring-gray-500 focus:border-gray-500 p-2">
+                        class="rounded-lg text-sm text-slate-500 border border-stroke py-1 outline-none focus:ring-2 hover:ring-gray-400 hover:ring-2 hover:border-white focus:border-white focus:ring-blue-500">
                     <option th:value="${10}" th:selected="${consultasPage.size == 10}">10</option>
                     <option th:value="${15}" th:selected="${consultasPage.size == 15}">15</option>
                     <option th:value="${30}" th:selected="${consultasPage.size == 30}">30</option>
                 </select>
             </div>
-            <div class="flex items-center space-x-4">
+            <div class="flex items-center">
                 <button id="consultasPrevPage"
                         th:disabled="${!consultasPage.hasPrevious()}"
                         th:attrprepend="hx-get=@{/contemplation-management/paginated(page = ${consultasPage.number - 1}, ubs = ${selectedUBS}, specialty = ${selectedSpecialty}, month = ${selectedMonth}, type = 'CONSULTA', status = ${selectedStatus})}"
@@ -77,10 +78,10 @@
                         hx-include="[name='consultasPageSize']"
                         hx-trigger="click"
                         hx-swap="outerHTML"
-                        class="px-4 py-2 bg-gray-700 text-white font-semibold rounded-md shadow-md hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed focus:ring-2 focus:ring-gray-400">
-                    Anterior
+                        class="inline-flex p-2 rounded-lg bg-slate-100 hover:bg-slate-200 disabled:opacity-50 disabled:cursor-not-allowed">
+                    <span class="material-symbols-outlined">keyboard_double_arrow_left</span>
                 </button>
-                <span class="text-sm text-gray-700">
+                <span class="mx-2 text-sm text-slate-500">
                     Página <span id="consultasCurrentPage" th:text="${consultasPage.number + 1}">1</span> de
                     <span th:text="${consultasPage.totalPages}">Muitos</span>
                 </span>
@@ -91,79 +92,81 @@
                         hx-include="[name='consultasPageSize']"
                         hx-trigger="click"
                         hx-swap="outerHTML"
-                        class="px-4 py-2 bg-gray-700 text-white font-semibold rounded-md shadow-md hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed focus:ring-2 focus:ring-gray-400">
-                    Próximo
+                        class="inline-flex p-2 rounded-lg bg-slate-100 hover:bg-slate-200 disabled:opacity-50 disabled:cursor-not-allowed">
+                    <span class="material-symbols-outlined">keyboard_double_arrow_right</span>
                 </button>
             </div>
         </div>
     </div>
 
-    <div id="exames" th:fragment="exames-datatable" class="tab-content p-4 bg-gray-100" th:classappend="${hide}">
-        <table class="min-w-full bg-white divide-y divide-gray-200">
-            <thead class="bg-gray-50">
-            <tr class="bg-gray-700 text-white">
-                <th class="px-4 py-2 text-left text-sm font-medium uppercase tracking-wider">N.</th>
-                <th class="px-4 py-2 text-left text-sm font-medium uppercase tracking-wider">Paciente</th>
-                <th class="px-4 py-2 text-left text-sm font-medium uppercase tracking-wider">CPF</th>
-                <th class="px-4 py-2 text-left text-sm font-medium uppercase tracking-wider">Exame</th>
-                <th class="px-4 py-2 text-left text-sm font-medium uppercase tracking-wider">Prioridade</th>
-                <th class="px-4 py-2 text-left text-sm font-medium uppercase tracking-wider">Contemplado por</th>
-<!--                <th class="px-4 py-2 text-left text-sm font-medium uppercase tracking-wider">Agendamento</th>-->
-                <th class="px-4 py-2 text-left text-sm font-medium uppercase tracking-wider">Contemplação</th>
-                <th class="px-4 py-2 text-left text-sm font-medium uppercase tracking-wider">Status</th>
-                <th class="px-4 py-2 text-left text-sm font-medium uppercase tracking-wider">UBS</th>
-                <th class="px-4 py-2 text-left text-sm font-medium uppercase tracking-wider">Ações</th>
+    <div id="exames" th:fragment="exames-datatable" class="tab-content" th:classappend="${hide}">
+        <div class="overflow-x-auto">
+        <table class="min-w-full bg-white">
+            <thead class="font-light text-sm text-slate-600 text-left tracking-wide">
+            <tr class="bg-slate-200">
+                <th class="text-sm rounded-l-lg py-2 px-4">N.</th>
+                <th class="text-sm pl-4">Paciente</th>
+                <th class="text-sm pl-4">CPF</th>
+                <th class="text-sm pl-4">Exame</th>
+                <th class="text-sm pl-4">Prioridade</th>
+                <th class="text-sm pl-4">Contemplado por</th>
+                <th class="text-sm pl-4">Contemplação</th>
+                <th class="text-sm pl-4">Status</th>
+                <th class="text-sm pl-4">UBS</th>
+                <th class="text-sm rounded-r-lg py-2 px-4">Ações</th>
             </tr>
             </thead>
-            <tbody class="divide-y divide-gray-200">
+            <tbody>
             <tr th:each="exp, iStat : ${examesPage}"
-                class="hover:bg-gray-200 transition-colors duration-200">
-                <td class="px-4 py-2 text-gray-700"
+                class="overflow-hidden border-slate-200 text-slate-600 w-full hover:bg-slate-50 active:bg-slate-200">
+                <td class="border-b text-sm py-2 px-4"
                     th:text="${examesPage.number eq 0 ? iStat.index + 1 : (iStat.index + 1) + (examesPage.number * examesPage.size)}"></td>
-                <td class="px-4 py-2 text-gray-700" th:text="${exp.appointment.patient.name}"></td>
-                <td class="px-4 py-2 text-gray-700" th:text="${exp.appointment.patient.cpf}"></td>
+                <td class="border-b text-sm pl-4" th:text="${exp.appointment.patient.name}"></td>
+                <td class="border-b text-sm pl-4" th:text="${exp.appointment.patient.cpf}"></td>
                 <th:block th:if="${selectedSpecialty != null}">
-                    <td class="px-4 py-2 text-gray-700" th:text="${exp.appointment.medicalProcedure.description}"></td>
+                    <td class="border-b text-sm pl-4" th:text="${exp.appointment.medicalProcedure.description}"></td>
                 </th:block>
                 <th:block th:unless="${selectedSpecialty != null}">
-                    <td class="px-4 py-2 text-gray-700" th:text="${exp.appointment.medicalProcedure.description} + ' [' + ${exp.appointment.medicalProcedure.specialty.title} + ']'"></td>
+                    <td class="border-b text-sm pl-4" th:text="${exp.appointment.medicalProcedure.description} + ' [' + ${exp.appointment.medicalProcedure.specialty.title} + ']'"></td>
                 </th:block>
-                <td class="px-4 py-2 text-gray-700" th:text="${exp.appointment.priority.getDescription()}"></td>
-                <td class="px-4 py-2 text-gray-700" th:text="${exp.contemplatedBy.getDescription()}"></td>
-<!--                <td class="px-4 py-2 text-gray-700" th:text="${#temporals.format(exp.appointment.requestDate, 'dd/MM/yyyy HH:mm')}"></td>-->
-                <td class="px-4 py-2 text-gray-700" th:text="${#temporals.format(exp.contemplationDate, 'dd/MM/yyyy')}"></td>
-                <td class="px-4 py-2 text-gray-700" th:text="${exp.appointment.status.description}"></td>
-                <td class="px-4 py-2 text-gray-700" th:text="${exp.medicalSlot.basicHealthUnit.name}"></td>
-                <td class="px-4 py-2 text-gray-700">
-                    <a th:attrappend="hx-get=@{/contemplation-management/{id}/load(id = ${exp.id}, ubs = ${selectedUBS}, specialty = ${selectedSpecialty}, month = ${selectedMonth})}"
-                       hx-target="#patientAppointment-modal"
-                       hx-swap="outerHTML"
-                       href=""
-                       class="flex items-center bg-indigo-500 text-white px-2 py-1 rounded-md hover:bg-indigo-400 focus:outline-none transition-colors duration-300"
-                       title="Ver Detalhes">
-                        <div class="flex items-center w-full">
-                            <span class="material-symbols-outlined px-2">edit_note</span>
+                <td class="border-b text-sm pl-4" th:text="${exp.appointment.priority.getDescription()}"></td>
+                <td class="border-b text-sm pl-4" th:text="${exp.contemplatedBy.getDescription()}"></td>
+                <td class="border-b text-sm pl-4" th:text="${#temporals.format(exp.contemplationDate, 'dd/MM/yyyy')}"></td>
+                <td class="border-b text-sm pl-4" th:text="${exp.appointment.status.description}"></td>
+                <td class="border-b text-sm pl-4" th:text="${exp.medicalSlot.basicHealthUnit.name}"></td>
+                <td class="border-b text-sm py-2 px-4">
+                    <div class="relative group">
+                        <a th:attrappend="hx-get=@{/contemplation-management/{id}/load(id = ${exp.id}, ubs = ${selectedUBS}, specialty = ${selectedSpecialty}, month = ${selectedMonth})}"
+                           hx-target="#patientAppointment-modal"
+                           hx-swap="outerHTML"
+                           href=""
+                           class="inline-flex p-2 rounded-lg hover:bg-slate-200 cursor-pointer transition duration-300">
+                            <span class="material-symbols-outlined hover:text-blue-500">edit_note</span>
+                        </a>
+                        <div class="absolute right-full top-1/2 transform -translate-y-1/2 -translate-x-1 hidden group-hover:block bg-slate-800 text-white text-sm rounded px-2 py-1 whitespace-nowrap">
+                            Ver Detalhes
                         </div>
-                    </a>
+                    </div>
                 </td>
             </tr>
             </tbody>
         </table>
+        </div>
         <div id="examesPaginationPanel" th:if="${examesPage.totalPages > 0}"
-             class="flex items-center justify-between mt-4 p-4 bg-white border border-gray-300 rounded-lg shadow-md">
-            <div class="flex items-center space-x-2">
-                <label for="examesPageSize" class="text-sm font-medium text-gray-700">Linhas por página:</label>
+             class="flex flex-1 mt-4 justify-between items-center bg-white">
+            <div>
+                <label class="text-sm text-slate-500">Linhas por página:</label>
                 <select id="examesPageSize" name="examesPageSize"
                         th:attrappend="hx-get=@{/contemplation-management/paginated(page = ${examesPage.number}, ubs = ${selectedUBS}, specialty = ${selectedSpecialty}, month = ${selectedMonth}, type = 'EXAME', confirmed = ${selectedStatus})}"
                         hx-target="#exames"
                         hx-swap="outerHTML"
-                        class="border-gray-300 rounded-md shadow-md focus:ring-gray-500 focus:border-gray-500 p-2">
+                        class="rounded-lg text-sm text-slate-500 border border-stroke py-1 outline-none focus:ring-2 hover:ring-gray-400 hover:ring-2 hover:border-white focus:border-white focus:ring-blue-500">
                     <option th:value="${10}" th:selected="${examesPage.size == 10}">10</option>
                     <option th:value="${15}" th:selected="${examesPage.size == 15}">15</option>
                     <option th:value="${30}" th:selected="${examesPage.size == 30}">30</option>
                 </select>
             </div>
-            <div class="flex items-center space-x-4">
+            <div class="flex items-center">
                 <button id="examesPrevPage"
                         th:disabled="${!examesPage.hasPrevious()}"
                         th:attrprepend="hx-get=@{/contemplation-management/paginated(page = ${examesPage.number - 1}, ubs = ${selectedUBS}, specialty = ${selectedSpecialty}, month = ${selectedMonth}, type = 'EXAME', confirmed = ${selectedStatus})}"
@@ -171,10 +174,10 @@
                         hx-include="[name='examesPageSize']"
                         hx-trigger="click"
                         hx-swap="outerHTML"
-                        class="px-4 py-2 bg-gray-700 text-white font-semibold rounded-md shadow-md hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed focus:ring-2 focus:ring-gray-400">
-                    Anterior
+                        class="inline-flex p-2 rounded-lg bg-slate-100 hover:bg-slate-200 disabled:opacity-50 disabled:cursor-not-allowed">
+                    <span class="material-symbols-outlined">keyboard_double_arrow_left</span>
                 </button>
-                <span class="text-sm text-gray-700">
+                <span class="mx-2 text-sm text-slate-500">
                     Página <span id="examesCurrentPage" th:text="${examesPage.number + 1}">1</span> de
                     <span th:text="${examesPage.totalPages}">Muitos</span>
                 </span>
@@ -185,79 +188,81 @@
                         hx-include="[name='examesPageSize']"
                         hx-trigger="click"
                         hx-swap="outerHTML"
-                        class="px-4 py-2 bg-gray-700 text-white font-semibold rounded-md shadow-md hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed focus:ring-2 focus:ring-gray-400">
-                    Próximo
+                        class="inline-flex p-2 rounded-lg bg-slate-100 hover:bg-slate-200 disabled:opacity-50 disabled:cursor-not-allowed">
+                    <span class="material-symbols-outlined">keyboard_double_arrow_right</span>
                 </button>
             </div>
         </div>
     </div>
 
-    <div id="cirurgias" th:fragment="cirurgias-datatable" class="tab-content p-4 bg-gray-100" th:classappend="${hide}">
-        <table class="min-w-full bg-white divide-y divide-gray-200">
-            <thead class="bg-gray-50">
-            <tr class="bg-gray-700 text-white">
-                <th class="px-4 py-2 text-left text-sm font-medium uppercase tracking-wider">N.</th>
-                <th class="px-4 py-2 text-left text-sm font-medium uppercase tracking-wider">Paciente</th>
-                <th class="px-4 py-2 text-left text-sm font-medium uppercase tracking-wider">CPF</th>
-                <th class="px-4 py-2 text-left text-sm font-medium uppercase tracking-wider">Cirurgia</th>
-                <th class="px-4 py-2 text-left text-sm font-medium uppercase tracking-wider">Prioridade</th>
-                <th class="px-4 py-2 text-left text-sm font-medium uppercase tracking-wider">Contemplado por</th>
-<!--                <th class="px-4 py-2 text-left text-sm font-medium uppercase tracking-wider">Agendamento</th>-->
-                <th class="px-4 py-2 text-left text-sm font-medium uppercase tracking-wider">Contemplação</th>
-                <th class="px-4 py-2 text-left text-sm font-medium uppercase tracking-wider">Status</th>
-                <th class="px-4 py-2 text-left text-sm font-medium uppercase tracking-wider">UBS</th>
-                <th class="px-4 py-2 text-left text-sm font-medium uppercase tracking-wider">Ações</th>
+    <div id="cirurgias" th:fragment="cirurgias-datatable" class="tab-content" th:classappend="${hide}">
+        <div class="overflow-x-auto">
+        <table class="min-w-full bg-white">
+            <thead class="font-light text-sm text-slate-600 text-left tracking-wide">
+            <tr class="bg-slate-200">
+                <th class="text-sm rounded-l-lg py-2 px-4">N.</th>
+                <th class="text-sm pl-4">Paciente</th>
+                <th class="text-sm pl-4">CPF</th>
+                <th class="text-sm pl-4">Cirurgia</th>
+                <th class="text-sm pl-4">Prioridade</th>
+                <th class="text-sm pl-4">Contemplado por</th>
+                <th class="text-sm pl-4">Contemplação</th>
+                <th class="text-sm pl-4">Status</th>
+                <th class="text-sm pl-4">UBS</th>
+                <th class="text-sm rounded-r-lg py-2 px-4">Ações</th>
             </tr>
             </thead>
-            <tbody class="divide-y divide-gray-200">
+            <tbody>
             <tr th:each="crp, iStat : ${cirurgiasPage}"
-                class="hover:bg-gray-200 transition-colors duration-200">
-                <td class="px-4 py-2 text-gray-700"
+                class="overflow-hidden border-slate-200 text-slate-600 w-full hover:bg-slate-50 active:bg-slate-200">
+                <td class="border-b text-sm py-2 px-4"
                     th:text="${cirurgiasPage.number eq 0 ? iStat.index + 1 : (iStat.index + 1) + (cirurgiasPage.number * cirurgiasPage.size)}"></td>
-                <td class="px-4 py-2 text-gray-700" th:text="${crp.appointment.patient.name}"></td>
-                <td class="px-4 py-2 text-gray-700" th:text="${crp.appointment.patient.cpf}"></td>
+                <td class="border-b text-sm pl-4" th:text="${crp.appointment.patient.name}"></td>
+                <td class="border-b text-sm pl-4" th:text="${crp.appointment.patient.cpf}"></td>
                 <th:block th:if="${selectedSpecialty != null}">
-                    <td class="px-4 py-2 text-gray-700" th:text="${crp.appointment.medicalProcedure.description}"></td>
+                    <td class="border-b text-sm pl-4" th:text="${crp.appointment.medicalProcedure.description}"></td>
                 </th:block>
                 <th:block th:unless="${selectedSpecialty != null}">
-                    <td class="px-4 py-2 text-gray-700" th:text="${crp.appointment.medicalProcedure.description} + ' [' + ${crp.appointment.medicalProcedure.specialty.title} + ']'"></td>
+                    <td class="border-b text-sm pl-4" th:text="${crp.appointment.medicalProcedure.description} + ' [' + ${crp.appointment.medicalProcedure.specialty.title} + ']'"></td>
                 </th:block>
-                <td class="px-4 py-2 text-gray-700" th:text="${crp.appointment.priority.getDescription()}"></td>
-                <td class="px-4 py-2 text-gray-700" th:text="${crp.contemplatedBy.getDescription()}"></td>
-<!--                <td class="px-4 py-2 text-gray-700" th:text="${#temporals.format(crp.appointment.requestDate, 'dd/MM/yyyy HH:mm')}"></td>-->
-                <td class="px-4 py-2 text-gray-700" th:text="${#temporals.format(crp.contemplationDate, 'dd/MM/yyyy')}"></td>
-                <td class="px-4 py-2 text-gray-700" th:text="${crp.appointment.status.description}"></td>
-                <td class="px-4 py-2 text-gray-700" th:text="${crp.medicalSlot.basicHealthUnit.name}"></td>
-                <td class="px-4 py-2 text-gray-700">
-                    <a th:attrappend="hx-get=@{/contemplation-management/{id}/load(id = ${crp.id}, ubs = ${selectedUBS}, specialty = ${selectedSpecialty}, month = ${selectedMonth})}"
-                       hx-target="#patientAppointment-modal"
-                       hx-swap="outerHTML"
-                       href=""
-                       class="flex items-center bg-indigo-500 text-white px-2 py-1 rounded-md hover:bg-indigo-400 focus:outline-none transition-colors duration-300"
-                       title="Ver Detalhes">
-                        <div class="flex items-center w-full">
-                            <span class="material-symbols-outlined px-2">edit_note</span>
+                <td class="border-b text-sm pl-4" th:text="${crp.appointment.priority.getDescription()}"></td>
+                <td class="border-b text-sm pl-4" th:text="${crp.contemplatedBy.getDescription()}"></td>
+                <td class="border-b text-sm pl-4" th:text="${#temporals.format(crp.contemplationDate, 'dd/MM/yyyy')}"></td>
+                <td class="border-b text-sm pl-4" th:text="${crp.appointment.status.description}"></td>
+                <td class="border-b text-sm pl-4" th:text="${crp.medicalSlot.basicHealthUnit.name}"></td>
+                <td class="border-b text-sm py-2 px-4">
+                    <div class="relative group">
+                        <a th:attrappend="hx-get=@{/contemplation-management/{id}/load(id = ${crp.id}, ubs = ${selectedUBS}, specialty = ${selectedSpecialty}, month = ${selectedMonth})}"
+                           hx-target="#patientAppointment-modal"
+                           hx-swap="outerHTML"
+                           href=""
+                           class="inline-flex p-2 rounded-lg hover:bg-slate-200 cursor-pointer transition duration-300">
+                            <span class="material-symbols-outlined hover:text-blue-500">edit_note</span>
+                        </a>
+                        <div class="absolute right-full top-1/2 transform -translate-y-1/2 -translate-x-1 hidden group-hover:block bg-slate-800 text-white text-sm rounded px-2 py-1 whitespace-nowrap">
+                            Ver Detalhes
                         </div>
-                    </a>
+                    </div>
                 </td>
             </tr>
             </tbody>
         </table>
+        </div>
         <div id="cirurgiasPaginationPanel" th:if="${cirurgiasPage.totalPages > 0}"
-             class="flex items-center justify-between mt-4 p-4 bg-white border border-gray-300 rounded-lg shadow-md">
-            <div class="flex items-center space-x-2">
-                <label for="cirurgiasPageSize" class="text-sm font-medium text-gray-700">Linhas por página:</label>
+             class="flex flex-1 mt-4 justify-between items-center bg-white">
+            <div>
+                <label class="text-sm text-slate-500">Linhas por página:</label>
                 <select id="cirurgiasPageSize" name="cirurgiasPageSize"
                         th:attrappend="hx-get=@{/contemplation-management/paginated(page = ${cirurgiasPage.number}, ubs = ${selectedUBS}, specialty = ${selectedSpecialty}, month = ${selectedMonth}, type = 'CIRURGIA', confirmed = ${selectedStatus})}"
                         hx-target="#cirurgias"
                         hx-swap="outerHTML"
-                        class="border-gray-300 rounded-md shadow-md focus:ring-gray-500 focus:border-gray-500 p-2">
+                        class="rounded-lg text-sm text-slate-500 border border-stroke py-1 outline-none focus:ring-2 hover:ring-gray-400 hover:ring-2 hover:border-white focus:border-white focus:ring-blue-500">
                     <option th:value="${10}" th:selected="${cirurgiasPage.size == 10}">10</option>
                     <option th:value="${15}" th:selected="${cirurgiasPage.size == 15}">15</option>
                     <option th:value="${30}" th:selected="${cirurgiasPage.size == 30}">30</option>
                 </select>
             </div>
-            <div class="flex items-center space-x-4">
+            <div class="flex items-center">
                 <button id="cirurgiasPrevPage"
                         th:disabled="${!cirurgiasPage.hasPrevious()}"
                         th:attrprepend="hx-get=@{/contemplation-management/paginated(page = ${cirurgiasPage.number - 1}, ubs = ${selectedUBS}, specialty = ${selectedSpecialty}, month = ${selectedMonth}, type = 'CIRURGIA', confirmed = ${selectedStatus})}"
@@ -265,10 +270,10 @@
                         hx-include="[name='cirurgiasPageSize']"
                         hx-trigger="click"
                         hx-swap="outerHTML"
-                        class="px-4 py-2 bg-gray-700 text-white font-semibold rounded-md shadow-md hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed focus:ring-2 focus:ring-gray-400">
-                    Anterior
+                        class="inline-flex p-2 rounded-lg bg-slate-100 hover:bg-slate-200 disabled:opacity-50 disabled:cursor-not-allowed">
+                    <span class="material-symbols-outlined">keyboard_double_arrow_left</span>
                 </button>
-                <span class="text-sm text-gray-700">
+                <span class="mx-2 text-sm text-slate-500">
                     Página <span id="cirurgiasCurrentPage" th:text="${cirurgiasPage.number + 1}">1</span> de
                     <span th:text="${cirurgiasPage.totalPages}">Muitos</span>
                 </span>
@@ -279,13 +284,12 @@
                         hx-include="[name='cirurgiasPageSize']"
                         hx-trigger="click"
                         hx-swap="outerHTML"
-                        class="px-4 py-2 bg-gray-700 text-white font-semibold rounded-md shadow-md hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed focus:ring-2 focus:ring-gray-400">
-                    Próximo
+                        class="inline-flex p-2 rounded-lg bg-slate-100 hover:bg-slate-200 disabled:opacity-50 disabled:cursor-not-allowed">
+                    <span class="material-symbols-outlined">keyboard_double_arrow_right</span>
                 </button>
             </div>
         </div>
     </div>
-    <!--    </div>-->
 
 </body>
 </html>
