@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html xmlns:th="https://www.thymeleaf.org">
+
 <head th:replace="~{fragments/template :: head}"></head>
+
 <body class="flex w-full flex-1 h-dvh justify-between items-center bg-slate-300">
     <nav th:replace="~{fragments/sidebar :: sidebar}"></nav>
     <main class="flex flex-col h-full w-full overflow-hidden">
@@ -16,74 +18,73 @@
                 <div class="w-full bg-white rounded-lg my-4">
                     <input type="checkbox" id="panel1" class="peer hidden" th:checked="${true}">
                     <label for="panel1"
-                           class="text-slate-200 tracking-wide block bg-slate-900 py-4 px-4 rounded-lg cursor-pointer border-2 border-slate-600 hover:bg-slate-800 hover:border-blue-500">
+                        class="text-slate-200 tracking-wide block bg-slate-900 py-4 px-4 rounded-lg cursor-pointer border-2 border-slate-600 hover:bg-slate-800 hover:border-blue-500">
                         <div class="flex items-center">
                             <span class="material-symbols-outlined mr-4">patient_list</span>Filas de espera
                         </div>
                     </label>
-                    <div class="flex flex-col justify-center peer-checked:max-h-[2000px] max-h-0 overflow-hidden overscroll-contain transition-max-height duration-500 ease-in-out">
+                    <div
+                        class="flex flex-col justify-center peer-checked:max-h-[2000px] max-h-0 overflow-hidden overscroll-contain transition-max-height duration-500 ease-in-out">
                         <div class="py-4 px-4">
-                            <form th:attrappend="hx-get=@{/queue-management/v2/search}"
-                                  th:method="get"
-                                  hx-target="#queue-datatable"
-                                  hx-swap="outerHTML"
-                                  hx-indicator=".animate-pulse">
-                                <div class="grid grid-flow-row grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2 gap-x-4 w-full items-end">
+                            <form th:attrappend="hx-get=@{/queue-management/v2/search}" th:method="get"
+                                hx-target="#queue-datatable" hx-swap="outerHTML" hx-indicator=".animate-pulse">
+                                <div
+                                    class="grid grid-flow-row grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2 gap-x-4 w-full items-end">
                                     <div class="flex flex-col w-full">
                                         <label class="text-sm" for="ubs">UBS:</label>
-                                        <select class="text-sm w-full rounded-lg border border-stroke py-2 pl-4 mt-1 outline-none focus:ring-2 hover:ring-gray-400 hover:ring-2 hover:border-white focus:border-white focus:ring-blue-500 transition duration-200"
-                                                id="ubs" th:name="basicHealthUnit">
+                                        <select
+                                            class="text-sm w-full rounded-lg border border-stroke py-2 pl-4 mt-1 outline-none focus:ring-2 hover:ring-gray-400 hover:ring-2 hover:border-white focus:border-white focus:ring-blue-500 transition duration-200"
+                                            id="ubs" th:name="basicHealthUnit">
                                             <option th:value="${null}">Selecione</option>
-                                            <option th:each="ubs : ${basicHealthUnits}"
-                                                    th:value="${ubs.id}"
-                                                    th:text="${ubs.name}"
-                                                    th:selected="${ubs.id == selectedUBS}">
+                                            <option th:each="ubs : ${basicHealthUnits}" th:value="${ubs.id}"
+                                                th:text="${ubs.name}" th:selected="${ubs.id == selectedUBS}">
                                             </option>
                                         </select>
                                     </div>
                                     <div class="flex flex-col w-full">
                                         <label class="text-sm" for="specialty">Especialidade:</label>
-                                        <select class="text-sm w-full rounded-lg border border-stroke py-2 pl-4 mt-1 outline-none focus:ring-2 hover:ring-gray-400 hover:ring-2 hover:border-white focus:border-white focus:ring-blue-500 transition duration-200"
-                                                id="specialty" th:name="specialty">
+                                        <select
+                                            class="text-sm w-full rounded-lg border border-stroke py-2 pl-4 mt-1 outline-none focus:ring-2 hover:ring-gray-400 hover:ring-2 hover:border-white focus:border-white focus:ring-blue-500 transition duration-200"
+                                            id="specialty" th:name="specialty">
                                             <option th:value="${null}">Selecione</option>
-                                            <option th:each="specialty : ${specialties}"
-                                                    th:value="${specialty.id}"
-                                                    th:text="${specialty.title}"
-                                                    th:selected="${specialty.id == selectedSpecialty}"></option>
+                                            <option th:each="specialty : ${specialties}" th:value="${specialty.id}"
+                                                th:text="${specialty.title}"
+                                                th:selected="${specialty.id == selectedSpecialty}"></option>
                                         </select>
                                     </div>
                                     <div class="flex flex-col w-full">
                                         <label class="text-sm" for="procedureType">Marcação:</label>
-                                        <select class="text-sm w-full rounded-lg border border-stroke py-2 pl-4 mt-1 outline-none focus:ring-2 hover:ring-gray-400 hover:ring-2 hover:border-white focus:border-white focus:ring-blue-500 transition duration-200"
-                                                id="procedureType" th:name="procedureType"
-                                                hx-get="/queue-management/v2/procedures"
-                                                hx-target="#selectMedicalProcedure"
-                                                hx-include="[name='specialty']"
-                                                hx-swap="outerHTML"
-                                                th:disabled="${selectedProcedureType == null}">
+                                        <select
+                                            class="text-sm w-full rounded-lg border border-stroke py-2 pl-4 mt-1 outline-none focus:ring-2 hover:ring-gray-400 hover:ring-2 hover:border-white focus:border-white focus:ring-blue-500 transition duration-200"
+                                            id="procedureType" th:name="procedureType"
+                                            hx-get="/queue-management/v2/procedures" hx-target="#selectMedicalProcedure"
+                                            hx-include="[name='specialty']" hx-swap="outerHTML"
+                                            th:disabled="${selectedProcedureType == null}">
                                             <option th:value="${null}">Selecione</option>
-                                            <option th:each="type : ${T(br.com.tecsus.sigaubs.enums.ProcedureType).values()}"
-                                                    th:value="${type.toString()}"
-                                                    th:text="${type.description}"
-                                                    th:selected="${type.toString() == selectedProcedureType}"></option>
+                                            <option
+                                                th:each="type : ${T(br.com.tecsus.sigaubs.enums.ProcedureType).values()}"
+                                                th:value="${type.toString()}" th:text="${type.description}"
+                                                th:selected="${type.toString() == selectedProcedureType}"></option>
                                         </select>
                                     </div>
                                     <div id="selectMedicalProcedure" class="flex flex-col w-full"
-                                         th:replace="~{queueManagement/queueFragments/medicalProcedures :: medicalProcedures}">
+                                        th:replace="~{queueManagement/queueFragments/medicalProcedures :: medicalProcedures}">
                                     </div>
                                     <div class="flex items-center sm:items-end space-x-2">
                                         <button type="submit"
-                                                class="inline-flex text-sm items-center rounded-lg bg-slate-900 p-2 text-white cursor-pointer active:bg-blue-400 hover:bg-blue-500 transition duration-300">
+                                            class="inline-flex text-sm items-center rounded-lg bg-slate-900 p-2 text-white cursor-pointer active:bg-blue-400 hover:bg-blue-500 transition duration-300">
                                             <span class="-ml-1 material-symbols-outlined mx-1">search</span>Pesquisar
                                         </button>
                                         <a th:href="@{/queue-management/v2/clear}"
-                                           class="inline-flex text-sm items-center rounded-lg bg-slate-900 p-2 text-white cursor-pointer active:bg-blue-400 hover:bg-red-500 transition duration-300">
+                                            class="inline-flex text-sm items-center rounded-lg bg-slate-900 p-2 text-white cursor-pointer active:bg-blue-400 hover:bg-red-500 transition duration-300">
                                             <span class="-ml-1 material-symbols-outlined mx-1">close</span>Limpar
                                         </a>
                                     </div>
                                 </div>
                             </form>
-                            <div id="queue-datatable" th:replace="~{queueManagement/queueFragments/queue-tabs-v2 :: queue-datatable}" class="tab-content mt-4"></div>
+                            <div id="queue-datatable"
+                                th:replace="~{queueManagement/queueFragments/queue-tabs-v2 :: queue-datatable}"
+                                class="tab-content mt-4"></div>
                         </div>
                     </div>
                 </div>
@@ -91,16 +92,22 @@
             </div>
         </section>
         <div id="patientAppointment-modal"></div>
-        <div id="default-modal" tabindex="-1" aria-hidden="true" class="hidden overflow-y-auto overflow-x-hidden fixed top-0 right-0 left-0 z-40 justify-center items-center w-full md:inset-0 h-[calc(100%-1rem)] max-h-full">
+        <div id="default-modal" tabindex="-1" aria-hidden="true"
+            class="hidden overflow-y-auto overflow-x-hidden fixed top-0 right-0 left-0 z-40 justify-center items-center w-full md:inset-0 h-[calc(100%-1rem)] max-h-full">
             <div class="relative p-4 w-full max-w-2xl max-h-full">
                 <div class="relative bg-white rounded-lg shadow">
-                    <div class="flex items-center justify-between p-4 md:p-5 bg-slate-900 rounded-t border-2 border-slate-600">
+                    <div
+                        class="flex items-center justify-between p-4 md:p-5 bg-slate-900 rounded-t border-2 border-slate-600">
                         <h3 class="text-xl font-semibold text-slate-200">
                             Observações
                         </h3>
-                        <button type="button" onclick="this.parentElement.parentElement.parentElement.parentElement.classList.add('hidden')" class="text-slate-400 bg-transparent hover:bg-slate-700 hover:text-white rounded-lg text-sm w-8 h-8 ms-auto inline-flex justify-center items-center">
-                            <svg class="w-3 h-3" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 14 14">
-                                <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m1 1 6 6m0 0 6 6M7 7l6-6M7 7l-6 6"/>
+                        <button type="button"
+                            onclick="this.parentElement.parentElement.parentElement.parentElement.classList.add('hidden')"
+                            class="text-slate-400 bg-transparent hover:bg-slate-700 hover:text-white rounded-lg text-sm w-8 h-8 ms-auto inline-flex justify-center items-center">
+                            <svg class="w-3 h-3" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none"
+                                viewBox="0 0 14 14">
+                                <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
+                                    stroke-width="2" d="m1 1 6 6m0 0 6 6M7 7l6-6M7 7l-6 6" />
                             </svg>
                             <span class="sr-only">Close modal</span>
                         </button>
@@ -112,13 +119,14 @@
             </div>
         </div>
         <div id="marcacoes-stats"
-             class="hidden absolute z-50 w-1/3 p-6 bg-white rounded-lg shadow-xl border border-gray-200 mt-2">
+            class="hidden absolute z-50 w-1/3 p-6 bg-white rounded-lg shadow-xl border border-gray-200 mt-2">
             <div class="grid grid-cols-2 gap-8">
                 <div>
                     <h4 class="text-xl font-bold text-gray-900 mb-4">Exames</h4>
                     <div class="grid grid-cols-2">
                         <th:block th:each="exame : ${totalMedicalProcedures}">
-                            <th:block th:if="${exame.type().equals(T(br.com.tecsus.sigaubs.enums.ProcedureType).EXAME)}">
+                            <th:block
+                                th:if="${exame.type().equals(T(br.com.tecsus.sigaubs.enums.ProcedureType).EXAME)}">
                                 <span class="text-slate-700 flex-1" th:text="${exame.description}"></span>
                                 <span class="text-slate-700 flex-1 text-right" th:text="${exame.total}"></span>
                             </th:block>
@@ -129,7 +137,8 @@
                     <h4 class="text-xl font-bold text-gray-900 mb-4">Cirurgias</h4>
                     <div class="grid grid-cols-2">
                         <th:block th:each="cirurgia : ${totalMedicalProcedures}">
-                            <th:block th:if="${cirurgia.type().equals(T(br.com.tecsus.sigaubs.enums.ProcedureType).CIRURGIA)}">
+                            <th:block
+                                th:if="${cirurgia.type().equals(T(br.com.tecsus.sigaubs.enums.ProcedureType).CIRURGIA)}">
                                 <span class="text-slate-700 flex-1" th:text="${cirurgia.description}"></span>
                                 <span class="text-slate-700 flex-1 text-right" th:text="${cirurgia.total}"></span>
                             </th:block>
@@ -138,7 +147,7 @@
                 </div>
             </div>
         </div>
-        <input type="hidden" id="csrfToken" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+        <input type="hidden" id="csrfToken" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
     </main>
 </body>
 <script>
@@ -185,7 +194,7 @@
         modal.classList.add('hidden');
     }
 
-    document.addEventListener('mousemove', function(e) {
+    document.addEventListener('mousemove', function (e) {
         const modal = document.getElementById('marcacoes-stats');
         if (!modal.classList.contains('hidden')) {
             const panel = document.getElementById('statistics-panel');
@@ -201,18 +210,36 @@
         }
     });
 
-    function showTab(tabId) {
+    function showTab(tabId, clickedBtn) {
         document.querySelectorAll('.tab-content').forEach(function (content) {
             content.classList.add('hidden');
         });
         document.getElementById(tabId).classList.remove('hidden');
+
+        if (clickedBtn) {
+            clickedBtn.closest('.flex').querySelectorAll('.tab-btn').forEach(function (btn) {
+                btn.classList.remove('bg-slate-300');
+                btn.classList.add('bg-slate-200');
+            });
+            clickedBtn.classList.remove('bg-slate-200');
+            clickedBtn.classList.add('bg-slate-300');
+        }
     }
 
-    function showModalTab(tabId) {
+    function showModalTab(tabId, clickedBtn) {
         document.getElementById('patient-details').classList.add('hidden');
         document.getElementById('appointment-details').classList.add('hidden');
         document.getElementById('patientHistory-details').classList.add('hidden');
         document.getElementById(tabId).classList.remove('hidden');
+
+        if (clickedBtn) {
+            clickedBtn.closest('.flex').querySelectorAll('.modal-tab-btn').forEach(function (btn) {
+                btn.classList.remove('bg-slate-300');
+                btn.classList.add('bg-slate-200');
+            });
+            clickedBtn.classList.remove('bg-slate-200');
+            clickedBtn.classList.add('bg-slate-300');
+        }
     }
 
     function openModal(observacoes) {
@@ -252,7 +279,7 @@
                 }
                 reasonText = value;
             }
-        }).then(function(result) {
+        }).then(function (result) {
             if (result.isConfirmed) {
                 Swal.fire({
                     title: "Digite a sua senha",
@@ -291,7 +318,7 @@
                                 });
                         });
                     }
-                }).then(function(passwordResult) {
+                }).then(function (passwordResult) {
                     if (passwordResult.isConfirmed) {
                         document.getElementById("reason").value = reasonText;
                         document.getElementById("contemplationForm").submit();
@@ -313,7 +340,7 @@
             cancelButtonColor: "#d33",
             confirmButtonText: "Sim",
             cancelButtonText: "Cancelar"
-        }).then(function(result) {
+        }).then(function (result) {
             if (result.isConfirmed) {
                 document.getElementById("confirmForm").submit();
             }
@@ -321,7 +348,7 @@
     }
 
 
-    document.addEventListener("htmx:confirm", function(evt) {
+    document.addEventListener("htmx:confirm", function (evt) {
         if (!evt.detail.target.hasAttribute('hx-confirm')) return
         evt.preventDefault()
 
@@ -335,7 +362,7 @@
             confirmButtonText: "Sim",
             cancelButtonText: "Cancelar"
 
-        }).then(function(result) {
+        }).then(function (result) {
             if (result.isConfirmed) {
                 Swal.fire({
                     title: "Digite o motivo do cancelamento",
@@ -345,14 +372,14 @@
                     confirmButtonText: "Enviar",
                     cancelButtonText: "Cancelar",
                     inputAttributes: {
-                        maxlength:"255"
+                        maxlength: "255"
                     },
                     inputValidator: (value) => {
                         if (!value) {
                             return "Você precisa digitar um motivo!"
                         }
                     }
-                }).then(function(textResult) {
+                }).then(function (textResult) {
                     if (textResult.isConfirmed && textResult.value) {
                         reasonText = textResult.value;
                         ubsId = document.getElementById("ubs").value;
@@ -365,4 +392,5 @@
         })
     })
 </script>
+
 </html>

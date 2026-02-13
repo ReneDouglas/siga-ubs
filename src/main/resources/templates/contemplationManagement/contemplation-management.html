@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html xmlns:th="https://www.thymeleaf.org">
+
 <head th:replace="~{fragments/template :: head}"></head>
+
 <body class="flex w-full flex-1 h-dvh justify-between items-center bg-slate-300">
     <nav th:replace="~{fragments/sidebar :: sidebar}"></nav>
     <main class="flex flex-col h-full w-full overflow-hidden">
@@ -15,85 +17,97 @@
                 <div class="w-full bg-white rounded-lg mt-4">
                     <input type="checkbox" id="panel1" class="peer hidden" th:checked="${true}">
                     <label for="panel1"
-                           class="text-slate-200 tracking-wide block bg-slate-900 py-4 px-4 rounded-lg cursor-pointer border-2 border-slate-600 hover:bg-slate-800 hover:border-blue-500">
+                        class="text-slate-200 tracking-wide block bg-slate-900 py-4 px-4 rounded-lg cursor-pointer border-2 border-slate-600 hover:bg-slate-800 hover:border-blue-500">
                         <div class="flex items-center">
                             <span class="material-symbols-outlined mr-4">groups</span>Pacientes Contemplados
                         </div>
                     </label>
-                    <div class="flex flex-col justify-center peer-checked:max-h-[2000px] max-h-0 overflow-hidden overscroll-contain transition-max-height duration-500 ease-in-out">
+                    <div
+                        class="flex flex-col justify-center peer-checked:max-h-[2000px] max-h-0 overflow-hidden overscroll-contain transition-max-height duration-500 ease-in-out">
                         <div class="py-4 px-4">
-                            <form class="grid grid-flow-row grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-2 gap-x-4 w-full items-end"
-                                  th:action="@{/contemplation-management/search}" th:method="get">
+                            <form
+                                class="grid grid-flow-row grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-2 gap-x-4 w-full items-end"
+                                th:action="@{/contemplation-management/search}" th:method="get">
                                 <div class="flex flex-col w-full">
                                     <label class="text-sm" for="ubs">UBS:</label>
-                                    <select class="text-sm w-full rounded-lg border border-stroke py-2 pl-4 mt-1 outline-none focus:ring-2 hover:ring-gray-400 hover:ring-2 hover:border-white focus:border-white focus:ring-blue-500 transition duration-200"
-                                            id="ubs" th:name="basicHealthUnit">
+                                    <select
+                                        class="text-sm w-full rounded-lg border border-stroke py-2 pl-4 mt-1 outline-none focus:ring-2 hover:ring-gray-400 hover:ring-2 hover:border-white focus:border-white focus:ring-blue-500 transition duration-200"
+                                        id="ubs" th:name="basicHealthUnit">
                                         <option th:value="${null}">Selecione</option>
-                                        <option th:each="ubs : ${basicHealthUnits}"
-                                                th:value="${ubs.id}"
-                                                th:text="${ubs.name}"
-                                                th:selected="${ubs.id == selectedUBS}">
+                                        <option th:each="ubs : ${basicHealthUnits}" th:value="${ubs.id}"
+                                            th:text="${ubs.name}" th:selected="${ubs.id == selectedUBS}">
                                         </option>
                                     </select>
                                 </div>
                                 <div class="flex flex-col w-full">
                                     <label class="text-sm" for="specialty">Especialidade:</label>
-                                    <select class="text-sm w-full rounded-lg border border-stroke py-2 pl-4 mt-1 outline-none focus:ring-2 hover:ring-gray-400 hover:ring-2 hover:border-white focus:border-white focus:ring-blue-500 transition duration-200"
-                                            id="specialty" th:name="specialty">
+                                    <select
+                                        class="text-sm w-full rounded-lg border border-stroke py-2 pl-4 mt-1 outline-none focus:ring-2 hover:ring-gray-400 hover:ring-2 hover:border-white focus:border-white focus:ring-blue-500 transition duration-200"
+                                        id="specialty" th:name="specialty">
                                         <option th:value="${null}">Selecione</option>
-                                        <option th:each="specialty : ${specialties}"
-                                                th:value="${specialty.id}"
-                                                th:text="${specialty.title}"
-                                                th:selected="${specialty.id == selectedSpecialty}"></option>
+                                        <option th:each="specialty : ${specialties}" th:value="${specialty.id}"
+                                            th:text="${specialty.title}"
+                                            th:selected="${specialty.id == selectedSpecialty}"></option>
                                     </select>
                                 </div>
                                 <div class="flex flex-col w-full">
                                     <label class="text-sm" for="month">Mês de Referência:</label>
-                                    <input class="text-sm w-full rounded-lg border border-stroke py-2 pl-4 mt-1 outline-none focus:ring-2 hover:ring-gray-400 hover:ring-2 hover:border-white focus:border-white focus:ring-blue-500 transition duration-200"
-                                           type="month" id="month" name="referenceMonth">
+                                    <input
+                                        class="text-sm w-full rounded-lg border border-stroke py-2 pl-4 mt-1 outline-none focus:ring-2 hover:ring-gray-400 hover:ring-2 hover:border-white focus:border-white focus:ring-blue-500 transition duration-200"
+                                        type="month" id="month" name="referenceMonth">
                                     <input type="hidden" id="selectedMonth" th:value="${selectedMonth}">
                                 </div>
                                 <div class="flex flex-col w-full">
                                     <label class="text-sm" for="status">Status:</label>
-                                    <select class="text-sm w-full rounded-lg border border-stroke py-2 pl-4 mt-1 outline-none focus:ring-2 hover:ring-gray-400 hover:ring-2 hover:border-white focus:border-white focus:ring-blue-500 transition duration-200"
-                                            id="status" th:name="status">
+                                    <select
+                                        class="text-sm w-full rounded-lg border border-stroke py-2 pl-4 mt-1 outline-none focus:ring-2 hover:ring-gray-400 hover:ring-2 hover:border-white focus:border-white focus:ring-blue-500 transition duration-200"
+                                        id="status" th:name="status">
                                         <option th:value="${null}">Todos</option>
-                                        <option th:each="status : ${T(br.com.tecsus.sigaubs.enums.AppointmentStatus).getContemplationValues()}"
-                                                th:value="${status.description}"
-                                                th:text="${status.description}"></option>
+                                        <option
+                                            th:each="status : ${T(br.com.tecsus.sigaubs.enums.AppointmentStatus).getContemplationValues()}"
+                                            th:value="${status.description}" th:text="${status.description}"></option>
                                     </select>
                                 </div>
                                 <div class="flex items-end">
                                     <button type="submit"
-                                            class="inline-flex text-sm items-center rounded-lg bg-slate-900 p-2 text-white cursor-pointer active:bg-blue-400 hover:bg-blue-500 transition duration-300">
+                                        class="inline-flex text-sm items-center rounded-lg bg-slate-900 p-2 text-white cursor-pointer active:bg-blue-400 hover:bg-blue-500 transition duration-300">
                                         <span class="-ml-1 material-symbols-outlined mx-1">search</span>Pesquisar
                                     </button>
                                 </div>
                             </form>
                             <!-- Abas -->
                             <div class="flex space-x-1 border-b border-slate-300 mt-4 mb-4">
-                                <button class="w-1/3 py-2 text-sm text-center bg-slate-200 hover:bg-slate-300 rounded-t-lg focus:outline-none focus:bg-slate-300 transition duration-200"
-                                        onclick="showTab('consultas')">
+                                <button
+                                    class="tab-btn w-1/3 py-2 text-sm text-center bg-slate-300 hover:bg-slate-300 rounded-t-lg focus:outline-none transition duration-200"
+                                    onclick="showTab('consultas', this)">
                                     Consultas
                                 </button>
-                                <button class="w-1/3 py-2 text-sm text-center bg-slate-200 hover:bg-slate-300 rounded-t-lg focus:outline-none focus:bg-slate-300 transition duration-200"
-                                        onclick="showTab('exames')">
+                                <button
+                                    class="tab-btn w-1/3 py-2 text-sm text-center bg-slate-200 hover:bg-slate-300 rounded-t-lg focus:outline-none transition duration-200"
+                                    onclick="showTab('exames', this)">
                                     Exames
                                 </button>
-                                <button class="w-1/3 py-2 text-sm text-center bg-slate-200 hover:bg-slate-300 rounded-t-lg focus:outline-none focus:bg-slate-300 transition duration-200"
-                                        onclick="showTab('cirurgias')">
+                                <button
+                                    class="tab-btn w-1/3 py-2 text-sm text-center bg-slate-200 hover:bg-slate-300 rounded-t-lg focus:outline-none transition duration-200"
+                                    onclick="showTab('cirurgias', this)">
                                     Cirurgias
                                 </button>
                             </div>
                             <!-- Conteúdo das abas -->
                             <div id="contentPanel">
-                                <div id="consultas" th:replace="~{contemplationManagement/contemplationFragments/contemplation-tabs :: consultas-datatable}" class="tab-content">
+                                <div id="consultas"
+                                    th:replace="~{contemplationManagement/contemplationFragments/contemplation-tabs :: consultas-datatable}"
+                                    class="tab-content">
                                     <p>Conteúdo da aba Consultas.</p>
                                 </div>
-                                <div id="exames" th:replace="~{contemplationManagement/contemplationFragments/contemplation-tabs :: exames-datatable}" class="tab-content hidden">
+                                <div id="exames"
+                                    th:replace="~{contemplationManagement/contemplationFragments/contemplation-tabs :: exames-datatable}"
+                                    class="tab-content hidden">
                                     <p>Conteúdo da aba Exames.</p>
                                 </div>
-                                <div id="cirurgias" th:replace="~{contemplationManagement/contemplationFragments/contemplation-tabs :: cirurgias-datatable}" class="tab-content hidden">
+                                <div id="cirurgias"
+                                    th:replace="~{contemplationManagement/contemplationFragments/contemplation-tabs :: cirurgias-datatable}"
+                                    class="tab-content hidden">
                                     <p>Conteúdo da aba Cirurgias.</p>
                                 </div>
                             </div>
@@ -105,12 +119,13 @@
                 <div class="w-full bg-white rounded-lg my-4">
                     <input type="checkbox" id="panel2" class="peer hidden" th:checked="${true}">
                     <label for="panel2"
-                           class="text-slate-200 tracking-wide block bg-slate-900 py-4 px-4 rounded-lg cursor-pointer border-2 border-slate-600 hover:bg-slate-800 hover:border-blue-500">
+                        class="text-slate-200 tracking-wide block bg-slate-900 py-4 px-4 rounded-lg cursor-pointer border-2 border-slate-600 hover:bg-slate-800 hover:border-blue-500">
                         <div class="flex items-center">
                             <span class="material-symbols-outlined mr-4">history</span>Histórico de vagas
                         </div>
                     </label>
-                    <div class="flex flex-col justify-center peer-checked:max-h-[2000px] max-h-0 overflow-hidden overscroll-contain transition-max-height duration-500 ease-in-out">
+                    <div
+                        class="flex flex-col justify-center peer-checked:max-h-[2000px] max-h-0 overflow-hidden overscroll-contain transition-max-height duration-500 ease-in-out">
                         <div class="p-4 rounded-lg">
 
                         </div>
@@ -143,18 +158,32 @@
         }
     });
 
-    function showTab(tabId) {
+    function showTab(tabId, clickedBtn) {
         document.querySelectorAll('.tab-content').forEach(function (content) {
             content.classList.add('hidden');
         });
         document.getElementById(tabId).classList.remove('hidden');
+
+        clickedBtn.closest('.flex').querySelectorAll('.tab-btn').forEach(function (btn) {
+            btn.classList.remove('bg-slate-300');
+            btn.classList.add('bg-slate-200');
+        });
+        clickedBtn.classList.remove('bg-slate-200');
+        clickedBtn.classList.add('bg-slate-300');
     }
 
-    function showModalTab(tabId) {
+    function showModalTab(tabId, clickedBtn) {
         document.getElementById('patient-details').classList.add('hidden');
         document.getElementById('appointment-details').classList.add('hidden');
         document.getElementById('status-details').classList.add('hidden');
         document.getElementById(tabId).classList.remove('hidden');
+
+        clickedBtn.closest('.flex').querySelectorAll('.modal-tab-btn').forEach(function (btn) {
+            btn.classList.remove('bg-slate-300');
+            btn.classList.add('bg-slate-200');
+        });
+        clickedBtn.classList.remove('bg-slate-200');
+        clickedBtn.classList.add('bg-slate-300');
     }
 
     function openModal(observacoes) {
@@ -186,7 +215,7 @@
             cancelButtonColor: "#d33",
             confirmButtonText: "Sim",
             cancelButtonText: "Cancelar"
-        }).then(function(result) {
+        }).then(function (result) {
             if (result.isConfirmed) {
                 Swal.fire({
                     title: "Digite o motivo do cancelamento",
@@ -203,7 +232,7 @@
                             return "Você precisa digitar um motivo!";
                         }
                     }
-                }).then(function(textResult) {
+                }).then(function (textResult) {
                     if (textResult.isConfirmed && textResult.value) {
                         document.getElementById("reason").value = textResult.value;
                         document.getElementById("cancelForm").submit();
@@ -224,7 +253,7 @@
             cancelButtonColor: "#d33",
             confirmButtonText: "Sim",
             cancelButtonText: "Cancelar"
-        }).then(function(result) {
+        }).then(function (result) {
             if (result.isConfirmed) {
                 document.getElementById("confirmForm").submit();
             }
@@ -232,7 +261,7 @@
     }
 
 
-    document.addEventListener("htmx:confirm", function(evt) {
+    document.addEventListener("htmx:confirm", function (evt) {
         if (!evt.detail.target.hasAttribute('hx-confirm')) return
         evt.preventDefault()
 
@@ -246,7 +275,7 @@
             confirmButtonText: "Sim",
             cancelButtonText: "Cancelar"
 
-        }).then(function(result) {
+        }).then(function (result) {
             if (result.isConfirmed) {
                 Swal.fire({
                     title: "Digite o motivo do cancelamento",
@@ -256,14 +285,14 @@
                     confirmButtonText: "Enviar",
                     cancelButtonText: "Cancelar",
                     inputAttributes: {
-                        maxlength:"255"
+                        maxlength: "255"
                     },
                     inputValidator: (value) => {
                         if (!value) {
                             return "Você precisa digitar um motivo!"
                         }
                     }
-                }).then(function(textResult) {
+                }).then(function (textResult) {
                     if (textResult.isConfirmed && textResult.value) {
                         reasonText = textResult.value;
                         ubsId = document.getElementById("ubs").value;
@@ -276,4 +305,5 @@
         })
     })
 </script>
+
 </html>
