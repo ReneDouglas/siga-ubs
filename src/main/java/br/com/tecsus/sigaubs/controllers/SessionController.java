@@ -3,6 +3,7 @@ package br.com.tecsus.sigaubs.controllers;
 import br.com.tecsus.sigaubs.entities.SystemUser;
 import br.com.tecsus.sigaubs.security.SystemUserDetails;
 import br.com.tecsus.sigaubs.services.BasicHealthUnitService;
+import br.com.tecsus.sigaubs.services.DashboardService;
 import br.com.tecsus.sigaubs.services.SystemUserService;
 import br.com.tecsus.sigaubs.services.exceptions.InvalidConfirmPasswordException;
 import br.com.tecsus.sigaubs.utils.DefaultValues;
@@ -24,7 +25,6 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.context.annotation.SessionScope;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
-
 @Slf4j
 @Controller
 @SessionScope
@@ -32,15 +32,19 @@ public class SessionController {
 
     private final SystemUserService systemUserService;
     private final BasicHealthUnitService basicHealthUnitService;
+    private final DashboardService dashboardService;
 
     @Autowired
-    public SessionController(SystemUserService systemUserService, BasicHealthUnitService basicHealthUnitService) {
+    public SessionController(SystemUserService systemUserService, BasicHealthUnitService basicHealthUnitService,
+            DashboardService dashboardService) {
         this.systemUserService = systemUserService;
         this.basicHealthUnitService = basicHealthUnitService;
+        this.dashboardService = dashboardService;
     }
 
     @GetMapping("/")
-    public String getHomePage(){
+    public String getHomePage(Model model) {
+        model.addAttribute("dashboard", dashboardService.loadDashboardData());
         return "home";
     }
 
@@ -73,10 +77,10 @@ public class SessionController {
     @PreAuthorize("hasAnyRole('ADMIN', 'SMS')")
     @GetMapping("/systemUser-management")
     public String getSystemUserInsertPage(Model model,
-                                          @ModelAttribute("searchUser") SystemUser systemUser,
-                                          @RequestParam(value = "page", defaultValue = "0", required = false) int currentPage,
-                                          @RequestParam(value = "size", defaultValue = "" + DefaultValues.PAGE_SIZE, required = false) int pageSize,
-                                          HttpServletRequest request) {
+            @ModelAttribute("searchUser") SystemUser systemUser,
+            @RequestParam(value = "page", defaultValue = "0", required = false) int currentPage,
+            @RequestParam(value = "size", defaultValue = "" + DefaultValues.PAGE_SIZE, required = false) int pageSize,
+            HttpServletRequest request) {
 
         Page<SystemUser> systemUsersPage;
 
@@ -86,14 +90,17 @@ public class SessionController {
                 .findAllUBS());
 
         systemUser.setCreationUser(SecurityContextHolder.getContext().getAuthentication().getName());
-        systemUser.setName(systemUser.getName() == null || systemUser.getName().isEmpty() ? null : systemUser.getName());
-        systemUser.setUsername(systemUser.getUsername() == null || systemUser.getUsername().isEmpty() ? null : systemUser.getUsername());
+        systemUser
+                .setName(systemUser.getName() == null || systemUser.getName().isEmpty() ? null : systemUser.getName());
+        systemUser.setUsername(systemUser.getUsername() == null || systemUser.getUsername().isEmpty() ? null
+                : systemUser.getUsername());
 
         systemUsersPage = systemUserService
-                .findAllUsersByCreationUserPaginated(systemUser, PageRequest.of(currentPage, pageSize, Sort.Direction.valueOf("DESC"), "creationDate"));
+                .findAllUsersByCreationUserPaginated(systemUser,
+                        PageRequest.of(currentPage, pageSize, Sort.Direction.valueOf("DESC"), "creationDate"));
         model.addAttribute("systemUsersPage", systemUsersPage);
 
-        if("searchRequest".equals(request.getHeader("X-Requested-With"))) {
+        if ("searchRequest".equals(request.getHeader("X-Requested-With"))) {
             return "sessionManagement/sessionFragments/systemUserList-datatable :: systemUser-datatable";
         } else {
             return "sessionManagement/systemUser-management";
@@ -104,8 +111,8 @@ public class SessionController {
     @PreAuthorize("hasAnyRole('ADMIN', 'SMS')")
     @PostMapping("/systemUser-management/create")
     public String registerSystemUser(@ModelAttribute SystemUser systemUser,
-                                     @AuthenticationPrincipal SystemUserDetails loggedUser,
-                                     RedirectAttributes redirectAttributes) {
+            @AuthenticationPrincipal SystemUserDetails loggedUser,
+            RedirectAttributes redirectAttributes) {
 
         try {
             systemUserService.registerNotAdminSystemUser(systemUser, loggedUser);
@@ -131,8 +138,8 @@ public class SessionController {
     @PreAuthorize("hasAnyRole('ADMIN', 'SMS')")
     @PostMapping("/systemUser-management")
     public String getSystemUserInsertPageToUpdate(@RequestParam("id") Long id,
-                                                  Model model,
-                                                  @AuthenticationPrincipal SystemUserDetails loggedUser) {
+            Model model,
+            @AuthenticationPrincipal SystemUserDetails loggedUser) {
 
         model.addAttribute("systemUser", systemUserService.findSystemUserById(id));
         model.addAttribute("searchUser", new SystemUser());
@@ -144,7 +151,8 @@ public class SessionController {
         su.setCreationUser(loggedUser.getUsername());
 
         Page<SystemUser> systemUsersPage = systemUserService
-                .findAllUsersByCreationUserPaginated(su, PageRequest.of(0, DefaultValues.PAGE_SIZE, Sort.Direction.valueOf("DESC"), "creationDate"));
+                .findAllUsersByCreationUserPaginated(su,
+                        PageRequest.of(0, DefaultValues.PAGE_SIZE, Sort.Direction.valueOf("DESC"), "creationDate"));
         model.addAttribute("systemUsersPage", systemUsersPage);
 
         return "sessionManagement/systemUser-management";
@@ -153,7 +161,7 @@ public class SessionController {
     @PreAuthorize("hasAnyRole('ADMIN', 'SMS')")
     @PostMapping("/systemUser-management/update")
     public String updateSystemUser(@ModelAttribute SystemUser systemUser,
-                                   RedirectAttributes redirectAttributes) {
+            RedirectAttributes redirectAttributes) {
 
         try {
             systemUserService.updateNotAdminSystemUser(systemUser);
@@ -165,7 +173,7 @@ public class SessionController {
             redirectAttributes.addFlashAttribute("error", true);
             log.error("Erro ao atualizar usuário: {}", e.getMessage());
         }
-        //return new RedirectView("/user");
+        // return new RedirectView("/user");
         return "redirect:/systemUser-management";
     }
 
@@ -190,7 +198,7 @@ public class SessionController {
     @PreAuthorize("hasAnyRole('ADMIN', 'SMS')")
     @PostMapping("/systemUser-management/validate")
     public ResponseEntity<String> validateSystemUserByPassword(@RequestParam String password,
-                                                       @AuthenticationPrincipal SystemUserDetails loggedUser){
+            @AuthenticationPrincipal SystemUserDetails loggedUser) {
 
         try {
             log.info("Validando senha do usuário: {}", loggedUser.getName());
