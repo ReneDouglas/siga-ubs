@@ -1,0 +1,52 @@
+version: "3.9"
+
+services:
+
+  mysql:
+    image: mysql:8.0
+    container_name: sigaubs-mysql-prd
+    env_file:
+      - .env.prd
+    environment:
+      MYSQL_DATABASE: sigaubs
+    volumes:
+      - sigaubs_mysql_prd_data:/var/lib/mysql
+      - ./docker/mysql/01-schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    # Porta NÃO exposta — somente a app acessa via rede interna
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD}"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
+    restart: always
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: sigaubs-app-prd
+    depends_on:
+      mysql:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env.prd
+    environment:
+      SPRING_PROFILES_ACTIVE: prd
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/sigaubs?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=America/Sao_Paulo
+      LOGGING_FILE_NAME: ""
+      JAVA_OPTS: "-Xms512m -Xmx1024m -XX:+UseG1GC"
+    restart: always
+    deploy:
+      resources:
+        limits:
+          memory: 1536m
+
+volumes:
+  sigaubs_mysql_prd_data:
