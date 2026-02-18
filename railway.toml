@@ -2,8 +2,8 @@
 builder = "dockerfile"
 dockerfilePath = "Dockerfile.railway"
 
-[deploy]
-healthcheckPath = "/actuator/health"
-healthcheckTimeout = 120
-restartPolicyType = "on_failure"
-restartPolicyMaxRetries = 3
+#[deploy]
+#healthcheckPath = "/actuator/health"
+#healthcheckTimeout = 120
+#restartPolicyType = "on_failure"
+#restartPolicyMaxRetries = 3
