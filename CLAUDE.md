@@ -30,18 +30,19 @@ MySQL on `localhost:3306/sigaubs`. Dev credentials: `root/root` (overridable via
 
 ## Architecture
 
-Standard Spring MVC layered architecture with server-side rendered Thymeleaf templates:
+Base package: `br.com.tecsus.sigaubs`. Standard Spring MVC layered architecture with server-side rendered Thymeleaf templates:
 
-- **`controllers/`** - Spring MVC controllers returning Thymeleaf views. Some use `@SessionScope`.
+- **`controllers/`** - Spring MVC controllers returning Thymeleaf views. Several are `@SessionScope` (e.g. `AppointmentController`, `QueueController`) to preserve state across requests within a user session.
 - **`services/`** - Business logic with `@Transactional` boundaries. `SystemUserService` also implements `UserDetailsService`.
-- **`repositories/`** - Spring Data JPA repositories, some with custom implementations for complex queries.
-- **`entities/`** - JPA entities with Lombok annotations. Uses custom `AttributeConverter` classes for enums (`SocialSituationAttrConverter`, `PriorityConverter`, `AppointmentStatusConverter`, `YearMonthDateAttributeConverter`).
-- **`dtos/`** - Data transfer objects for view/query projections.
-- **`enums/`** - Domain enumerations (`Priorities`, `AppointmentStatus`, `ProcedureType`, `Roles`, etc.).
-- **`security/`** - Spring Security 6 config with form login, BCrypt, role-based auth (`ADMIN`, `SMS`, `ATENDENTE`, `ENFERMEIRO`, `ACS`, `USER`). Max 1 concurrent session per user.
-- **`jobs/`** - Scheduled tasks. `ContemplationScheduleV2` is the active contemplation routine (cron: daily at midnight) with Spring Retry (max 4 attempts).
+- **`repositories/`** - Spring Data JPA repositories. Complex queries use a custom repository pattern: interface `FooRepositoryCustom` + implementation `repositories/Impl/FooRepositoryCustomImpl` extending `JpaContext`/`EntityManager` directly.
+- **`entities/`** - JPA entities with Lombok `@Getter`/`@Setter` and `@DynamicUpdate`. Uses custom `AttributeConverter` classes for enums (`SocialSituationAttrConverter`, `PriorityConverter`, `AppointmentStatusConverter`, `YearMonthDateAttributeConverter`).
+- **`dtos/`** - Data transfer objects for view/query projections (Java records).
+- **`enums/`** - Domain enumerations (`Priorities`, `AppointmentStatus`, `ProcedureType`, `Roles`, `SocialSituationRating`, etc.).
+- **`security/`** - Spring Security 6 config with form login, BCrypt, role-based auth (`ADMIN`, `SMS`, `ATENDENTE`, `ENFERMEIRO`, `ACS`, `USER`). Max 1 concurrent session per user. URL patterns defined in `UrlPatternConfig`. Authenticated principal accessed via `@AuthenticationPrincipal SystemUserDetails`.
+- **`jobs/`** - Scheduled tasks. `ContemplationScheduleV2` is the **active** contemplation routine (`ContemplationSchedule` is the old/inactive version). Cron configurable via `schedule.cron.contemplation` property (default: daily at midnight). Uses Spring Retry (max 4 attempts, 5s backoff).
+- **`utils/`** - `ContemplationScheduleStatus` tracks job state globally (static fields). `DefaultValues` holds domain constants (e.g. `QUATRO_MESES = 4`).
 
-**Frontend stack:** Thymeleaf + Tailwind CSS + Alpine.js + ApexCharts. Templates in `src/main/resources/templates/` with reusable fragments in `templates/fragments/`.
+**Frontend stack:** Thymeleaf + Tailwind CSS + Alpine.js + ApexCharts. Templates in `src/main/resources/templates/` with reusable fragments in `templates/fragments/`. Controllers return partial fragments for AJAX-style updates using the Thymeleaf fragment selector syntax (e.g. `return "someTemplate :: fragmentName"`). HTML forms use PUT/DELETE via `spring.mvc.hiddenmethod.filter.enabled=true`.
 
 ## Key Domain Model
 
@@ -54,7 +55,17 @@ Appointment --(1:1)--> Contemplation --(N:1)--> MedicalSlot
 MedicalSlot --(1:1)--> MedicalProcedure, BasicHealthUnit
 ```
 
-The contemplation routine processes appointments by UBS and procedure, selecting patients by priority and assigning them to available medical slots.
+## Contemplation Priority Logic
+
+The contemplation routine selects patients from the waiting queue ordered by these tiebreaker rules (in order):
+
+1. Appointments older than 4 months (`MAIS_DE_QUATRO_MESES`)
+2. Manual priority value (lower `Priorities.value` = higher priority: `URGENCIA=2`, `RETORNO=3`, `PRIORITARIO=4`, `ELETIVO=8`)
+3. Patient age (older patients first, `birthDate ASC`)
+4. Social situation rating
+5. Appointment request date (FIFO)
+
+The `contemplatedBy` field on `Contemplation` records which rule was the deciding factor.
 
 ## Important Configuration Notes
 
