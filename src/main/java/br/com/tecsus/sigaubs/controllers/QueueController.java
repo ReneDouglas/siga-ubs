@@ -33,12 +33,14 @@ public class QueueController {
 
     private final AppointmentService appointmentService;
     private final MedicalSlotService medicalSlotService;
+    private final BasicHealthUnitService basicHealthUnitService;
     private final List<BasicHealthUnit> basicHealthUnits;
     private final List<Specialty> specialties;
     private final ContemplationService contemplationService;
 
     @Autowired
     public QueueController(BasicHealthUnitService basicHealthUnitService, SpecialtyService specialtyService, AppointmentService appointmentService, MedicalSlotService medicalSlotService, ContemplationService contemplationService) {
+        this.basicHealthUnitService = basicHealthUnitService;
         this.basicHealthUnits = basicHealthUnitService.findAllUBS();
         this.specialties = specialtyService.findSpecialties();
         this.appointmentService = appointmentService;
@@ -60,23 +62,28 @@ public class QueueController {
         return "queueManagement/queue-management";
     }
 
-    @PreAuthorize("hasAnyRole('ADMIN', 'SMS')")
     @GetMapping("/queue-management/v2")
     public String getQueuePageV2(Model model,
                                  @RequestParam(required = false) Long basicHealthUnit,
                                  @RequestParam(required = false) Long specialty,
                                  @RequestParam(required = false) Long medicalProcedure,
-                                 @RequestParam(required = false) String procedureType) {
+                                 @RequestParam(required = false) String procedureType,
+                                 @AuthenticationPrincipal SystemUserDetails loggedUser) {
 
-        model.addAttribute("basicHealthUnits", this.basicHealthUnits);
-        model.addAttribute("specialties", this.specialties);
+        boolean isAdminOrSms = loggedUser.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN") || a.getAuthority().equals("ROLE_SMS"));
 
-        /*if (basicHealthUnit == null && specialty == null && medicalProcedure == null && procedureType == null) {
-            model.addAttribute("queuePage", new PageImpl<>(List.of(), PageRequest.of(0, DefaultValues.PAGE_SIZE), 0));
+        if (!isAdminOrSms) {
+            basicHealthUnit = loggedUser.getBasicHealthUnitId();
+            model.addAttribute("basicHealthUnits",
+                    basicHealthUnit != null
+                            ? List.of(basicHealthUnitService.findSystemUserUBS(basicHealthUnit))
+                            : List.of());
         } else {
+            model.addAttribute("basicHealthUnits", this.basicHealthUnits);
+        }
 
-
-        }*/
+        model.addAttribute("specialties", this.specialties);
 
         var queuePage = appointmentService
                 .findOpenAppointmentsQueuePaginatedV2(
@@ -84,7 +91,6 @@ public class QueueController {
                         specialty,
                         medicalProcedure,
                         PageRequest.of(0, DefaultValues.PAGE_SIZE));
-        //List<MedicalProcedure> procedures = loadProcedures(procedureType, specialty);
 
         model.addAttribute("queuePage", queuePage);
         model.addAttribute("selectedUBS", basicHealthUnit);
@@ -140,14 +146,20 @@ public class QueueController {
         return "queueManagement/queue-management";
     }
 
-    @PreAuthorize("hasAnyRole('ADMIN', 'SMS')")
     @GetMapping("/queue-management/v2/search")
     public String searchOpenAppointmentsQueueV2(@RequestParam(required = false) Long basicHealthUnit,
                                                 @RequestParam(required = false) Long specialty,
                                                 @RequestParam(required = false) Long medicalProcedure,
                                                 @RequestParam(required = false) String procedureType,
-                                                Model model) {
+                                                Model model,
+                                                @AuthenticationPrincipal SystemUserDetails loggedUser) {
 
+        boolean isAdminOrSms = loggedUser.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN") || a.getAuthority().equals("ROLE_SMS"));
+
+        if (!isAdminOrSms) {
+            basicHealthUnit = loggedUser.getBasicHealthUnitId();
+        }
 
         var queuePage = appointmentService
                 .findOpenAppointmentsQueuePaginatedV2(
@@ -211,7 +223,6 @@ public class QueueController {
         return "queueManagement/queue-management";
     }
 
-    @PreAuthorize("hasAnyRole('ADMIN', 'SMS')")
     @GetMapping("/queue-management/v2/paginated")
     public String getOpenAppointmentsQueuePaginatedV2(Model model,
                                                     @RequestParam(value = "page", defaultValue = "0", required = false) int page,
@@ -219,7 +230,15 @@ public class QueueController {
                                                     @RequestParam(value = "ubs", required = false) Long ubs,
                                                     @RequestParam(value = "specialty", required = false) Long specialty,
                                                     @RequestParam(value = "medicalProcedure", required = false) Long medicalProcedure,
-                                                    @RequestParam(value = "procedureType", required = false) String procedureType) {
+                                                    @RequestParam(value = "procedureType", required = false) String procedureType,
+                                                    @AuthenticationPrincipal SystemUserDetails loggedUser) {
+
+        boolean isAdminOrSms = loggedUser.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN") || a.getAuthority().equals("ROLE_SMS"));
+
+        if (!isAdminOrSms) {
+            ubs = loggedUser.getBasicHealthUnitId();
+        }
 
         model.addAttribute("selectedUBS", ubs);
         model.addAttribute("selectedSpecialty", specialty);
@@ -352,7 +371,6 @@ public class QueueController {
         return "redirect:/queue-management/v2?basicHealthUnit=" + ubs + "&specialty=" + specialty + "&medicalProcedure=" + medicalProcedure + "&procedureType=" + procedureType;
     }
 
-    @PreAuthorize("hasAnyRole('ADMIN', 'SMS')")
     @GetMapping(value = "/queue-management/v2/procedures", produces = MediaType.TEXT_HTML_VALUE)
     public String loadProcedure(@RequestParam("procedureType") String procedureType,
                                             @RequestParam("specialty") Long specialtyId,
@@ -364,7 +382,6 @@ public class QueueController {
         return "queueManagement/queueFragments/medicalProcedures :: medicalProcedures";
     }
 
-    @PreAuthorize("hasAnyRole('ADMIN', 'SMS')")
     @GetMapping("/queue-management/v2/clear")
     public String clearSearch() {
         return "redirect:/queue-management/v2";

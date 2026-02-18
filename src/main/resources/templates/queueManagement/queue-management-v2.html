@@ -1,5 +1,6 @@
 <!DOCTYPE html>
-<html xmlns:th="https://www.thymeleaf.org">
+<html xmlns:th="https://www.thymeleaf.org"
+      xmlns:sec="https://www.thymeleaf.org/thymeleaf-extras-springsecurity6">
 
 <head th:replace="~{fragments/template :: head}"></head>
 
@@ -32,14 +33,28 @@
                                     class="grid grid-flow-row grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2 gap-x-4 w-full items-end">
                                     <div class="flex flex-col w-full">
                                         <label class="text-sm" for="ubs">UBS:</label>
+                                        <!-- Select editável para ADMIN/SMS -->
                                         <select
                                             class="text-sm w-full rounded-lg border border-stroke py-2 pl-4 mt-1 outline-none focus:ring-2 hover:ring-gray-400 hover:ring-2 hover:border-white focus:border-white focus:ring-blue-500 transition duration-200"
-                                            id="ubs" th:name="basicHealthUnit">
+                                            id="ubs" th:name="basicHealthUnit"
+                                            sec:authorize="hasAnyRole('ADMIN','SMS')">
                                             <option th:value="${null}">Selecione</option>
                                             <option th:each="ubs : ${basicHealthUnits}" th:value="${ubs.id}"
                                                 th:text="${ubs.name}" th:selected="${ubs.id == selectedUBS}">
                                             </option>
                                         </select>
+                                        <!-- Select desabilitado para demais roles -->
+                                        <select
+                                            class="text-sm w-full rounded-lg border border-stroke py-2 pl-4 mt-1 outline-none bg-slate-100 cursor-not-allowed"
+                                            id="ubs" disabled
+                                            sec:authorize="!hasAnyRole('ADMIN','SMS')">
+                                            <option th:each="ubs : ${basicHealthUnits}" th:value="${ubs.id}"
+                                                th:text="${ubs.name}" th:selected="${ubs.id == selectedUBS}">
+                                            </option>
+                                        </select>
+                                        <!-- Hidden input para garantir submissão do valor nos requests HTMX -->
+                                        <input type="hidden" th:name="basicHealthUnit" th:value="${selectedUBS}"
+                                               sec:authorize="!hasAnyRole('ADMIN','SMS')"/>
                                     </div>
                                     <div class="flex flex-col w-full">
                                         <label class="text-sm" for="specialty">Especialidade:</label>

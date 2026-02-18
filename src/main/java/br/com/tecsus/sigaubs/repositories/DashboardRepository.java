@@ -1,7 +1,9 @@
 package br.com.tecsus.sigaubs.repositories;
 
 import br.com.tecsus.sigaubs.dtos.*;
+import br.com.tecsus.sigaubs.enums.AppointmentStatus;
 import br.com.tecsus.sigaubs.enums.Priorities;
+import br.com.tecsus.sigaubs.enums.ProcedureType;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import org.springframework.stereotype.Repository;
@@ -175,5 +177,75 @@ public class DashboardRepository {
 
                 Object result = em.createNativeQuery(sql).getSingleResult();
                 return ((Number) result).longValue();
+        }
+
+        /**
+         * Retorna resumo de indicadores de uma UBS específica.
+         */
+        @SuppressWarnings("unchecked")
+        public Object[] findUBSSummaryByUbsId(Long ubsId) {
+
+                String sql = """
+                                SELECT
+                                    bhu.name,
+                                    (SELECT COUNT(a.id) FROM appointments a
+                                     JOIN patients p ON a.id_patient = p.id
+                                     WHERE p.id_basic_health_unit = :ubsId
+                                     AND a.status = 'Aguardando Contemplação') AS total_open,
+                                    (SELECT COUNT(c.id) FROM contemplations c
+                                     JOIN medical_slots ms ON c.id_available_medical_slot = ms.id
+                                     WHERE ms.id_basic_health_unit = :ubsId
+                                     AND MONTH(ms.reference_month) = MONTH(NOW())
+                                     AND YEAR(ms.reference_month) = YEAR(NOW())) AS total_contemplated,
+                                    (SELECT COUNT(p.id) FROM patients p
+                                     WHERE p.id_basic_health_unit = :ubsId) AS total_patients
+                                FROM basic_health_units bhu
+                                WHERE bhu.id = :ubsId
+                                """;
+
+                List<Object[]> results = em.createNativeQuery(sql)
+                                .setParameter("ubsId", ubsId)
+                                .getResultList();
+
+                return results.isEmpty() ? null : results.get(0);
+        }
+
+        /**
+         * Retorna pacientes contemplados no mês corrente para uma UBS.
+         */
+        @SuppressWarnings("unchecked")
+        public List<ContemplatedPatientRowDTO> findContemplatedPatientsByUbsThisMonth(Long ubsId) {
+
+                String sql = """
+                                SELECT
+                                    p.name,
+                                    s.title,
+                                    mp.type,
+                                    mp.description,
+                                    a.status
+                                FROM contemplations c
+                                JOIN medical_slots ms   ON c.id_available_medical_slot = ms.id
+                                JOIN medical_procedures mp ON ms.id_medical_procedure = mp.id
+                                JOIN specialties s         ON mp.id_specialty = s.id
+                                JOIN appointments a        ON a.id_contemplation = c.id
+                                JOIN patients p            ON a.id_patient = p.id
+                                WHERE ms.id_basic_health_unit = :ubsId
+                                  AND MONTH(ms.reference_month) = MONTH(NOW())
+                                  AND YEAR(ms.reference_month) = YEAR(NOW())
+                                ORDER BY c.contemplation_date DESC
+                                """;
+
+                List<Object[]> results = em.createNativeQuery(sql)
+                                .setParameter("ubsId", ubsId)
+                                .getResultList();
+
+                return results.stream()
+                                .map(row -> new ContemplatedPatientRowDTO(
+                                                (String) row[0],
+                                                (String) row[1],
+                                                ProcedureType.valueOf((String) row[2]),
+                                                (String) row[3],
+                                                AppointmentStatus.getByDescription((String) row[4])))
+                                .toList();
         }
 }

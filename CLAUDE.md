@@ -8,15 +8,15 @@ SIGA-UBS is a Brazilian healthcare management system for Basic Health Units (UBS
 
 ## Build & Run Commands
 
-**Backend (Maven + Spring Boot 3.3.4, Java 17):**
+**Backend (Maven + Spring Boot 3.3.4, Java 21):**
 ```bash
 ./mvnw spring-boot:run              # Run with dev profile (default)
 ./mvnw clean package                # Build JAR (output: SCCUBS-0.0.1-SNAPSHOT-dev.jar)
-./mvnw test                         # Run all tests
+./mvnw test                         # Run all tests (most are @Disabled, require MySQL)
 ./mvnw test -Dtest=TestClassName    # Run a single test class
 ```
 
-**Frontend (Tailwind CSS):**
+**Frontend (Tailwind CSS via PostCSS):**
 ```bash
 npm run watch:postcss    # Watch mode - rebuilds CSS on changes (use during development)
 npm run build:postcss    # One-time CSS build (minified)
@@ -28,13 +28,15 @@ Both the Spring Boot app and `npm run watch:postcss` need to run simultaneously 
 
 MySQL on `localhost:3306/sigaubs`. Dev credentials: `root/root` (overridable via `PASSWORD` env var). Schema DDL in `src/main/resources/database.sql`, seed data in `src/main/resources/inserts.sql`.
 
+The only existing test (`SccubsApplicationTests`) is `@Disabled` with a note that it requires a live MySQL connection to run.
+
 ## Architecture
 
 Base package: `br.com.tecsus.sigaubs`. Standard Spring MVC layered architecture with server-side rendered Thymeleaf templates:
 
 - **`controllers/`** - Spring MVC controllers returning Thymeleaf views. Several are `@SessionScope` (e.g. `AppointmentController`, `QueueController`) to preserve state across requests within a user session.
 - **`services/`** - Business logic with `@Transactional` boundaries. `SystemUserService` also implements `UserDetailsService`.
-- **`repositories/`** - Spring Data JPA repositories. Complex queries use a custom repository pattern: interface `FooRepositoryCustom` + implementation `repositories/Impl/FooRepositoryCustomImpl` extending `JpaContext`/`EntityManager` directly.
+- **`repositories/`** - Spring Data JPA repositories. Complex queries use a custom repository pattern: interface `FooRepositoryCustom` + implementation `repositories/Impl/FooRepositoryCustomImpl` using `EntityManager` directly.
 - **`entities/`** - JPA entities with Lombok `@Getter`/`@Setter` and `@DynamicUpdate`. Uses custom `AttributeConverter` classes for enums (`SocialSituationAttrConverter`, `PriorityConverter`, `AppointmentStatusConverter`, `YearMonthDateAttributeConverter`).
 - **`dtos/`** - Data transfer objects for view/query projections (Java records).
 - **`enums/`** - Domain enumerations (`Priorities`, `AppointmentStatus`, `ProcedureType`, `Roles`, `SocialSituationRating`, etc.).
@@ -42,7 +44,7 @@ Base package: `br.com.tecsus.sigaubs`. Standard Spring MVC layered architecture 
 - **`jobs/`** - Scheduled tasks. `ContemplationScheduleV2` is the **active** contemplation routine (`ContemplationSchedule` is the old/inactive version). Cron configurable via `schedule.cron.contemplation` property (default: daily at midnight). Uses Spring Retry (max 4 attempts, 5s backoff).
 - **`utils/`** - `ContemplationScheduleStatus` tracks job state globally (static fields). `DefaultValues` holds domain constants (e.g. `QUATRO_MESES = 4`).
 
-**Frontend stack:** Thymeleaf + Tailwind CSS + Alpine.js + ApexCharts. Templates in `src/main/resources/templates/` with reusable fragments in `templates/fragments/`. Controllers return partial fragments for AJAX-style updates using the Thymeleaf fragment selector syntax (e.g. `return "someTemplate :: fragmentName"`). HTML forms use PUT/DELETE via `spring.mvc.hiddenmethod.filter.enabled=true`.
+**Frontend stack:** Thymeleaf + Tailwind CSS + Alpine.js + ApexCharts. Templates in `src/main/resources/templates/` organized as `xyzManagement/xyzFragments/fragment-name.html`. Reusable layout fragments are in `templates/fragments/` (header, sidebar, footer, template, dialogs). Controllers return partial fragments for AJAX-style updates using the Thymeleaf fragment selector syntax (e.g. `return "someTemplate :: fragmentName"`). HTML forms use PUT/DELETE via `spring.mvc.hiddenmethod.filter.enabled=true`.
 
 ## Key Domain Model
 
@@ -51,29 +53,32 @@ Specialty --(1:N)--> MedicalProcedure (types: CONSULTA, EXAME, CIRURGIA)
 BasicHealthUnit --(1:N)--> Patient
 BasicHealthUnit --(1:N)--> SystemUser
 Patient --(1:1)--> Appointment --(1:1)--> MedicalProcedure
+Appointment --(1:N)--> AppointmentStatusHistory
 Appointment --(1:1)--> Contemplation --(N:1)--> MedicalSlot
 MedicalSlot --(1:1)--> MedicalProcedure, BasicHealthUnit
 ```
 
 ## Contemplation Priority Logic
 
-The contemplation routine selects patients from the waiting queue ordered by these tiebreaker rules (in order):
+The contemplation routine (`ContemplationScheduleV2`) selects patients from the waiting queue ordered by these tiebreaker rules (in order):
 
-1. Appointments older than 4 months (`MAIS_DE_QUATRO_MESES`)
+1. Appointments older than 4 months (`MAIS_DE_QUATRO_MESES`, value=1)
 2. Manual priority value (lower `Priorities.value` = higher priority: `URGENCIA=2`, `RETORNO=3`, `PRIORITARIO=4`, `ELETIVO=8`)
-3. Patient age (older patients first, `birthDate ASC`)
-4. Social situation rating
-5. Appointment request date (FIFO)
+3. Patient age (older patients first, `birthDate ASC`) → `IDADE`
+4. Social situation rating → `SITUACAO_SOCIAL`
+5. Gender (Feminino before Masculino) → `SEXO`
+6. Appointment request date (FIFO) → `DATA_DA_MARCACAO`
 
-The `contemplatedBy` field on `Contemplation` records which rule was the deciding factor.
+The `contemplatedBy` field on `Contemplation` records which rule was the deciding factor. Admin-initiated contemplations use `Priorities.ADMINISTRATIVO` (value=9).
 
 ## Important Configuration Notes
 
-- `spring.jpa.open-in-view=false` - Entities must not be lazily loaded outside transactions. Use entity graphs or DTOs.
+- `spring.jpa.open-in-view=false` — Entities must not be lazily loaded outside transactions. Use entity graphs or DTOs.
 - Hibernate batch size is 50 for bulk operations.
 - HikariCP pool: max 40 connections, `READ_COMMITTED` isolation, auto-commit disabled.
-- Active Spring profile is `dev` by default (`application.properties` → `application-dev.properties`).
+- Active Spring profile is `dev` by default (`application.properties` → `application-dev.properties`). Also has `prd` and `railway` profiles.
 - Virtual threads enabled (`spring.threads.virtual.enabled=true`).
+- Static resources (JS/CSS) use content-based versioning in dev profile.
 
 ## Language
 

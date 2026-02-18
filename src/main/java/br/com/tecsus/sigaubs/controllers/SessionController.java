@@ -43,8 +43,18 @@ public class SessionController {
     }
 
     @GetMapping("/")
-    public String getHomePage(Model model) {
-        model.addAttribute("dashboard", dashboardService.loadDashboardData());
+    public String getHomePage(Model model, @AuthenticationPrincipal SystemUserDetails loggedUser) {
+        boolean isAdminOrSms = loggedUser.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN") || a.getAuthority().equals("ROLE_SMS"));
+
+        if (isAdminOrSms) {
+            model.addAttribute("dashboard", dashboardService.loadDashboardData());
+        } else {
+            Long ubsId = loggedUser.getBasicHealthUnitId();
+            if (ubsId != null) {
+                model.addAttribute("ubsDashboard", dashboardService.loadUBSDashboardData(ubsId));
+            }
+        }
         return "home";
     }
 

@@ -40,6 +40,24 @@ public class DashboardService {
                 contemplationStatus);
     }
 
+    @Transactional(readOnly = true)
+    public UBSDashboardDTO loadUBSDashboardData(Long ubsId) {
+
+        Object[] summary = dashboardRepository.findUBSSummaryByUbsId(ubsId);
+        List<ContemplatedPatientRowDTO> rows = dashboardRepository.findContemplatedPatientsByUbsThisMonth(ubsId);
+
+        if (summary == null) {
+            return null;
+        }
+
+        return new UBSDashboardDTO(
+                (String) summary[0],
+                ((Number) summary[1]).longValue(),
+                ((Number) summary[2]).longValue(),
+                ((Number) summary[3]).longValue(),
+                rows);
+    }
+
     private ContemplationStatusDTO buildContemplationStatus() {
 
         String status = ContemplationScheduleStatus.status != null

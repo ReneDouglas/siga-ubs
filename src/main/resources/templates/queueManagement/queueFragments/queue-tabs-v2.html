@@ -18,7 +18,8 @@
                 <th class="text-sm pl-4">Sexo</th>
                 <th class="text-sm pl-4">UBS</th>
                 <th class="text-sm pl-4">Marcação</th>
-                <th class="text-sm rounded-r-lg py-2 px-4">Ações</th>
+                <th class="text-sm rounded-r-lg py-2 px-4"
+                    sec:authorize="hasAnyRole('ADMIN','SMS')">Ações</th>
             </tr>
             </thead>
             <tbody>
@@ -34,7 +35,8 @@
                 <td class="border-b text-sm pl-4" th:text="${queue.patientGender}"></td>
                 <td class="border-b text-sm pl-4" th:text="${queue.ubsName}"></td>
                 <td class="border-b text-sm pl-4" th:text="${queue.procedureType.getDescription().equals('Consulta') ? 'Consulta'+' ['+ queue.specialty +']' : queue.medicalProcedureDescription}"></td>
-                <td class="border-b text-sm py-2 px-4">
+                <td class="border-b text-sm py-2 px-4"
+                    sec:authorize="hasAnyRole('ADMIN','SMS')">
                     <div class="relative group">
                         <a th:attrappend="hx-get=@{/queue-management/v2/{id}/load(id = ${queue.appointmentId}, ubs = ${selectedUBS}, specialty = ${selectedSpecialty}, medicalProcedure = ${selectedMedicalProcedure}, procedureType = ${selectedProcedureType})}"
                            hx-target="#patientAppointment-modal"

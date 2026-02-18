@@ -28,7 +28,7 @@
             </a>
 
             <!--Queue Item-->
-            <a  th:href="@{/queue-management/v2}" sec:authorize="hasAnyRole('ADMIN','SMS')" class="text-sm inline-flex flex-nowrap items-center p-2.5 gap-x-2 tracking-wide rounded-lg text-white hover:bg-white hover:text-slate-900 overflow-hidden flex-shrink-0 min-h-10">
+            <a  th:href="@{/queue-management/v2}" class="text-sm inline-flex flex-nowrap items-center p-2.5 gap-x-2 tracking-wide rounded-lg text-white hover:bg-white hover:text-slate-900 overflow-hidden flex-shrink-0 min-h-10">
                 <span class="material-symbols-outlined inline-block align-middle hover:text-amber-500">patient_list</span>
                 <span :class="open ? 'block' : 'hidden'" class="text-nowrap">Filas de Espera</span>
             </a>
