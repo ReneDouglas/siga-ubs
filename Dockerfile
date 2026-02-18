@@ -1,7 +1,7 @@
 # =============================================================================
 # Stage 1 — build: Node.js + Maven
 # =============================================================================
-FROM eclipse-temurin:25-jdk-jammy AS builder
+FROM eclipse-temurin:21-jdk-jammy AS builder
 
 # Instalar Node.js 20.x
 RUN apt-get update && apt-get install -y --no-install-recommends curl \
@@ -36,7 +36,7 @@ RUN ./mvnw package -DskipTests -B
 # =============================================================================
 # Stage 2 — runtime: JRE slim
 # =============================================================================
-FROM eclipse-temurin:25-jre-jammy AS runtime
+FROM eclipse-temurin:21-jre-jammy AS runtime
 
 RUN groupadd --system sigaubs && useradd --system --gid sigaubs sigaubs
 
