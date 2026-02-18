@@ -7,51 +7,49 @@
 </head>
 <body>
     <div th:fragment="patientHistory-details" class="p-4">
-        <h3 class="text-xl font-semibold text-gray-800 mb-4">Outros agendamentos em aberto</h3>
+        <h3 class="text-sm font-semibold text-slate-800 mb-4">Outros agendamentos em aberto</h3>
 
-        <div class=" max-h-[400px] overflow-y-auto overflow-x-auto shadow-md rounded-lg">
+        <div class="max-h-[400px] overflow-y-auto overflow-x-auto rounded-lg">
             <table class="min-w-full bg-white">
-                <thead class="bg-gray-100">
-                <tr>
-                    <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Data da Requisição</th>
-                    <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Prioridade</th>
-                    <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Marcação</th>
-                    <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Especialidade</th>
-                    <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Procedimento</th>
-                    <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Ações</th>
+                <thead class="font-light text-sm text-slate-600 text-left tracking-wide">
+                <tr class="bg-slate-200">
+                    <th class="text-sm rounded-l-lg py-2 px-4">Data da Requisição</th>
+                    <th class="text-sm pl-4">Prioridade</th>
+                    <th class="text-sm pl-4">Marcação</th>
+                    <th class="text-sm pl-4">Especialidade</th>
+                    <th class="text-sm pl-4">Procedimento</th>
+                    <th class="text-sm rounded-r-lg py-2 px-4">Ações</th>
                 </tr>
                 </thead>
-                <tbody class="divide-y divide-gray-200">
-                <tr th:if="${#lists.isEmpty(patientOpenAppointments)}" class="hover:bg-gray-50">
-                    <td colspan="6" class="px-6 py-8 text-center text-gray-500">
+                <tbody>
+                <tr th:if="${#lists.isEmpty(patientOpenAppointments)}"
+                    class="overflow-hidden border-slate-200 text-slate-600 w-full hover:bg-slate-50">
+                    <td colspan="6" class="border-b text-sm py-8 px-4 text-center text-slate-500">
                         Nenhum agendamento em aberto encontrado.
                     </td>
                 </tr>
-                <tr th:each="openAppt : ${patientOpenAppointments}" class="hover:bg-gray-50 transition-colors">
-                    <td class="px-6 py-4 text-sm text-gray-700 whitespace-nowrap"
+                <tr th:each="openAppt : ${patientOpenAppointments}"
+                    class="overflow-hidden border-slate-200 text-slate-600 w-full hover:bg-slate-50 active:bg-slate-200">
+                    <td class="border-b text-sm py-2 px-4"
                         th:text="${openAppt.formattedRequestDate()}"></td>
-                    <td class="px-6 py-4 text-sm text-gray-700 whitespace-nowrap"
+                    <td class="border-b text-sm pl-4"
                         th:text="${openAppt.priority().getDescription()}"></td>
-                    <td class="px-6 py-4 text-sm text-gray-700 whitespace-nowrap"
+                    <td class="border-b text-sm pl-4"
                         th:text="${openAppt.procedureType().getDescription()}"></td>
-                    <td class="px-6 py-4 text-sm text-gray-700 whitespace-nowrap"
+                    <td class="border-b text-sm pl-4"
                         th:text="${openAppt.specialty()}"></td>
-                    <td class="px-6 py-4 text-sm text-gray-700 whitespace-nowrap"
+                    <td class="border-b text-sm pl-4"
                         th:text="${openAppt.medicalProcedureDescription()}"></td>
-                    <td class="px-6 py-4 whitespace-nowrap">
-                        <div class="flex gap-2">
-<!--                            <form th:action="@{/appointment-management/{id}/cancel(id=${openAppt.appointmentId}, patientId=${openAppt.patientId})}"-->
-<!--                                  th:method="put">-->
-<!--                                <button procedureType="submit"-->
-<!--                                        class="px-3 py-1.5 bg-red-600 text-white text-sm font-medium rounded hover:bg-red-500 focus:outline-none focus:ring-2 focus:ring-red-400 focus:ring-offset-2 transition-colors">-->
-<!--                                    Cancelar-->
-<!--                                </button>-->
-<!--                            </form>-->
+                    <td class="border-b text-sm py-2 px-4">
+                        <div class="relative group">
                             <button type="button"
                                     th:onclick="openModal([[${openAppt.observations()}]])"
-                                    class="px-3 py-1.5 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 transition-colors">
-                                Observações
+                                    class="inline-flex p-2 rounded-lg hover:bg-slate-200 cursor-pointer transition duration-300">
+                                <span class="material-symbols-outlined hover:text-blue-500">description</span>
                             </button>
+                            <div class="absolute right-full top-1/2 transform -translate-y-1/2 -translate-x-1 hidden group-hover:block bg-slate-800 text-white text-sm rounded px-2 py-1 whitespace-nowrap">
+                                Observações
+                            </div>
                         </div>
                     </td>
                 </tr>
@@ -59,6 +57,6 @@
             </table>
         </div>
     </div>
-    
+
 </body>
 </html>

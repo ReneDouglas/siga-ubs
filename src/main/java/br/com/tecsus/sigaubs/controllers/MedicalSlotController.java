@@ -3,6 +3,7 @@ package br.com.tecsus.sigaubs.controllers;
 import br.com.tecsus.sigaubs.dtos.AvailableMedicalSlotsFormDTO;
 import br.com.tecsus.sigaubs.entities.MedicalProcedure;
 import br.com.tecsus.sigaubs.entities.MedicalSlot;
+import br.com.tecsus.sigaubs.entities.BasicHealthUnit;
 import br.com.tecsus.sigaubs.enums.ProcedureType;
 import br.com.tecsus.sigaubs.security.SystemUserDetails;
 import br.com.tecsus.sigaubs.services.AppointmentService;
@@ -35,7 +36,8 @@ public class MedicalSlotController {
     private final AppointmentService appointmentService;
     private AvailableMedicalSlotsFormDTO availableMedicalSlotsFormDTO;
 
-    public MedicalSlotController(BasicHealthUnitService basicHealthUnitService, SpecialtyService specialtyService, MedicalSlotService medicalSlotService, AppointmentService appointmentService) {
+    public MedicalSlotController(BasicHealthUnitService basicHealthUnitService, SpecialtyService specialtyService,
+            MedicalSlotService medicalSlotService, AppointmentService appointmentService) {
         this.basicHealthUnitService = basicHealthUnitService;
         this.specialtyService = specialtyService;
         this.medicalSlotService = medicalSlotService;
@@ -50,7 +52,8 @@ public class MedicalSlotController {
 
         model.addAttribute("basicHealthUnits", basicHealthUnitService.findAllUBS());
         model.addAttribute("specialties", specialtyService.findSpecialties());
-        model.addAttribute("medicalSlotsPage", medicalSlotService.findMedicalSlotsPaginated(PageRequest.of(0, DefaultValues.PAGE_SIZE)));
+        model.addAttribute("medicalSlotsPage",
+                medicalSlotService.findMedicalSlotsPaginated(PageRequest.of(0, DefaultValues.PAGE_SIZE)));
 
         return "medicalSlotManagement/medicalSlot-management";
     }
@@ -58,11 +61,18 @@ public class MedicalSlotController {
     @PreAuthorize("hasAnyRole('ADMIN', 'SMS')")
     @PostMapping("/medicalSlot-management/slots/add")
     public String addAvailableMedicalSlotsRow(@ModelAttribute MedicalSlot availableMedicalSlot,
-                                              Model model) {
+            Model model) {
 
         if (availableMedicalSlotsFormDTO == null) {
             this.availableMedicalSlotsFormDTO = new AvailableMedicalSlotsFormDTO();
         }
+
+        BasicHealthUnit bhu = basicHealthUnitService
+                .findSystemUserUBS(availableMedicalSlot.getBasicHealthUnit().getId());
+        availableMedicalSlot.setBasicHealthUnit(bhu);
+
+        availableMedicalSlot = basicHealthUnitService.getFetchedAssociations(availableMedicalSlot);
+
         this.availableMedicalSlotsFormDTO.addRow(availableMedicalSlot);
         model.addAttribute("availableMedicalSlotsForm", availableMedicalSlotsFormDTO);
 
@@ -72,9 +82,10 @@ public class MedicalSlotController {
 
     @PreAuthorize("hasAnyRole('ADMIN', 'SMS')")
     @PostMapping("/medicalSlot-management/slots/create")
-    public String registerAvailableMedicalSlots(@ModelAttribute AvailableMedicalSlotsFormDTO availableMedicalSlotsFormDTO,
-                                                @AuthenticationPrincipal SystemUserDetails loggedUser,
-                                                RedirectAttributes redirectAttributes) {
+    public String registerAvailableMedicalSlots(
+            @ModelAttribute AvailableMedicalSlotsFormDTO availableMedicalSlotsFormDTO,
+            @AuthenticationPrincipal SystemUserDetails loggedUser,
+            RedirectAttributes redirectAttributes) {
 
         try {
             medicalSlotService.registerAvailableMedicalSlotsBatch(availableMedicalSlotsFormDTO, loggedUser);
@@ -94,7 +105,7 @@ public class MedicalSlotController {
     @PreAuthorize("hasAnyRole('ADMIN', 'SMS')")
     @GetMapping("/medicalSlot-management/slots/{index}/remove")
     public String removeRowtByIndex(@PathVariable int index,
-                                    Model model) {
+            Model model) {
         this.availableMedicalSlotsFormDTO.removeRow(index);
         model.addAttribute("availableMedicalSlotsForm", this.availableMedicalSlotsFormDTO);
         return "medicalSlotManagement/medicalSlotFragments/availableMedicalSlotsForm :: availableMedicalSlotsFormTable";
@@ -103,25 +114,27 @@ public class MedicalSlotController {
     @PreAuthorize("hasAnyRole('ADMIN', 'SMS')")
     @GetMapping("/medicalSlot-management/paginated")
     public String getMedicalSlotsPaginated(Model model,
-                                           @RequestParam(value = "page", defaultValue = "0", required = false) int currentPage,
-                                           @RequestParam(value = "pageSize", defaultValue = "" + DefaultValues.PAGE_SIZE, required = false) int pageSize) {
+            @RequestParam(value = "page", defaultValue = "0", required = false) int currentPage,
+            @RequestParam(value = "pageSize", defaultValue = ""
+                    + DefaultValues.PAGE_SIZE, required = false) int pageSize) {
 
-        model.addAttribute("medicalSlotsPage", medicalSlotService.findMedicalSlotsPaginated(PageRequest.of(currentPage, pageSize)));
+        model.addAttribute("medicalSlotsPage",
+                medicalSlotService.findMedicalSlotsPaginated(PageRequest.of(currentPage, pageSize)));
         return "medicalSlotManagement/medicalSlotFragments/medicalSlot-datatable :: medicalSlotsDatatable";
     }
 
     @PreAuthorize("hasAnyRole('ADMIN', 'SMS')")
     @GetMapping(value = "/medicalSlot-management/procedures", produces = MediaType.TEXT_HTML_VALUE)
     public String loadProcedure(@RequestParam("procedureType") String procedureType,
-                                @RequestParam("specialty") Long specialtyId,
-                                Model model) {
+            @RequestParam("specialty") Long specialtyId,
+            Model model) {
 
         List<MedicalProcedure> procedures;
 
         if (procedureType.equals(ProcedureType.CONSULTA.toString())) {
             procedures = appointmentService.findBySpecialtyIdAndProcedureType(specialtyId, ProcedureType.CONSULTA);
             model.addAttribute("isConsultation", true);
-        } else if (procedureType.equals(ProcedureType.EXAME.toString())){
+        } else if (procedureType.equals(ProcedureType.EXAME.toString())) {
             procedures = appointmentService.findBySpecialtyIdAndProcedureType(specialtyId, ProcedureType.EXAME);
         } else {
             procedures = appointmentService.findBySpecialtyIdAndProcedureType(specialtyId, ProcedureType.CIRURGIA);

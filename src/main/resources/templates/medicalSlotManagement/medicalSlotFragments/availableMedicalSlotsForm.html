@@ -10,53 +10,58 @@
           th:action="@{/medicalSlot-management/slots/create}"
           method="post"
           class="mt-4">
-        <table class="min-w-full bg-white divide-y divide-gray-200 table-fixed">
-            <thead class="bg-gray-50">
-            <tr class="bg-gray-700 text-white">
-                <th class="px-4 py-2 text-left text-sm font-medium uppercase tracking-wider">Mês Ref.</th>
-                <th class="px-4 py-2 text-left text-sm font-medium uppercase tracking-wider">Vagas</th>
-                <th class="px-4 py-2 text-left text-sm font-medium uppercase tracking-wider">Especialidade</th>
-                <th class="px-4 py-2 text-left text-sm font-medium uppercase tracking-wider">Marcação</th>
-                <th class="px-4 py-2 text-left text-sm font-medium uppercase tracking-wider">Procedimento</th>
-                <th class="px-4 py-2 text-left text-sm font-medium uppercase tracking-wider">UBS</th>
-                <th class="px-4 py-2 text-left text-sm font-medium uppercase tracking-wider">Ações</th>
+        <div class="overflow-x-auto">
+        <table class="min-w-full bg-white">
+            <thead class="font-light text-sm text-slate-600 text-left tracking-wide">
+            <tr class="bg-slate-200">
+                <th class="text-sm rounded-l-lg py-2 px-4">Mês Ref.</th>
+                <th class="text-sm pl-4">Vagas</th>
+                <th class="text-sm pl-4">Especialidade</th>
+                <th class="text-sm pl-4">Marcação</th>
+                <th class="text-sm pl-4">Procedimento</th>
+                <th class="text-sm pl-4">UBS</th>
+                <th class="text-sm rounded-r-lg py-2 px-4">Ações</th>
             </tr>
             </thead>
-            <tbody class="divide-y divide-gray-200">
+            <tbody>
             <tr th:each="row, itemStat : ${availableMedicalSlotsForm.availableMedicalSlots}"
-                class="hover:bg-gray-200 transition-colors duration-200">
-                <td class="px-4 py-2 text-gray-700" th:text="${#temporals.monthNameShort(row.referenceMonth)}"></td>
-                <td class="px-4 py-2 text-gray-700 text-center" th:text="${row.totalSlots}"></td>
-                <td class="px-4 py-2 text-gray-700" th:text="${row.medicalProcedure.specialty.title}"></td>
-                <td class="px-4 py-2 text-gray-700" th:text="${row.medicalProcedure.procedureType.description}"></td>
-                <td class="px-4 py-2 text-gray-700" th:text="${row.medicalProcedure.description}"></td>
-                <td class="px-4 py-2 text-gray-700" th:text="${row.basicHealthUnit.name}"></td>
-                <td td style="display:none;">
+                class="overflow-hidden border-slate-200 text-slate-600 w-full hover:bg-slate-50 active:bg-slate-200">
+                <td class="border-b text-sm py-2 px-4" th:text="${#temporals.monthNameShort(row.referenceMonth)}"></td>
+                <td class="border-b text-sm pl-4 text-center" th:text="${row.totalSlots}"></td>
+                <td class="border-b text-sm pl-4" th:text="${row.medicalProcedure.specialty.title}"></td>
+                <td class="border-b text-sm pl-4" th:text="${row.medicalProcedure.procedureType.description}"></td>
+                <td class="border-b text-sm pl-4" th:text="${row.medicalProcedure.description}"></td>
+                <td class="border-b text-sm pl-4" th:text="${row.basicHealthUnit.name}"></td>
+                <td style="display:none;">
                     <input type="hidden" th:name="|availableMedicalSlots[${itemStat.index}].referenceMonth|" th:value="${row.referenceMonth}">
                 </td>
-                <td td style="display:none;">
+                <td style="display:none;">
                     <input type="hidden" th:name="|availableMedicalSlots[${itemStat.index}].totalSlots|" th:value="${row.totalSlots}">
                 </td>
-                <td td style="display:none;">
+                <td style="display:none;">
                     <input type="hidden" th:name="|availableMedicalSlots[${itemStat.index}].medicalProcedure.id|" th:value="${row.medicalProcedure.id}">
                 </td>
-                <td td style="display:none;">
+                <td style="display:none;">
                     <input type="hidden" th:name="|availableMedicalSlots[${itemStat.index}].basicHealthUnit.id|" th:value="${row.basicHealthUnit.id}">
                 </td>
-                <td class="px-4 py-2 text-gray-700">
-                    <a th:attrappend="hx-get=@{/medicalSlot-management/slots/{index}/remove(index = ${itemStat.index})}"
-                       hx-target="#availableMedicalSlotsFormTable"
-                       hx-swap="outerHTML"
-                       href=""
-                       class="flex items-center bg-red-500 text-white px-2 py-1 rounded-md hover:bg-red-400 focus:outline-none transition-colors duration-300">
-                        <div class="flex items-center w-full">
-                            <span class="material-symbols-outlined px-2">delete</span>
+                <td class="border-b text-sm py-2 px-4">
+                    <div class="relative group">
+                        <a th:attrappend="hx-get=@{/medicalSlot-management/slots/{index}/remove(index = ${itemStat.index})}"
+                           hx-target="#availableMedicalSlotsFormTable"
+                           hx-swap="outerHTML"
+                           href=""
+                           class="inline-flex p-2 rounded-lg hover:bg-slate-200 cursor-pointer transition duration-300">
+                            <span class="material-symbols-outlined hover:text-red-500">delete</span>
+                        </a>
+                        <div class="absolute right-full top-1/2 transform -translate-y-1/2 -translate-x-1 hidden group-hover:block bg-slate-800 text-white text-sm rounded px-2 py-1">
+                            Remover
                         </div>
-                    </a>
+                    </div>
                 </td>
             </tr>
             </tbody>
         </table>
+        </div>
     </form>
 </body>
 </html>

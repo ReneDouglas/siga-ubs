@@ -4,68 +4,73 @@
       xmlns:sec="https://www.thymeleaf.org/thymeleaf-extras-springsecurity6">
 <body>
 
-    <div id="queue-datatable" th:fragment="queue-datatable" class="tab-content p-4 bg-gray-100">
-        <table class="min-w-full bg-white divide-y divide-gray-200">
-            <thead class="bg-gray-50">
-            <tr class="bg-gray-700 text-white">
-                <th class="px-4 py-2 text-left text-sm font-medium uppercase tracking-wider">N.</th>
-                <th class="px-4 py-2 text-left text-sm font-medium uppercase tracking-wider">Paciente</th>
-                <th class="px-4 py-2 text-left text-sm font-medium uppercase tracking-wider">Agendamento</th>
-                <th class="px-4 py-2 text-left text-sm font-medium uppercase tracking-wider">Prioridade</th>
-                <th class="px-4 py-2 text-left text-sm font-medium uppercase tracking-wider">Idade</th>
-                <th class="px-4 py-2 text-left text-sm font-medium uppercase tracking-wider">Situação Social</th>
-                <th class="px-4 py-2 text-left text-sm font-medium uppercase tracking-wider">Sexo</th>
-                <th class="px-4 py-2 text-left text-sm font-medium uppercase tracking-wider">UBS</th>
-                <th class="px-4 py-2 text-left text-sm font-medium uppercase tracking-wider">Marcação</th>
-                <th class="px-4 py-2 text-left text-sm font-medium uppercase tracking-wider">Ações</th>
+    <div id="queue-datatable" th:fragment="queue-datatable" class="tab-content mt-4">
+        <div class="overflow-x-auto">
+        <table class="min-w-full bg-white">
+            <thead class="font-light text-sm text-slate-600 text-left tracking-wide">
+            <tr class="bg-slate-200">
+                <th class="text-sm rounded-l-lg py-2 px-4">N.</th>
+                <th class="text-sm pl-4">Paciente</th>
+                <th class="text-sm pl-4">Agendamento</th>
+                <th class="text-sm pl-4">Prioridade</th>
+                <th class="text-sm pl-4">Idade</th>
+                <th class="text-sm pl-4">Situação Social</th>
+                <th class="text-sm pl-4">Sexo</th>
+                <th class="text-sm pl-4">UBS</th>
+                <th class="text-sm pl-4">Marcação</th>
+                <th class="text-sm rounded-r-lg py-2 px-4">Ações</th>
             </tr>
             </thead>
-            <tbody class="divide-y divide-gray-200">
-            <tr th:each="queue, iStat : ${queuePage}">
-                <td class="px-4 py-2 text-gray-700"
+            <tbody>
+            <tr th:each="queue, iStat : ${queuePage}"
+                class="overflow-hidden border-slate-200 text-slate-600 w-full hover:bg-slate-50 active:bg-slate-200">
+                <td class="border-b text-sm py-2 px-4"
                     th:text="${queuePage.number eq 0 ? iStat.index + 1 : (iStat.index + 1) + (queuePage.number * queuePage.size)}"></td>
-                <td class="px-4 py-2 text-gray-700" th:text="${queue.patientName}"></td>
-                <td class="px-4 py-2 text-gray-700" th:text="${#temporals.format(queue.requestDate, 'dd/MM/yyyy HH:mm:ss')}"></td>
-                <td class="px-4 py-2 text-gray-700" th:text="${queue.priority.getDescription()}"></td>
-                <td class="px-4 py-2 text-gray-700" th:text="${queue.getBirthDateWithAge()}"></td>
-                <td class="px-4 py-2 text-gray-700" th:text="${queue.patientSocialSituationRating.getDescription()}"></td>
-                <td class="px-4 py-2 text-gray-700" th:text="${queue.patientGender}"></td>
-                <td class="px-4 py-2 text-gray-700" th:text="${queue.ubsName}"></td>
-                <td class="px-4 py-2 text-gray-700" th:text="${queue.procedureType.getDescription().equals('Consulta') ? 'Consulta'+' ['+ queue.specialty +']' : queue.medicalProcedureDescription}"></td>
-                <td class="px-4 py-2 text-gray-700">
-                    <a th:attrappend="hx-get=@{/queue-management/v2/{id}/load(id = ${queue.appointmentId}, ubs = ${selectedUBS}, specialty = ${selectedSpecialty}, medicalProcedure = ${selectedMedicalProcedure}, procedureType = ${selectedProcedureType})}"
-                       hx-target="#patientAppointment-modal"
-                       hx-swap="outerHTML"
-                       href=""
-                       class="flex items-center bg-indigo-500 text-white px-2 py-1 rounded-md hover:bg-indigo-400 focus:outline-none transition-colors duration-300"
-                       title="Ver Detalhes">
-                        <div class="flex items-center w-full">
-                            <span class="material-symbols-outlined px-2">edit_note</span>
+                <td class="border-b text-sm pl-4" th:text="${queue.patientName}"></td>
+                <td class="border-b text-sm pl-4" th:text="${#temporals.format(queue.requestDate, 'dd/MM/yyyy HH:mm:ss')}"></td>
+                <td class="border-b text-sm pl-4" th:text="${queue.priority.getDescription()}"></td>
+                <td class="border-b text-sm pl-4" th:text="${queue.getBirthDateWithAge()}"></td>
+                <td class="border-b text-sm pl-4" th:text="${queue.patientSocialSituationRating.getDescription()}"></td>
+                <td class="border-b text-sm pl-4" th:text="${queue.patientGender}"></td>
+                <td class="border-b text-sm pl-4" th:text="${queue.ubsName}"></td>
+                <td class="border-b text-sm pl-4" th:text="${queue.procedureType.getDescription().equals('Consulta') ? 'Consulta'+' ['+ queue.specialty +']' : queue.medicalProcedureDescription}"></td>
+                <td class="border-b text-sm py-2 px-4">
+                    <div class="relative group">
+                        <a th:attrappend="hx-get=@{/queue-management/v2/{id}/load(id = ${queue.appointmentId}, ubs = ${selectedUBS}, specialty = ${selectedSpecialty}, medicalProcedure = ${selectedMedicalProcedure}, procedureType = ${selectedProcedureType})}"
+                           hx-target="#patientAppointment-modal"
+                           hx-swap="outerHTML"
+                           href=""
+                           class="inline-flex p-2 rounded-lg hover:bg-slate-200 cursor-pointer transition duration-300">
+                            <span class="material-symbols-outlined hover:text-blue-500">edit_note</span>
+                        </a>
+                        <div class="absolute right-full top-1/2 transform -translate-y-1/2 -translate-x-1 hidden group-hover:block bg-slate-800 text-white text-sm rounded px-2 py-1 whitespace-nowrap">
+                            Ver Detalhes
                         </div>
-                    </a>
+                    </div>
                 </td>
             </tr>
             </tbody>
         </table>
+        </div>
         <div id="paginationPanel" th:if="${queuePage.totalPages > 0}"
-             class="flex items-center justify-between mt-4 p-4 bg-white border border-gray-300 rounded-lg shadow-md">
-            <div class="flex items-center space-x-2">
-                <label for="size" class="text-sm font-medium text-gray-700">Linhas por página:</label>
+             class="flex flex-1 mt-4 justify-between items-center bg-white">
+            <div>
+                <label class="text-sm text-slate-500">Linhas por página:</label>
                 <select id="size" name="size"
                         th:attrappend="hx-get=@{/queue-management/v2/paginated(page = ${queuePage.number}, ubs = ${selectedUBS}, specialty = ${selectedSpecialty}, medicalProcedure = ${selectedMedicalProcedure}, procedureType = ${selectedProcedureType})}"
                         hx-target="#queue-datatable"
                         hx-indicator=".animate-pulse"
                         hx-swap="outerHTML"
-                        class="border-gray-300 rounded-md shadow-md focus:ring-gray-500 focus:border-gray-500 p-2">
+                        class="rounded-lg text-sm text-slate-500 border border-stroke py-1 outline-none focus:ring-2 hover:ring-gray-400 hover:ring-2 hover:border-white focus:border-white focus:ring-blue-500">
                     <option th:value="${10}" th:selected="${queuePage.size == 10}">10</option>
                     <option th:value="${15}" th:selected="${queuePage.size == 15}">15</option>
                     <option th:value="${30}" th:selected="${queuePage.size == 30}">30</option>
                 </select>
             </div>
-            <div class="flex items-center space-x-2">
-                <span class="text-sm font-semibold text-gray-700">Há [[${queuePage.getTotalElements()}]] paciente(s) nesta fila de espera</span>
+            <div class="flex items-center">
+                <span class="text-sm text-slate-500 mr-4">Há [[${queuePage.getTotalElements()}]] paciente(s) nesta fila de espera</span>
             </div>
-            <div class="flex items-center space-x-4">
+            <div class="flex items-center">
                 <button id="prevPage"
                         th:disabled="${!queuePage.hasPrevious()}"
                         th:attrprepend="hx-get=@{/queue-management/v2/paginated(page = ${queuePage.number - 1}, ubs = ${selectedUBS}, specialty = ${selectedSpecialty}, medicalProcedure = ${selectedMedicalProcedure}, procedureType = ${selectedProcedureType})}"
@@ -74,10 +79,10 @@
                         hx-trigger="click"
                         hx-indicator=".animate-pulse"
                         hx-swap="outerHTML"
-                        class="px-4 py-2 bg-gray-700 text-white font-semibold rounded-md shadow-md hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed focus:ring-2 focus:ring-gray-400">
-                    Anterior
+                        class="inline-flex p-2 rounded-lg bg-slate-100 hover:bg-slate-200 disabled:opacity-50 disabled:cursor-not-allowed">
+                    <span class="material-symbols-outlined">keyboard_double_arrow_left</span>
                 </button>
-                <span class="text-sm text-gray-700">
+                <span class="mx-2 text-sm text-slate-500">
                     Página <span id="currentPage" th:text="${queuePage.number + 1}">1</span> de
                     <span th:text="${queuePage.totalPages}">Muitos</span>
                 </span>
@@ -89,8 +94,8 @@
                         hx-trigger="click"
                         hx-indicator=".animate-pulse"
                         hx-swap="outerHTML"
-                        class="px-4 py-2 bg-gray-700 text-white font-semibold rounded-md shadow-md hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed focus:ring-2 focus:ring-gray-400">
-                    Próximo
+                        class="inline-flex p-2 rounded-lg bg-slate-100 hover:bg-slate-200 disabled:opacity-50 disabled:cursor-not-allowed">
+                    <span class="material-symbols-outlined">keyboard_double_arrow_right</span>
                 </button>
             </div>
         </div>

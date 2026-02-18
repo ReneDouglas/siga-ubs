@@ -5,6 +5,7 @@
 <body>
 
     <div id="consultas" th:fragment="consultas-datatable" class="tab-content p-4 bg-gray-100">
+        <div class="overflow-x-auto">
         <table class="min-w-full bg-white divide-y divide-gray-200">
             <thead class="bg-gray-50">
             <tr class="bg-gray-700 text-white">
@@ -43,6 +44,7 @@
             </tr>
             </tbody>
         </table>
+        </div>
         <div id="consultasPaginationPanel" th:if="${consultasPage.totalPages > 0}"
              class="flex items-center justify-between mt-4 p-4 bg-white border border-gray-300 rounded-lg shadow-md">
             <div class="flex items-center space-x-2">
@@ -87,6 +89,7 @@
     </div>
 
     <div id="exames" th:fragment="exames-datatable" class="tab-content p-4 bg-gray-100" th:classappend="${hide}">
+        <div class="overflow-x-auto">
         <table class="min-w-full bg-white divide-y divide-gray-200">
             <thead class="bg-gray-50">
             <tr class="bg-gray-700 text-white">
@@ -125,6 +128,7 @@
             </tr>
             </tbody>
         </table>
+        </div>
         <div id="examesPaginationPanel" th:if="${examesPage.totalPages > 0}"
              class="flex items-center justify-between mt-4 p-4 bg-white border border-gray-300 rounded-lg shadow-md">
             <div class="flex items-center space-x-2">
@@ -169,6 +173,7 @@
     </div>
 
     <div id="cirurgias" th:fragment="cirurgias-datatable" class="tab-content p-4 bg-gray-100" th:classappend="${hide}">
+        <div class="overflow-x-auto">
         <table class="min-w-full bg-white divide-y divide-gray-200">
             <thead class="bg-gray-50">
             <tr class="bg-gray-700 text-white">
@@ -207,6 +212,7 @@
             </tr>
             </tbody>
         </table>
+        </div>
         <div id="cirurgiasPaginationPanel" th:if="${cirurgiasPage.totalPages > 0}"
              class="flex items-center justify-between mt-4 p-4 bg-white border border-gray-300 rounded-lg shadow-md">
             <div class="flex items-center space-x-2">

@@ -1,116 +1,137 @@
 <!DOCTYPE html>
 <html xmlns:th="https://www.thymeleaf.org">
 <head th:replace="~{fragments/template :: head}"></head>
-<body class="flex w-full min-h-screen justify-between bg-slate-900">
+<body class="flex w-full flex-1 h-dvh justify-between items-center bg-slate-300">
     <nav th:replace="~{fragments/sidebar :: sidebar}"></nav>
-    <main class="flex flex-col w-full mx-auto bg-slate-100">
+    <main class="flex flex-col h-full w-full overflow-hidden">
         <header th:replace="~{fragments/header :: header}"></header>
 
         <th:block th:replace="~{fragments/dialogs :: confirmDialog}"></th:block>
 
-        <div class="flex flex-1 bg-slate-100 my-8 flex-col space-y-4">
-            <div class="w-full">
-                <input type="checkbox" id="panel2" class="peer hidden" th:checked="${true}">
-                <label for="panel2" class="block bg-gray-700 text-white p-4 cursor-pointer">
-                    Cadastrar Unidade Básica de Saúde
-                </label>
-                <div class="peer-checked:max-h-[2000px] max-h-0 overflow-hidden transition-max-height duration-500 ease-in-out">
-                    <div class="p-4 bg-white border border-gray-300">
-                        <form th:action="${basicHealthUnit.id == null} ? @{/basicHealthUnit-management/create} : @{/basicHealthUnit-management/update}"
+        <section class="flex flex-col flex-1 overflow-auto">
+            <div class="flex flex-col mx-4 justify-start items-center">
+
+                <!--Panel 1 - Cadastrar UBS-->
+                <div class="w-full bg-white rounded-lg mt-4">
+                    <input type="checkbox" id="panel2" class="peer hidden" th:checked="${true}">
+                    <label for="panel2"
+                           class="text-slate-200 tracking-wide block bg-slate-900 py-4 px-4 rounded-lg cursor-pointer border-2 border-slate-600 hover:bg-slate-800 hover:border-blue-500">
+                        <div class="flex items-center">
+                            <span class="material-symbols-outlined mr-4">apartment</span>Cadastrar Unidade Básica de Saúde
+                        </div>
+                    </label>
+                    <div class="flex flex-col justify-center peer-checked:max-h-full max-h-0 overflow-hidden overscroll-contain transition-max-height duration-500 ease-in-out">
+                        <form class="grid grid-flow-row grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 gap-x-4 py-4 px-4 w-full"
+                              th:action="${basicHealthUnit.id == null} ? @{/basicHealthUnit-management/create} : @{/basicHealthUnit-management/update}"
                               method="post" th:object="${basicHealthUnit}">
-                            <div>
-                                <label for="name">Nome da Unidade:</label>
-                                <input type="text" id="name" th:field="*{name}" name="name" required>
+                            <div class="flex flex-col w-full col-span-2">
+                                <label class="text-sm" for="name">Nome da Unidade:</label>
+                                <input class="text-sm w-full rounded-lg border border-stroke py-2 pl-4 mt-1 outline-none focus:ring-2 hover:ring-gray-400 hover:ring-2 hover:border-white focus:border-white focus:ring-blue-500 transition duration-200"
+                                       type="text" id="name" th:field="*{name}" name="name" required>
                             </div>
-                            <br>
-                            <div>
-                                <label for="neighborhood">Bairro:</label>
-                                <input type="text" id="neighborhood" th:field="*{neighborhood}" name="neighborhood" required>
+                            <div class="flex flex-col w-full col-span-2">
+                                <label class="text-sm" for="neighborhood">Bairro:</label>
+                                <input class="text-sm w-full rounded-lg border border-stroke py-2 pl-4 mt-1 outline-none focus:ring-2 hover:ring-gray-400 hover:ring-2 hover:border-white focus:border-white focus:ring-blue-500 transition duration-200"
+                                       type="text" id="neighborhood" th:field="*{neighborhood}" name="neighborhood" required>
                             </div>
-                            <br>
-<!--                            <div>-->
-<!--                                <label for="cityHall">Nome:</label>-->
-<!--                                <input type="text" id="cityHall" th:field="*{cityHall.name}" name="cityHall" disabled-->
-<!--                                       style="width: 300px">-->
-<!--                            </div>-->
-                            <br>
                             <input type="hidden" id="id" th:field="*{id} "/>
-                            <div>
-                                <button type="submit">Enviar</button>
+                            <div class="col-span-2 lg:col-span-4 text-center mt-2">
+                                <button type="submit"
+                                        class="text-sm inline-block rounded-lg bg-slate-900 py-2.5 px-8 text-white cursor-pointer active:bg-blue-400 hover:bg-blue-500 transition duration-300">Enviar</button>
                             </div>
                         </form>
                     </div>
                 </div>
-            </div>
 
-            <div class="w-full">
-                <input type="checkbox" id="panel3" class="peer hidden" th:checked="${true}">
-                <label for="panel3" class="block bg-gray-700 text-white p-4 cursor-pointer">
-                    Atualizar Unidade Básica de Saúde
-                </label>
-                <div class="peer-checked:max-h-screen max-h-0 overflow-hidden transition-max-height duration-500 ease-in-out">
-                    <div class="p-4 bg-white border border-gray-300">
-                        <div>
-                            <form th:action="@{/basicHealthUnit-management}" method="post" style="display:inline;">
-                                <label for="basicHealthUnit">Unidades Básicas de Saúde:</label>
-                                <select id="basicHealthUnit" name="basicHealthUnit"
-                                        hx-get="/basicHealthUnit-management/systemUsers"
-                                        hx-target="#systemUsersUBStable">
-                                    <option th:value="${null}">Selecione</option>
-                                    <option th:each="ubs : ${basicHealthUnits}"
-                                            th:value="${ubs.id}"
-                                            th:text="${ubs.name}">
-                                    </option>
-                                </select>
-                                <button type="submit">Editar</button>
-                                <button type="submit" th:formaction="@{/basicHealthUnit-management/delete}">Deletar</button>
-                            </form>
+                <!--Panel 2 - Atualizar UBS-->
+                <div class="w-full bg-white rounded-lg my-4">
+                    <input type="checkbox" id="panel3" class="peer hidden" th:checked="${true}">
+                    <label for="panel3"
+                           class="text-slate-200 tracking-wide block bg-slate-900 py-4 px-4 rounded-lg cursor-pointer border-2 border-slate-600 hover:bg-slate-800 hover:border-blue-500">
+                        <div class="flex items-center">
+                            <span class="material-symbols-outlined mr-4">edit</span>Atualizar Unidade Básica de Saúde
                         </div>
-                        <div>
-                            <form id="attachSystemUserForm"
-                                  hx-post="/basicHealthUnit-management/systemUser/add"
-                                  hx-target="#systemUsersUBStable"
-                                  hx-include="[name='basicHealthUnit']">
-                                <!--              hx-on::after-request="if(event.detail.successful) { setTimeout(() => { this.reset(); }, 3000); }" >-->
+                    </label>
+                    <div class="flex flex-col justify-center peer-checked:max-h-full max-h-0 overflow-hidden overscroll-contain transition-max-height duration-500 ease-in-out">
+                        <div class="py-4 px-4">
+                            <div>
+                                <form class="grid grid-flow-row grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 gap-x-4 w-full items-end"
+                                      th:action="@{/basicHealthUnit-management}" method="post">
+                                    <div class="flex flex-col w-full col-span-2">
+                                        <label class="text-sm" for="basicHealthUnit">Unidades Básicas de Saúde:</label>
+                                        <select class="text-sm w-full rounded-lg border border-stroke py-2 pl-4 mt-1 outline-none focus:ring-2 hover:ring-gray-400 hover:ring-2 hover:border-white focus:border-white focus:ring-blue-500 transition duration-200"
+                                                id="basicHealthUnit" name="basicHealthUnit"
+                                                hx-get="/basicHealthUnit-management/systemUsers"
+                                                hx-target="#systemUsersUBStable">
+                                            <option th:value="${null}">Selecione</option>
+                                            <option th:each="ubs : ${basicHealthUnits}"
+                                                    th:value="${ubs.id}"
+                                                    th:text="${ubs.name}">
+                                            </option>
+                                        </select>
+                                    </div>
+                                    <div class="flex items-end space-x-2">
+                                        <button type="submit"
+                                                class="text-sm inline-block rounded-lg bg-slate-900 py-2.5 px-6 text-white cursor-pointer active:bg-blue-400 hover:bg-blue-500 transition duration-300">Editar</button>
+                                        <button type="submit" th:formaction="@{/basicHealthUnit-management/delete}"
+                                                class="text-sm inline-block rounded-lg bg-slate-900 py-2.5 px-6 text-white cursor-pointer active:bg-blue-400 hover:bg-red-500 transition duration-300">Deletar</button>
+                                    </div>
+                                </form>
+                            </div>
+                            <div class="mt-4">
+                                <form id="attachSystemUserForm"
+                                      hx-post="/basicHealthUnit-management/systemUser/add"
+                                      hx-target="#systemUsersUBStable"
+                                      hx-include="[name='basicHealthUnit']"
+                                      class="grid grid-flow-row grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 gap-x-4 w-full items-end">
 
-                                <label for="systemUserSearch">Buscar usuário:</label>
-                                <div class="relative w-1/2">
-                                    <input type="search" id="systemUserSearch" name="systemUserSearch"
-                                           class="w-1/3 p-2 border border-gray-300 rounded" placeholder="Buscar..."
-                                           hx-get="/basicHealthUnit-management/systemUser/search"
-                                           hx-trigger="input changed delay:500ms, systemUserSearch"
-                                           hx-target="#dropdown"/>
-                                    <div id="dropdown"
-                                         class="absolute bg-white border border-gray-300 w-1/3 mt-1 rounded shadow-lg hidden"></div>
-                                    <input type="text" id="idSystemUser" th:name="idSystemUser" th:value="${null}"
-                                           style="display: none"/>
-                                    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
-                                    <button id="attachButton">Adicionar</button>
+                                    <div class="flex flex-col w-full col-span-2 relative">
+                                        <label class="text-sm" for="systemUserSearch">Buscar usuário:</label>
+                                        <input type="search" id="systemUserSearch" name="systemUserSearch"
+                                               class="text-sm w-full rounded-lg border border-stroke py-2 pl-4 mt-1 outline-none focus:ring-2 hover:ring-gray-400 hover:ring-2 hover:border-white focus:border-white focus:ring-blue-500 transition duration-200"
+                                               placeholder="Buscar..."
+                                               hx-get="/basicHealthUnit-management/systemUser/search"
+                                               hx-trigger="input changed delay:500ms, systemUserSearch"
+                                               hx-target="#dropdown"/>
+                                        <div class="absolute top-full w-full z-50">
+                                            <div id="dropdown"
+                                                 class="bg-white border border-gray-300 rounded shadow-lg hidden"></div>
+                                        </div>
+                                        <input type="text" id="idSystemUser" th:name="idSystemUser" th:value="${null}"
+                                               style="display: none"/>
+                                        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                                    </div>
+                                    <div class="flex items-end">
+                                        <button id="attachButton"
+                                                class="text-sm inline-block rounded-lg bg-slate-900 py-2.5 px-6 text-white cursor-pointer active:bg-blue-400 hover:bg-blue-500 transition duration-300">Adicionar</button>
+                                    </div>
+                                </form>
+                            </div>
+                            <div id="systemUsersUBStable" class="mt-4">
+                                <div class="overflow-x-auto">
+                                <table class="min-w-full bg-white">
+                                    <thead class="font-light text-sm text-slate-600 text-left tracking-wide">
+                                    <tr class="bg-slate-200">
+                                        <th class="text-sm rounded-l-lg py-2 px-4">Nome</th>
+                                        <th class="text-sm pl-4">Perfil</th>
+                                        <th class="text-sm pl-4">Ativo</th>
+                                        <th class="text-sm rounded-r-lg py-2 px-4">Ações</th>
+                                    </tr>
+                                    </thead>
+                                    <tbody>
+                                    <tr class="overflow-hidden border-slate-200 text-slate-600 w-full hover:bg-slate-50 active:bg-slate-200">
+                                        <td class="border-b text-sm py-2 px-4" colspan="4">Sem registro</td>
+                                    </tr>
+                                    </tbody>
+                                </table>
                                 </div>
-                            </form>
-                        </div>
-                        <div id="systemUsersUBStable">
-                            <table>
-                                <thead>
-                                <tr>
-                                    <th>Nome</th>
-                                    <th>Perfil</th>
-                                    <th>Ativo</th>
-                                    <th>Ações</th>
-                                </tr>
-                                </thead>
-                                <tbody>
-                                <tr>
-                                    <td colspan="4">Sem registro</td>
-                                </tr>
-                                </tbody>
-                            </table>
+                            </div>
                         </div>
                     </div>
                 </div>
+
             </div>
-        </div>
-        <footer th:replace="~{fragments/footer :: footer}"></footer>
+        </section>
     </main>
 </body>
 <script>
@@ -152,44 +173,7 @@
             }
         });
 
-        //var procedures = [];
-        /*$('#addMedicalSlot').click(function() {
-            // Obter os valores dos campos de entrada
-            let totalSlots = $('#totalSlots').val();
-            let specialtyName = $('#specialty option:selected').text();
-            let procedureType = $(`#procedureType option:selected`).text();
-            let medicalProcedure = $('#medicalProcedure option:selected').text();
-
-            // Verificar se os campos estão preenchidos
-            if(specialtyName && procedureType && medicalProcedure !== "Selecione" && totalSlots && totalSlots > 0) {
-                // Adicionar uma nova linha à tabela
-                const newRow = `
-                    <tr>
-                        <td>${totalSlots}<input procedureType="hidden" name="totalSlots"></td>
-                        <td>${specialtyName}</td>
-                        <td>${procedureType}</td>
-                        <td>${medicalProcedure}</td>
-                        <td><button procedureType="button" class="remove-row-btn">Remover</button></td>
-                    </tr>
-                `;
-
-                $('#availableMedicalSlotsTable tbody').append(newRow);
-
-                $('.remove-row-btn').off('click').on('click', function() {
-                    $(this).closest('tr').remove(); // Remove a linha correspondente ao botão clicado
-                });
-
-                //procedures.push({ description: procedureName, procedureType: procedureType });
-
-                // Limpar os campos de entrada
-                $('#medicalProcedureDescription').val('').prop('disabled', false);
-                $('#procedureType').prop('selectedIndex', 0);
-            } else {
-                alert("Por favor, preencha todos os campos corretamente e adicione um número de vagas válido.");
-            }
-        });*/
-
-        $('#procedureType').change(function() {
+        $('#procedureType').change(function () {
             let selectedValue = $('#procedureType option:selected').val();
             if (selectedValue === "Consulta") {
                 $('#procedure').val('-').prop('disabled', true);
@@ -197,14 +181,6 @@
                 $('#procedure').prop('disabled', false);
             }
         });
-
-
-        /*$('#attachButton').on('click', function() {
-            //$("#attachSystemUserForm").submit();
-            $('#idSystemUser').val('');
-            $('#systemUserSearch').val('');
-        });*/
     });
 </script>
 </html>
-

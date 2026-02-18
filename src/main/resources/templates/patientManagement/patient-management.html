@@ -4,20 +4,38 @@
 >
 
 <head th:replace="~{fragments/template :: head}"></head>
-<body class="flex w-full h-screen justify-between items-center bg-slate-900">
+<body class="flex w-full flex-1 h-dvh justify-between items-center bg-slate-300">
     <nav th:replace="~{fragments/sidebar :: sidebar}"></nav>
-    <main class="flex flex-col h-screen w-full mx-auto bg-slate-100">
+
+    <main class="flex flex-col h-full w-full overflow-hidden">
         <header th:replace="~{fragments/header :: header}"></header>
 
         <div th:replace="~{fragments/loading :: loading-style-1}"></div>
 
-        <div>
-            <h1>Dados do Paciente</h1>
-            <th:block th:if="${true}">
-                <div th:replace="~{patientManagement/patientFragments/patient-form :: patientForm}"></div>
-            </th:block>
-        </div>
+        <th:block th:replace="~{fragments/dialogs :: confirmDialog}"></th:block>
 
+        <section class="flex flex-col flex-1 overflow-auto">
+            <div class="flex flex-col mx-4 justify-start items-center">
+
+                <!--Panel 1-->
+                <div class="w-full bg-white rounded-lg my-4">
+                    <input type="checkbox" id="panel1" class="peer hidden" th:checked="${true}">
+                    <label for="panel1"
+                           class="text-slate-200 tracking-wide block bg-slate-900 py-4 px-4 rounded-lg cursor-pointer border-2 border-slate-600 hover:bg-slate-800 hover:border-blue-500">
+                        <div class="flex items-center">
+                            <span class="material-symbols-outlined mr-4">personal_injury</span>Dados do Paciente
+                        </div>
+                    </label>
+
+                    <div class="flex flex-col justify-center peer-checked:max-h-full max-h-0 overflow-hidden overscroll-contain transition-max-height duration-500 ease-in-out">
+                        <th:block th:if="${true}">
+                            <div th:replace="~{patientManagement/patientFragments/patient-form :: patientForm}"></div>
+                        </th:block>
+                    </div>
+                </div>
+
+            </div>
+        </section>
     </main>
 </body>
 <script th:inline="javascript" th:src="@{/js/cpfmask.js}"></script>

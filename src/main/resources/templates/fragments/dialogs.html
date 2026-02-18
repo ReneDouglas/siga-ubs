@@ -1,34 +1,50 @@
 <!DOCTYPE html>
 <html lang="en" xmlns:th="https://www.thymeleaf.org">
+
 <head>
     <meta charset="UTF-8">
 </head>
+
 <body>
 
     <th:block th:fragment="confirmDialog" th:switch="${error}">
-        <div th:case="${false}" role="alert" class="fixed shadow-gray-700 shadow-lg top-0 right-0 m-4 z-50 w-1/4">
-            <div class="bg-green-500 text-white font-bold rounded-t px-4 py-2 flex items-center">
-                Sucesso
-                <button class="ml-auto text-green-800 font-bold" style="font-size: 1.5rem;"
-                        onclick="this.parentElement.parentElement.style.display='none'">&#215;
+        <!-- Success Alert -->
+        <div th:case="${false}" role="alert"
+            class="fixed z-50 top-4 right-4 left-4 sm:left-auto sm:w-96 shadow-lg shadow-gray-700 transition-all duration-300 transform translate-y-0">
+            <div class="bg-green-500 text-white font-bold rounded-t px-4 py-3 flex items-center justify-between">
+                <span class="flex items-center gap-2">
+                    <span class="material-symbols-outlined">check_circle</span>
+                    Sucesso
+                </span>
+                <button class="text-green-100 hover:text-white transition-colors focus:outline-none"
+                    onclick="this.closest('[role=alert]').style.display='none'">
+                    <span class="material-symbols-outlined">close</span>
                 </button>
             </div>
-            <div class="border border-t-0 border-green-400 rounded-b bg-green-100 px-4 py-3 text-green-700">
+            <div class="border border-t-0 border-green-400 rounded-b bg-green-50 px-4 py-4 text-green-800 shadow-inner">
                 <p th:text="${message}"></p>
             </div>
         </div>
-        <div th:case="${true}" role="alert" class="fixed shadow-gray-700 shadow-lg top-0 right-0 m-4 z-50 w-1/4">
-            <div class="bg-red-500 text-white font-bold rounded-t px-4 py-2 flex items-center">
-                Erro
-                <button class="ml-auto text-red-800 font-bold" style="font-size: 1.5rem;"
-                        onclick="this.parentElement.parentElement.style.display='none'">&#215;
+
+        <!-- Error Alert -->
+        <div th:case="${true}" role="alert"
+            class="fixed z-50 top-4 right-4 left-4 sm:left-auto sm:w-96 shadow-lg shadow-gray-700 transition-all duration-300 transform translate-y-0">
+            <div class="bg-red-500 text-white font-bold rounded-t px-4 py-3 flex items-center justify-between">
+                <span class="flex items-center gap-2">
+                    <span class="material-symbols-outlined">error</span>
+                    Erro
+                </span>
+                <button class="text-red-100 hover:text-white transition-colors focus:outline-none"
+                    onclick="this.closest('[role=alert]').style.display='none'">
+                    <span class="material-symbols-outlined">close</span>
                 </button>
             </div>
-            <div class="border border-t-0 border-red-400 rounded-b bg-red-100 px-4 py-3 text-red-700">
+            <div class="border border-t-0 border-red-400 rounded-b bg-red-50 px-4 py-4 text-red-800 shadow-inner">
                 <p th:text="${message}"></p>
             </div>
         </div>
     </th:block>
 
 </body>
+
 </html>

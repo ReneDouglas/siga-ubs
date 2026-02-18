@@ -1,3 +1,11 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer components {
+    /* Garante altura mínima nos spans de valor (bg-slate-100) dentro de containers flex-col,
+       evitando colapso visual quando o campo está vazio */
+    .flex.flex-col > span.bg-slate-100 {
+        min-height: 2.25rem;
+    }
+}
