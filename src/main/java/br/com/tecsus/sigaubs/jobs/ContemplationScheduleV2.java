@@ -45,7 +45,9 @@ public class ContemplationScheduleV2 {
     private static final String USERNAME_JOB = "ROTINA";
 
     @Autowired
-    public ContemplationScheduleV2(MedicalSlotService medicalSlotService, AppointmentService appointmentService, ContemplationService contemplationService, AppointmentStatusHistoryService appointmentStatusHistoryService) {
+    public ContemplationScheduleV2(MedicalSlotService medicalSlotService, AppointmentService appointmentService,
+            ContemplationService contemplationService,
+            AppointmentStatusHistoryService appointmentStatusHistoryService) {
         this.medicalSlotService = medicalSlotService;
         this.appointmentService = appointmentService;
         this.contemplationService = contemplationService;
@@ -54,15 +56,15 @@ public class ContemplationScheduleV2 {
 
     @Transactional
     @Scheduled(cron = "${schedule.cron.contemplation}")
-    @Retryable(retryFor = RuntimeException.class,
-            maxAttempts = MAX_ATTEMPTS,
-            backoff = @Backoff(delay = 5000))
+    @Retryable(retryFor = RuntimeException.class, maxAttempts = MAX_ATTEMPTS, backoff = @Backoff(delay = 5000))
     public void processContemplationTask() throws RuntimeException {
 
         if (RetrySynchronizationManager.getContext().getRetryCount() > 0) {
             log.warn("[retry] A rotina de contemplação falhou.");
-            log.warn("[retry] Mensagem de erro: {}", RetrySynchronizationManager.getContext().getLastThrowable().getMessage());
-            log.warn("[retry] Tentativa {} de {}", RetrySynchronizationManager.getContext().getRetryCount(), MAX_ATTEMPTS);
+            log.warn("[retry] Mensagem de erro: {}",
+                    RetrySynchronizationManager.getContext().getLastThrowable().getMessage());
+            log.warn("[retry] Tentativa {} de {}", RetrySynchronizationManager.getContext().getRetryCount(),
+                    MAX_ATTEMPTS);
         }
 
         log.info(" ");
@@ -90,7 +92,8 @@ public class ContemplationScheduleV2 {
 
         log.info("> Total de Vagas: {}", availableSlots.stream().mapToInt(MedicalSlot::getCurrentSlots).sum());
 
-        Map<BasicHealthUnit, List<MedicalSlot>> slotsByUBS = availableSlots.stream().collect(Collectors.groupingBy(MedicalSlot::getBasicHealthUnit));
+        Map<BasicHealthUnit, List<MedicalSlot>> slotsByUBS = availableSlots.stream()
+                .collect(Collectors.groupingBy(MedicalSlot::getBasicHealthUnit));
 
         processSlotsByUBS(slotsByUBS);
 
@@ -140,8 +143,7 @@ public class ContemplationScheduleV2 {
             contemplatePatient(
                     currentPatient,
                     nextPatient,
-                    slotsByProcedure
-            );
+                    slotsByProcedure);
         }
 
         log.info("[X]------[X]------[X]------[X]------[X]------[X]------[X]");
@@ -155,7 +157,8 @@ public class ContemplationScheduleV2 {
                 PageRequest.of(0, slotsByProcedure.getCurrentSlots() + NEXT_PATIENT));
     }
 
-    private void contemplatePatient(PatientOpenAppointmentDTO currentPatient, PatientOpenAppointmentDTO nextPatient, MedicalSlot slotsByProcedure) {
+    private void contemplatePatient(PatientOpenAppointmentDTO currentPatient, PatientOpenAppointmentDTO nextPatient,
+            MedicalSlot slotsByProcedure) {
 
         var contemplated = new Contemplation();
         contemplated.setMedicalSlot(slotsByProcedure);
@@ -196,13 +199,15 @@ public class ContemplationScheduleV2 {
 
         if (currentPatient.requestDate().isBefore(LocalDateTime.now().minusMonths(QUATRO_MESES))) {
             return Priorities.MAIS_DE_QUATRO_MESES;
-        } else if (currentPatient.priority().getValue() > nextPatient.priority().getValue()) {
+        } else if (currentPatient.priority().getValue() < nextPatient.priority().getValue()) {
             return currentPatient.priority();
         } else if (currentPatient.patientBirthDate().isBefore(nextPatient.patientBirthDate())) {
             return Priorities.IDADE;
-        } else if (currentPatient.patientSocialSituationRating().getPriority() > nextPatient.patientSocialSituationRating().getPriority()) {
+        } else if (currentPatient.patientSocialSituationRating().getPriority() > nextPatient
+                .patientSocialSituationRating().getPriority()) {
             return Priorities.SITUACAO_SOCIAL;
-        } else if (currentPatient.patientGender().equals("Feminino") && nextPatient.patientGender().equals("Masculino")) {
+        } else if (currentPatient.patientGender().equals("Feminino")
+                && nextPatient.patientGender().equals("Masculino")) {
             return Priorities.SEXO;
         } else {
             return Priorities.DATA_DA_MARCACAO;

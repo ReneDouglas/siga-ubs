@@ -44,7 +44,9 @@ public class ContemplationSchedule {
     private final String USERNAME_JOB = "ROTINA";
 
     @Autowired
-    public ContemplationSchedule(MedicalSlotService medicalSlotService, AppointmentService appointmentService, ContemplationService contemplationService, AppointmentStatusHistoryService appointmentStatusHistoryService) {
+    public ContemplationSchedule(MedicalSlotService medicalSlotService, AppointmentService appointmentService,
+            ContemplationService contemplationService,
+            AppointmentStatusHistoryService appointmentStatusHistoryService) {
         this.medicalSlotService = medicalSlotService;
         this.appointmentService = appointmentService;
         this.contemplationService = contemplationService;
@@ -53,15 +55,15 @@ public class ContemplationSchedule {
 
     @Transactional
     @Scheduled(cron = "${schedule.cron.contemplation}")
-    @Retryable(retryFor = RuntimeException.class,
-            maxAttempts = MAX_ATTEMPTS,
-            backoff = @Backoff(delay = 5000))
+    @Retryable(retryFor = RuntimeException.class, maxAttempts = MAX_ATTEMPTS, backoff = @Backoff(delay = 5000))
     public void processContemplationTask() throws RuntimeException {
 
         if (RetrySynchronizationManager.getContext().getRetryCount() > 0) {
             log.warn("[retry] A rotina de contemplação falhou.");
-            log.warn("[retry] Mensagem de erro: {}", RetrySynchronizationManager.getContext().getLastThrowable().getMessage());
-            log.warn("[retry] Tentativa {} de {}", RetrySynchronizationManager.getContext().getRetryCount(), MAX_ATTEMPTS);
+            log.warn("[retry] Mensagem de erro: {}",
+                    RetrySynchronizationManager.getContext().getLastThrowable().getMessage());
+            log.warn("[retry] Tentativa {} de {}", RetrySynchronizationManager.getContext().getRetryCount(),
+                    MAX_ATTEMPTS);
         }
 
         log.info(" ");
@@ -89,7 +91,8 @@ public class ContemplationSchedule {
         }
         log.info("> Total de Vagas: {}", availableSlots.stream().mapToInt(MedicalSlot::getCurrentSlots).sum());
 
-        Map<BasicHealthUnit, List<MedicalSlot>> slotsByUBS = availableSlots.stream().collect(Collectors.groupingBy(MedicalSlot::getBasicHealthUnit));
+        Map<BasicHealthUnit, List<MedicalSlot>> slotsByUBS = availableSlots.stream()
+                .collect(Collectors.groupingBy(MedicalSlot::getBasicHealthUnit));
 
         log.info(" ");
         log.info("======== INICIANDO CONTEMPLAÇÕES POR UBS ========");
@@ -117,19 +120,20 @@ public class ContemplationSchedule {
                 log.info("::::::::: [NOME DO PACIENTE] ::::::::: [CPF] ::::::::: [CONTEMPLADO POR] :::::::::");
                 for (int slot = 0; slot < slotsByProcedure.getCurrentSlots(); slot++) {
 
-                    Appointment appt = appointmentService.findReferenceById(queue.getContent().get(slot).appointmentId());
+                    Appointment appt = appointmentService
+                            .findReferenceById(queue.getContent().get(slot).appointmentId());
                     appt.setStatus(AppointmentStatus.PACIENTE_CONTEMPLADO);
 
                     Contemplation contemplated = new Contemplation();
 
-                    //appt.setId(queue.getContent().get(slot).appointmentId());
+                    // appt.setId(queue.getContent().get(slot).appointmentId());
                     contemplated.setMedicalSlot(slotsByProcedure);
                     contemplated.setAppointment(appt);
-                    contemplated.setContemplatedBy(contemplatedBy(queue.getContent().get(slot), queue.getContent().get(slot + NEXT_CONTEMPLATED)));
+                    contemplated.setContemplatedBy(contemplatedBy(queue.getContent().get(slot),
+                            queue.getContent().get(slot + NEXT_CONTEMPLATED)));
                     contemplated.setContemplationDate(LocalDateTime.now());
                     contemplated.setCreationDate(LocalDateTime.now());
                     contemplated.setCreationUser("Rotina de Contemplação");
-
 
                     appt = appointmentService.updateAppointment(appt);
                     contemplationService.registerContemplation(contemplated);
@@ -171,15 +175,17 @@ public class ContemplationSchedule {
         ContemplationScheduleStatus.endTime = LocalDateTime.now();
     }
 
-    private Priorities contemplatedBy(PatientOpenAppointmentDTO currentContemplated, PatientOpenAppointmentDTO nextContemplated) {
+    private Priorities contemplatedBy(PatientOpenAppointmentDTO currentContemplated,
+            PatientOpenAppointmentDTO nextContemplated) {
 
         if (currentContemplated.requestDate().isBefore(LocalDateTime.now().minusMonths(QUATRO_MESES))) {
             return Priorities.MAIS_DE_QUATRO_MESES;
-        } else if (currentContemplated.priority().getValue() > nextContemplated.priority().getValue()) {
+        } else if (currentContemplated.priority().getValue() < nextContemplated.priority().getValue()) {
             return currentContemplated.priority();
         } else if (currentContemplated.patientBirthDate().isBefore(nextContemplated.patientBirthDate())) {
             return Priorities.IDADE;
-        } else if (currentContemplated.patientSocialSituationRating().getPriority() > nextContemplated.patientSocialSituationRating().getPriority()) {
+        } else if (currentContemplated.patientSocialSituationRating().getPriority() > nextContemplated
+                .patientSocialSituationRating().getPriority()) {
             return Priorities.SITUACAO_SOCIAL;
         } else if (currentContemplated.patientGender().equals("Feminino")) {
             return Priorities.SEXO;
