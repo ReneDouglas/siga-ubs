@@ -157,8 +157,12 @@ public class DashboardRepository {
 
                 return results.stream()
                                 .map(row -> {
-                                        int ordinal = ((Number) row[0]).intValue();
-                                        String label = Priorities.values()[ordinal].getDescription();
+                                        int priorityValue = ((Number) row[0]).intValue();
+                                        String label = java.util.Arrays.stream(Priorities.values())
+                                                        .filter(p -> p.getValue() == priorityValue)
+                                                        .findFirst()
+                                                        .map(Priorities::getDescription)
+                                                        .orElse("Desconhecido");
                                         return new PriorityDistributionDTO(label, ((Number) row[1]).longValue());
                                 })
                                 .toList();
