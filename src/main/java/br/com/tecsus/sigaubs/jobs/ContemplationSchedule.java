@@ -20,7 +20,7 @@ import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Recover;
 import org.springframework.retry.annotation.Retryable;
 import org.springframework.retry.support.RetrySynchronizationManager;
-import org.springframework.scheduling.annotation.Scheduled;
+// import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -54,7 +54,8 @@ public class ContemplationSchedule {
     }
 
     @Transactional
-    @Scheduled(cron = "${schedule.cron.contemplation}", zone = "${schedule.cron.contemplation.zone}")
+    // @Scheduled(cron = "${schedule.cron.contemplation}", zone =
+    // "${schedule.cron.contemplation.zone}")
     @Retryable(retryFor = RuntimeException.class, maxAttempts = MAX_ATTEMPTS, backoff = @Backoff(delay = 5000))
     public void processContemplationTask() throws RuntimeException {
 
