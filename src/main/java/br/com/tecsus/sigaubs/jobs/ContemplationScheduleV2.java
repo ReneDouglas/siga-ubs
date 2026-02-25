@@ -55,7 +55,7 @@ public class ContemplationScheduleV2 {
     }
 
     @Transactional
-    @Scheduled(cron = "${schedule.cron.contemplation}")
+    @Scheduled(cron = "${schedule.cron.contemplation}", zone = "${schedule.cron.contemplation.zone}")
     @Retryable(retryFor = RuntimeException.class, maxAttempts = MAX_ATTEMPTS, backoff = @Backoff(delay = 5000))
     public void processContemplationTask() throws RuntimeException {
 
