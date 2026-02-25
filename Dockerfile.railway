@@ -48,7 +48,7 @@ RUN chown sigaubs:sigaubs app.jar
 USER sigaubs
 
 ENV SPRING_PROFILES_ACTIVE=railway
-ENV JAVA_OPTS="-Xms256m -Xmx512m -XX:+UseG1GC"
+ENV JAVA_OPTS="-Xms256m -Xmx512m -XX:+UseG1GC -Duser.timezone=America/Sao_Paulo"
 
 EXPOSE 8080
 
