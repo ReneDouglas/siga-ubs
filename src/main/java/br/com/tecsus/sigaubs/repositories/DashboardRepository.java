@@ -279,4 +279,61 @@ public class DashboardRepository {
                                                 AppointmentStatus.getByDescription((String) row[4])))
                                 .toList();
         }
+
+        /**
+         * Q7: Top 10 gargalos — especialidades/procedimentos com maior fila ativa.
+         * Query única com JOINs, sem risco de N+1.
+         */
+        @SuppressWarnings("unchecked")
+        public List<BottleneckDTO> findTopBottlenecks() {
+
+                String sql = """
+                                SELECT s.title, mp.description, COUNT(a.id) AS total_fila
+                                FROM appointments a
+                                JOIN medical_procedures mp ON a.id_medical_procedure = mp.id
+                                JOIN specialties s ON mp.id_specialty = s.id
+                                WHERE a.status = 'Aguardando Contemplação'
+                                GROUP BY s.title, mp.description
+                                ORDER BY total_fila DESC
+                                LIMIT 10
+                                """;
+
+                List<Object[]> results = em.createNativeQuery(sql).getResultList();
+
+                return results.stream()
+                                .map(row -> new BottleneckDTO(
+                                                (String) row[0],
+                                                (String) row[1],
+                                                ((Number) row[2]).longValue()))
+                                .toList();
+        }
+
+        /**
+         * Q8: Taxa de ocupação de vagas por UBS no mês corrente.
+         * Query única com JOIN + GROUP BY agregado, sem risco de N+1.
+         */
+        @SuppressWarnings("unchecked")
+        public List<SlotOccupancyDTO> findSlotOccupancyByUBS() {
+
+                String sql = """
+                                SELECT bhu.name,
+                                       COALESCE(SUM(ms.total_slots), 0) AS vagas_totais,
+                                       COALESCE(SUM(ms.total_slots - ms.current_slots), 0) AS vagas_consumidas
+                                FROM medical_slots ms
+                                JOIN basic_health_units bhu ON ms.id_basic_health_unit = bhu.id
+                                WHERE MONTH(ms.reference_month) = MONTH(NOW())
+                                  AND YEAR(ms.reference_month) = YEAR(NOW())
+                                GROUP BY bhu.name
+                                ORDER BY bhu.name
+                                """;
+
+                List<Object[]> results = em.createNativeQuery(sql).getResultList();
+
+                return results.stream()
+                                .map(row -> new SlotOccupancyDTO(
+                                                (String) row[0],
+                                                ((Number) row[1]).longValue(),
+                                                ((Number) row[2]).longValue()))
+                                .toList();
+        }
 }

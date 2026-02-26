@@ -31,6 +31,8 @@ public class DashboardService {
         List<PriorityDistributionDTO> priorityDistribution = dashboardRepository.findPriorityDistribution();
         List<ProcedureTypeDistributionDTO> procedureTypeDistribution = dashboardRepository
                 .findProcedureTypeDistribution();
+        List<BottleneckDTO> topBottlenecks = dashboardRepository.findTopBottlenecks();
+        List<SlotOccupancyDTO> slotOccupancy = dashboardRepository.findSlotOccupancyByUBS();
         ContemplationStatusDTO contemplationStatus = buildContemplationStatus();
 
         return new DashboardDTO(
@@ -40,7 +42,9 @@ public class DashboardService {
                 monthlyContemplations,
                 priorityDistribution,
                 contemplationStatus,
-                procedureTypeDistribution);
+                procedureTypeDistribution,
+                topBottlenecks,
+                slotOccupancy);
     }
 
     @Transactional(readOnly = true)

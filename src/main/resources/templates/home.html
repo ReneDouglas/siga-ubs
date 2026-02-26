@@ -165,6 +165,20 @@
                     </div>
                 </div>
 
+                <!-- Bottlenecks and Slot Occupancy Section -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
+                    <!-- Top Gargalos -->
+                    <div class="bg-white p-4 rounded-lg shadow-md">
+                        <h3 class="text-lg font-semibold text-slate-700 mb-4">Top Gargalos na Fila</h3>
+                        <div id="bottleneckChart" class="overflow-y-auto" style="max-height: 420px;"></div>
+                    </div>
+                    <!-- Ocupação de Vagas -->
+                    <div class="bg-white p-4 rounded-lg shadow-md">
+                        <h3 class="text-lg font-semibold text-slate-700 mb-4">Ocupação de Vagas por UBS (Mês Atual)</h3>
+                        <div id="occupancyChart" class="overflow-y-auto" style="max-height: 420px;"></div>
+                    </div>
+                </div>
+
                 <!-- ApexCharts Script (apenas para ADMIN/SMS) -->
                 <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
                 <script th:inline="javascript">
@@ -185,6 +199,13 @@
 
                         var procLabels = /*[[${dashboard.procedureTypeDistribution().![procedureType()]}]]*/[];
                         var procData = /*[[${dashboard.procedureTypeDistribution().![total()]}]]*/[];
+
+                        var bottleneckLabels = /*[[${dashboard.topBottlenecks().![specialty() + ' - ' + procedure()]}]]*/[];
+                        var bottleneckData = /*[[${dashboard.topBottlenecks().![total()]}]]*/[];
+
+                        var ubsNames = /*[[${dashboard.slotOccupancy().![ubsName()]}]]*/[];
+                        var totalSlotsData = /*[[${dashboard.slotOccupancy().![totalSlots()]}]]*/[];
+                        var consumedSlotsData = /*[[${dashboard.slotOccupancy().![consumedSlots()]}]]*/[];
                         /*]]>*/
 
                         // Combinar labels dos meses (usar o maior conjunto)
@@ -404,6 +425,104 @@
 
                         var procedureChart = new ApexCharts(document.querySelector("#procedureDonut"), procedureOptions);
                         procedureChart.render();
+
+                        // Bottleneck Chart - Horizontal Bar
+                        var bottleneckHeight = Math.max(300, bottleneckLabels.length * 40);
+                        var bottleneckOptions = {
+                            series: [{
+                                name: 'Na fila',
+                                data: bottleneckData
+                            }],
+                            chart: {
+                                type: 'bar',
+                                height: bottleneckHeight,
+                                toolbar: { show: false }
+                            },
+                            plotOptions: {
+                                bar: {
+                                    horizontal: true,
+                                    borderRadius: 4,
+                                    barHeight: '60%'
+                                }
+                            },
+                            xaxis: {
+                                categories: bottleneckLabels
+                            },
+                            colors: ['#EF4444'],
+                            dataLabels: {
+                                enabled: true,
+                                style: { fontSize: '12px' }
+                            },
+                            tooltip: {
+                                y: {
+                                    formatter: function (val) {
+                                        return val + ' marcações';
+                                    }
+                                }
+                            },
+                            noData: {
+                                text: 'Sem gargalos identificados',
+                                align: 'center',
+                                verticalAlign: 'middle'
+                            }
+                        };
+
+                        var bottleneckChart = new ApexCharts(document.querySelector("#bottleneckChart"), bottleneckOptions);
+                        bottleneckChart.render();
+
+                        // Slot Occupancy Chart - Horizontal Stacked Bar
+                        var availableData = totalSlotsData.map(function (total, i) {
+                            return total - consumedSlotsData[i];
+                        });
+                        var occupancyHeight = Math.max(300, ubsNames.length * 45);
+                        var occupancyOptions = {
+                            series: [{
+                                name: 'Consumidas',
+                                data: consumedSlotsData
+                            }, {
+                                name: 'Disponíveis',
+                                data: availableData
+                            }],
+                            chart: {
+                                type: 'bar',
+                                height: occupancyHeight,
+                                stacked: true,
+                                toolbar: { show: false }
+                            },
+                            plotOptions: {
+                                bar: {
+                                    horizontal: true,
+                                    borderRadius: 4,
+                                    barHeight: '55%'
+                                }
+                            },
+                            xaxis: {
+                                categories: ubsNames
+                            },
+                            colors: ['#3B82F6', '#D1FAE5'],
+                            dataLabels: {
+                                enabled: true,
+                                style: { fontSize: '11px' }
+                            },
+                            legend: {
+                                position: 'top'
+                            },
+                            tooltip: {
+                                y: {
+                                    formatter: function (val) {
+                                        return val + ' vagas';
+                                    }
+                                }
+                            },
+                            noData: {
+                                text: 'Sem vagas cadastradas neste mês',
+                                align: 'center',
+                                verticalAlign: 'middle'
+                            }
+                        };
+
+                        var occupancyChart = new ApexCharts(document.querySelector("#occupancyChart"), occupancyOptions);
+                        occupancyChart.render();
                     });
                 </script>
             </th:block>
