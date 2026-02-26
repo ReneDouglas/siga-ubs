@@ -29,6 +29,8 @@ public class DashboardService {
         List<MonthlyStatsDTO> monthlyOpen = dashboardRepository.findMonthlyOpenAppointments();
         List<MonthlyStatsDTO> monthlyContemplations = dashboardRepository.findMonthlyContemplations();
         List<PriorityDistributionDTO> priorityDistribution = dashboardRepository.findPriorityDistribution();
+        List<ProcedureTypeDistributionDTO> procedureTypeDistribution = dashboardRepository
+                .findProcedureTypeDistribution();
         ContemplationStatusDTO contemplationStatus = buildContemplationStatus();
 
         return new DashboardDTO(
@@ -37,7 +39,8 @@ public class DashboardService {
                 monthlyOpen,
                 monthlyContemplations,
                 priorityDistribution,
-                contemplationStatus);
+                contemplationStatus,
+                procedureTypeDistribution);
     }
 
     @Transactional(readOnly = true)

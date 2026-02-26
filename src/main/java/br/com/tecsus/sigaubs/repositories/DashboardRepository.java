@@ -149,6 +149,7 @@ public class DashboardRepository {
                                 SELECT a.priority AS prioridade, COUNT(a.id) AS total
                                 FROM appointments a
                                 WHERE a.status = 'Aguardando Contemplação'
+                                AND a.priority IN (2, 3, 4, 8, 9)
                                 GROUP BY a.priority
                                 ORDER BY total DESC
                                 """;
@@ -164,6 +165,32 @@ public class DashboardRepository {
                                                         .map(Priorities::getDescription)
                                                         .orElse("Desconhecido");
                                         return new PriorityDistributionDTO(label, ((Number) row[1]).longValue());
+                                })
+                                .toList();
+        }
+
+        /**
+         * Q5b: Distribuição de agendamentos por tipo de procedimento (fila ativa).
+         */
+        @SuppressWarnings("unchecked")
+        public List<ProcedureTypeDistributionDTO> findProcedureTypeDistribution() {
+
+                String sql = """
+                                SELECT mp.type AS tipo, COUNT(a.id) AS total
+                                FROM appointments a
+                                JOIN medical_procedures mp ON a.id_medical_procedure = mp.id
+                                WHERE a.status = 'Aguardando Contemplação'
+                                GROUP BY mp.type
+                                ORDER BY total DESC
+                                """;
+
+                List<Object[]> results = em.createNativeQuery(sql).getResultList();
+
+                return results.stream()
+                                .map(row -> {
+                                        String typeValue = (String) row[0];
+                                        String label = ProcedureType.valueOf(typeValue).getDescription();
+                                        return new ProcedureTypeDistributionDTO(label, ((Number) row[1]).longValue());
                                 })
                                 .toList();
         }
