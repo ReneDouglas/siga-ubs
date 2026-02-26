@@ -367,8 +367,8 @@ public class QueueController {
 
         try {
             log.info("Iniciando contemplação de paciente.");
-            // contemplationService.contemplateAppointmentByAdmin(appointmentId, reason,
-            // medicalSlotId, loggedUser);
+            contemplationService.contemplateAppointmentByAdmin(appointmentId, reason,
+                    medicalSlotId, loggedUser);
             redirectAttributes.addFlashAttribute("error", false);
             redirectAttributes.addFlashAttribute("message", "Paciente contemplado com sucesso.");
             log.info("Paciente [Appoinment.id={}] contemplado com sucesso pelo usuário[nome={}].", appointmentId,
