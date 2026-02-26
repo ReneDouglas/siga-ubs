@@ -27,15 +27,17 @@ public class MedicalSlotService {
     }
 
     @Transactional
-    public void registerAvailableMedicalSlotsBatch(AvailableMedicalSlotsFormDTO availableMedicalSlotsFormDTO, SystemUserDetails loggedUser) throws DistinctAvailableMedicalSlotException {
+    public void registerAvailableMedicalSlotsBatch(AvailableMedicalSlotsFormDTO availableMedicalSlotsFormDTO,
+            SystemUserDetails loggedUser) throws DistinctAvailableMedicalSlotException {
 
-        Long referenceUbsId = availableMedicalSlotsFormDTO.getAvailableMedicalSlots().get(0).getBasicHealthUnit().getId();
-        boolean isDistinct = availableMedicalSlotsFormDTO.getAvailableMedicalSlots().stream().anyMatch(slotUbs -> !slotUbs.getBasicHealthUnit().getId().equals(referenceUbsId));
+        Long referenceUbsId = availableMedicalSlotsFormDTO.getAvailableMedicalSlots().get(0).getBasicHealthUnit()
+                .getId();
+        boolean isDistinct = availableMedicalSlotsFormDTO.getAvailableMedicalSlots().stream()
+                .anyMatch(slotUbs -> !slotUbs.getBasicHealthUnit().getId().equals(referenceUbsId));
 
         if (isDistinct) {
             throw new DistinctAvailableMedicalSlotException("Cadastre as vagas para uma UBS de cada vez.");
         }
-
 
         for (MedicalSlot medicalSlot : availableMedicalSlotsFormDTO.getAvailableMedicalSlots()) {
             medicalSlot.setCurrentSlots(medicalSlot.getTotalSlots());
@@ -52,11 +54,13 @@ public class MedicalSlotService {
     }
 
     public MedicalSlot findAvailableSlots(MedicalSlot medicalSlot) {
-        return medicalSlotRepository.findByMedicalProcedureAndBasicHealthUnitAndContemplationsIsNull(medicalSlot.getMedicalProcedure(), medicalSlot.getBasicHealthUnit());
+        return medicalSlotRepository.findByMedicalProcedureAndBasicHealthUnitAndContemplationsIsNull(
+                medicalSlot.getMedicalProcedure(), medicalSlot.getBasicHealthUnit());
     }
 
     public Optional<MedicalSlot> findAvailableSlotsV2(MedicalSlot medicalSlot) {
-        return medicalSlotRepository.findAvailableSlotsByMedicalProcedureAndUBS(medicalSlot.getMedicalProcedure().getId(), medicalSlot.getBasicHealthUnit().getId());
+        return medicalSlotRepository.findAvailableSlotsByMedicalProcedureAndUBS(
+                medicalSlot.getMedicalProcedure().getId(), medicalSlot.getBasicHealthUnit().getId());
     }
 
     public List<MedicalSlot> findAvailableSlotsByReferenceMonth() {
@@ -85,7 +89,7 @@ public class MedicalSlotService {
             throw new RuntimeException("Não há mais slots disponíveis.");
         }
 
-        ms.setCurrentSlots(medicalSlot.getCurrentSlots() - 1);
+        ms.setCurrentSlots(ms.getCurrentSlots() - 1);
         return medicalSlotRepository.saveAndFlush(ms);
     }
 }
