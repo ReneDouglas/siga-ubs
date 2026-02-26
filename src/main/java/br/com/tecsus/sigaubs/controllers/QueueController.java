@@ -17,6 +17,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.util.UriComponentsBuilder;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -39,7 +40,9 @@ public class QueueController {
     private final ContemplationService contemplationService;
 
     @Autowired
-    public QueueController(BasicHealthUnitService basicHealthUnitService, SpecialtyService specialtyService, AppointmentService appointmentService, MedicalSlotService medicalSlotService, ContemplationService contemplationService) {
+    public QueueController(BasicHealthUnitService basicHealthUnitService, SpecialtyService specialtyService,
+            AppointmentService appointmentService, MedicalSlotService medicalSlotService,
+            ContemplationService contemplationService) {
         this.basicHealthUnitService = basicHealthUnitService;
         this.basicHealthUnits = basicHealthUnitService.findAllUBS();
         this.specialties = specialtyService.findSpecialties();
@@ -54,9 +57,12 @@ public class QueueController {
 
         model.addAttribute("basicHealthUnits", this.basicHealthUnits);
         model.addAttribute("specialties", this.specialties);
-        model.addAttribute("consultasPage", new PageImpl<Contemplation>(List.of(), PageRequest.of(0, DefaultValues.PAGE_SIZE), 0));
-        model.addAttribute("examesPage", new PageImpl<Contemplation>(List.of(), PageRequest.of(0, DefaultValues.PAGE_SIZE), 0));
-        model.addAttribute("cirurgiasPage", new PageImpl<Contemplation>(List.of(), PageRequest.of(0, DefaultValues.PAGE_SIZE), 0));
+        model.addAttribute("consultasPage",
+                new PageImpl<Contemplation>(List.of(), PageRequest.of(0, DefaultValues.PAGE_SIZE), 0));
+        model.addAttribute("examesPage",
+                new PageImpl<Contemplation>(List.of(), PageRequest.of(0, DefaultValues.PAGE_SIZE), 0));
+        model.addAttribute("cirurgiasPage",
+                new PageImpl<Contemplation>(List.of(), PageRequest.of(0, DefaultValues.PAGE_SIZE), 0));
         model.addAttribute("hide", "hidden");
 
         return "queueManagement/queue-management";
@@ -64,11 +70,11 @@ public class QueueController {
 
     @GetMapping("/queue-management/v2")
     public String getQueuePageV2(Model model,
-                                 @RequestParam(required = false) Long basicHealthUnit,
-                                 @RequestParam(required = false) Long specialty,
-                                 @RequestParam(required = false) Long medicalProcedure,
-                                 @RequestParam(required = false) String procedureType,
-                                 @AuthenticationPrincipal SystemUserDetails loggedUser) {
+            @RequestParam(required = false) Long basicHealthUnit,
+            @RequestParam(required = false) Long specialty,
+            @RequestParam(required = false) Long medicalProcedure,
+            @RequestParam(required = false) String procedureType,
+            @AuthenticationPrincipal SystemUserDetails loggedUser) {
 
         boolean isAdminOrSms = loggedUser.getAuthorities().stream()
                 .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN") || a.getAuthority().equals("ROLE_SMS"));
@@ -106,9 +112,8 @@ public class QueueController {
     @PreAuthorize("hasAnyRole('ADMIN', 'SMS')")
     @GetMapping("/queue-management/search")
     public String searchOpenAppointmentsQueue(@RequestParam Long basicHealthUnit,
-                                           @RequestParam Long specialty,
-                                           Model model) {
-
+            @RequestParam Long specialty,
+            Model model) {
 
         var consultas = appointmentService
                 .findOpenAppointmentsQueuePaginated(
@@ -148,11 +153,11 @@ public class QueueController {
 
     @GetMapping("/queue-management/v2/search")
     public String searchOpenAppointmentsQueueV2(@RequestParam(required = false) Long basicHealthUnit,
-                                                @RequestParam(required = false) Long specialty,
-                                                @RequestParam(required = false) Long medicalProcedure,
-                                                @RequestParam(required = false) String procedureType,
-                                                Model model,
-                                                @AuthenticationPrincipal SystemUserDetails loggedUser) {
+            @RequestParam(required = false) Long specialty,
+            @RequestParam(required = false) Long medicalProcedure,
+            @RequestParam(required = false) String procedureType,
+            Model model,
+            @AuthenticationPrincipal SystemUserDetails loggedUser) {
 
         boolean isAdminOrSms = loggedUser.getAuthorities().stream()
                 .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN") || a.getAuthority().equals("ROLE_SMS"));
@@ -168,7 +173,6 @@ public class QueueController {
                         medicalProcedure,
                         PageRequest.of(0, DefaultValues.PAGE_SIZE));
 
-
         model.addAttribute("selectedUBS", basicHealthUnit);
         model.addAttribute("basicHealthUnits", this.basicHealthUnits);
         model.addAttribute("selectedSpecialty", specialty);
@@ -183,13 +187,16 @@ public class QueueController {
     @PreAuthorize("hasAnyRole('ADMIN', 'SMS')")
     @GetMapping("/queue-management/paginated")
     public String getOpenAppointmentsQueuePaginated(Model model,
-                                           @RequestParam(value = "page", defaultValue = "0", required = false) int currentPage,
-                                           @RequestParam(value = "consultasPageSize", defaultValue = "" + DefaultValues.PAGE_SIZE, required = false) int consultasPageSize,
-                                           @RequestParam(value = "examesPageSize", defaultValue = "" + DefaultValues.PAGE_SIZE, required = false) int examesPageSize,
-                                           @RequestParam(value = "cirurgiasPageSize", defaultValue = "" + DefaultValues.PAGE_SIZE, required = false) int cirurgiasPageSize,
-                                           @RequestParam(value = "ubs") Long ubs,
-                                           @RequestParam(value = "specialty") Long specialty,
-                                           @RequestParam(value = "type") String procedureType) {
+            @RequestParam(value = "page", defaultValue = "0", required = false) int currentPage,
+            @RequestParam(value = "consultasPageSize", defaultValue = ""
+                    + DefaultValues.PAGE_SIZE, required = false) int consultasPageSize,
+            @RequestParam(value = "examesPageSize", defaultValue = ""
+                    + DefaultValues.PAGE_SIZE, required = false) int examesPageSize,
+            @RequestParam(value = "cirurgiasPageSize", defaultValue = ""
+                    + DefaultValues.PAGE_SIZE, required = false) int cirurgiasPageSize,
+            @RequestParam(value = "ubs") Long ubs,
+            @RequestParam(value = "specialty") Long specialty,
+            @RequestParam(value = "type") String procedureType) {
 
         model.addAttribute("selectedUBS", ubs);
         model.addAttribute("selectedSpecialty", specialty);
@@ -225,13 +232,13 @@ public class QueueController {
 
     @GetMapping("/queue-management/v2/paginated")
     public String getOpenAppointmentsQueuePaginatedV2(Model model,
-                                                    @RequestParam(value = "page", defaultValue = "0", required = false) int page,
-                                                    @RequestParam(value = "size", defaultValue = "" + DefaultValues.PAGE_SIZE, required = false) int size,
-                                                    @RequestParam(value = "ubs", required = false) Long ubs,
-                                                    @RequestParam(value = "specialty", required = false) Long specialty,
-                                                    @RequestParam(value = "medicalProcedure", required = false) Long medicalProcedure,
-                                                    @RequestParam(value = "procedureType", required = false) String procedureType,
-                                                    @AuthenticationPrincipal SystemUserDetails loggedUser) {
+            @RequestParam(value = "page", defaultValue = "0", required = false) int page,
+            @RequestParam(value = "size", defaultValue = "" + DefaultValues.PAGE_SIZE, required = false) int size,
+            @RequestParam(value = "ubs", required = false) Long ubs,
+            @RequestParam(value = "specialty", required = false) Long specialty,
+            @RequestParam(value = "medicalProcedure", required = false) Long medicalProcedure,
+            @RequestParam(value = "procedureType", required = false) String procedureType,
+            @AuthenticationPrincipal SystemUserDetails loggedUser) {
 
         boolean isAdminOrSms = loggedUser.getAuthorities().stream()
                 .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN") || a.getAuthority().equals("ROLE_SMS"));
@@ -258,16 +265,17 @@ public class QueueController {
     @PreAuthorize("hasAnyRole('ADMIN', 'SMS')")
     @GetMapping("/queue-management/{id}/load")
     public String loadOpenAppointment(@PathVariable Long id,
-                                      @RequestParam Long ubs,
-                                      @RequestParam Long specialty,
-                                      Model model) {
+            @RequestParam Long ubs,
+            @RequestParam Long specialty,
+            Model model) {
 
         Appointment appointment = appointmentService.findById(id);
         MedicalSlot medicalSlot = new MedicalSlot();
         medicalSlot.setMedicalProcedure(appointment.getMedicalProcedure());
         medicalSlot.setBasicHealthUnit(appointment.getPatient().getBasicHealthUnit());
 
-        List<PatientOpenAppointmentDTO> patientOpenAppointments = appointmentService.findPatientOpenAppointments(appointment.getPatient().getId());
+        List<PatientOpenAppointmentDTO> patientOpenAppointments = appointmentService
+                .findPatientOpenAppointments(appointment.getPatient().getId());
         patientOpenAppointments.removeIf(openAppt -> openAppt.appointmentId().equals(id));
 
         Optional<MedicalSlot> availableSlots = medicalSlotService.findAvailableSlotsV2(medicalSlot);
@@ -287,18 +295,19 @@ public class QueueController {
     @PreAuthorize("hasAnyRole('ADMIN', 'SMS')")
     @GetMapping("/queue-management/v2/{id}/load")
     public String loadOpenAppointmentV2(@PathVariable Long id,
-                                      @RequestParam(required = false) Long ubs,
-                                      @RequestParam(required = false) Long specialty,
-                                      @RequestParam(required = false) Long medicalProcedure,
-                                      @RequestParam(required = false) String procedureType,
-                                      Model model) {
+            @RequestParam(required = false) Long ubs,
+            @RequestParam(required = false) Long specialty,
+            @RequestParam(required = false) Long medicalProcedure,
+            @RequestParam(required = false) String procedureType,
+            Model model) {
 
         Appointment appointment = appointmentService.findById(id);
         MedicalSlot medicalSlot = new MedicalSlot();
         medicalSlot.setMedicalProcedure(appointment.getMedicalProcedure());
         medicalSlot.setBasicHealthUnit(appointment.getPatient().getBasicHealthUnit());
 
-        List<PatientOpenAppointmentDTO> patientOpenAppointments = appointmentService.findPatientOpenAppointments(appointment.getPatient().getId());
+        List<PatientOpenAppointmentDTO> patientOpenAppointments = appointmentService
+                .findPatientOpenAppointments(appointment.getPatient().getId());
         patientOpenAppointments.removeIf(openAppt -> openAppt.appointmentId().equals(id));
 
         Optional<MedicalSlot> availableSlots = medicalSlotService.findAvailableSlotsV2(medicalSlot);
@@ -320,24 +329,25 @@ public class QueueController {
     @PreAuthorize("hasAnyRole('ADMIN', 'SMS')")
     @PostMapping(value = "/queue-management/contemplate")
     public String contemplateByAdmin(@RequestParam String reason,
-                                     @RequestParam Long ubs,
-                                     @RequestParam Long specialty,
-                                     @RequestParam Long appointmentId,
-                                     @RequestParam Long medicalSlotId,
-                                     @AuthenticationPrincipal SystemUserDetails loggedUser,
-                                     RedirectAttributes redirectAttributes) {
-
+            @RequestParam Long ubs,
+            @RequestParam Long specialty,
+            @RequestParam Long appointmentId,
+            @RequestParam Long medicalSlotId,
+            @AuthenticationPrincipal SystemUserDetails loggedUser,
+            RedirectAttributes redirectAttributes) {
 
         try {
             log.info("Iniciando contemplação de paciente.");
             contemplationService.contemplateAppointmentByAdmin(appointmentId, reason, medicalSlotId, loggedUser);
             redirectAttributes.addFlashAttribute("error", false);
             redirectAttributes.addFlashAttribute("message", "Paciente contemplado com sucesso.");
-            log.info("Paciente [Appoinment.id={}] contemplado com sucesso pelo usuário[nome={}].", appointmentId, loggedUser.getName());
+            log.info("Paciente [Appoinment.id={}] contemplado com sucesso pelo usuário[nome={}].", appointmentId,
+                    loggedUser.getName());
         } catch (CancelContemplationException e) {
             redirectAttributes.addFlashAttribute("error", true);
             redirectAttributes.addFlashAttribute("message", "Erro ao cancelar contemplação.");
-            log.info("Erro ao contemplar paciente [Appoinment.id={}][SystemUser={}].", appointmentId, loggedUser.getName());
+            log.info("Erro ao contemplar paciente [Appoinment.id={}][SystemUser={}].", appointmentId,
+                    loggedUser.getName());
         }
 
         return "redirect:/queue-management/search?basicHealthUnit=" + ubs + "&specialty=" + specialty;
@@ -346,35 +356,46 @@ public class QueueController {
     @PreAuthorize("hasAnyRole('ADMIN', 'SMS')")
     @PostMapping(value = "/queue-management/v2/contemplate")
     public String contemplateByAdminV2(@RequestParam String reason,
-                                     @RequestParam(required = false) Long ubs,
-                                     @RequestParam(required = false) Long specialty,
-                                     @RequestParam(required = false) Long medicalProcedure,
-                                     @RequestParam(required = false) String procedureType,
-                                     @RequestParam Long appointmentId,
-                                     @RequestParam Long medicalSlotId,
-                                     @AuthenticationPrincipal SystemUserDetails loggedUser,
-                                     RedirectAttributes redirectAttributes) {
-
+            @RequestParam(required = false) Long ubs,
+            @RequestParam(required = false) Long specialty,
+            @RequestParam(required = false) Long medicalProcedure,
+            @RequestParam(required = false) String procedureType,
+            @RequestParam Long appointmentId,
+            @RequestParam Long medicalSlotId,
+            @AuthenticationPrincipal SystemUserDetails loggedUser,
+            RedirectAttributes redirectAttributes) {
 
         try {
             log.info("Iniciando contemplação de paciente.");
-            //contemplationService.contemplateAppointmentByAdmin(appointmentId, reason, medicalSlotId, loggedUser);
+            // contemplationService.contemplateAppointmentByAdmin(appointmentId, reason,
+            // medicalSlotId, loggedUser);
             redirectAttributes.addFlashAttribute("error", false);
             redirectAttributes.addFlashAttribute("message", "Paciente contemplado com sucesso.");
-            log.info("Paciente [Appoinment.id={}] contemplado com sucesso pelo usuário[nome={}].", appointmentId, loggedUser.getName());
+            log.info("Paciente [Appoinment.id={}] contemplado com sucesso pelo usuário[nome={}].", appointmentId,
+                    loggedUser.getName());
         } catch (CancelContemplationException e) {
             redirectAttributes.addFlashAttribute("error", true);
             redirectAttributes.addFlashAttribute("message", "Erro ao cancelar contemplação.");
-            log.info("Erro ao contemplar paciente [Appoinment.id={}][SystemUser={}].", appointmentId, loggedUser.getName());
+            log.info("Erro ao contemplar paciente [Appoinment.id={}][SystemUser={}].", appointmentId,
+                    loggedUser.getName());
         }
 
-        return "redirect:/queue-management/v2?basicHealthUnit=" + ubs + "&specialty=" + specialty + "&medicalProcedure=" + medicalProcedure + "&procedureType=" + procedureType;
+        UriComponentsBuilder redirectUrl = UriComponentsBuilder.fromPath("/queue-management/v2");
+        if (ubs != null)
+            redirectUrl.queryParam("basicHealthUnit", ubs);
+        if (specialty != null)
+            redirectUrl.queryParam("specialty", specialty);
+        if (medicalProcedure != null)
+            redirectUrl.queryParam("medicalProcedure", medicalProcedure);
+        if (procedureType != null && !procedureType.isEmpty())
+            redirectUrl.queryParam("procedureType", procedureType);
+        return "redirect:" + redirectUrl.build().toUriString();
     }
 
     @GetMapping(value = "/queue-management/v2/procedures", produces = MediaType.TEXT_HTML_VALUE)
     public String loadProcedure(@RequestParam("procedureType") String procedureType,
-                                            @RequestParam("specialty") Long specialtyId,
-                                            Model model) {
+            @RequestParam("specialty") Long specialtyId,
+            Model model) {
 
         List<MedicalProcedure> procedures = loadProcedures(procedureType, specialtyId);
         model.addAttribute("procedures", procedures);
@@ -390,7 +411,7 @@ public class QueueController {
     private List<MedicalProcedure> loadProcedures(String procedureType, Long specialtyId) {
         if (procedureType.equals(ProcedureType.CONSULTA.toString())) {
             return appointmentService.findBySpecialtyIdAndProcedureType(specialtyId, ProcedureType.CONSULTA);
-        } else if (procedureType.equals(ProcedureType.EXAME.toString())){
+        } else if (procedureType.equals(ProcedureType.EXAME.toString())) {
             return appointmentService.findBySpecialtyIdAndProcedureType(specialtyId, ProcedureType.EXAME);
         } else {
             return appointmentService.findBySpecialtyIdAndProcedureType(specialtyId, ProcedureType.CIRURGIA);
