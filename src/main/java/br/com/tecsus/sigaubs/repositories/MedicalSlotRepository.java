@@ -13,27 +13,29 @@ import java.util.Optional;
 public interface MedicalSlotRepository extends JpaRepository<MedicalSlot, Long>, MedicalSlotRepositoryCustom {
 
     @Transactional(readOnly = true)
-    MedicalSlot findByMedicalProcedureAndBasicHealthUnitAndContemplationsIsNull(MedicalProcedure medicalProcedure, BasicHealthUnit basicHealthUnit);
+    MedicalSlot findByMedicalProcedureAndBasicHealthUnitAndContemplationsIsNull(MedicalProcedure medicalProcedure,
+            BasicHealthUnit basicHealthUnit);
 
     @Transactional(readOnly = true)
     @Query("""
-        SELECT ms
-        FROM MedicalSlot ms
-        WHERE ms.medicalProcedure.id = :medicalProcedureId
-        AND ms.basicHealthUnit.id = :ubsId
-        AND ms.currentSlots < ms.totalSlots
-    """)
+                SELECT ms
+                FROM MedicalSlot ms
+                WHERE ms.medicalProcedure.id = :medicalProcedureId
+                AND ms.basicHealthUnit.id = :ubsId
+                AND ms.currentSlots < ms.totalSlots
+            """)
     Optional<MedicalSlot> findAvailableSlotsByMedicalProcedureAndUBS(Long medicalProcedureId, Long ubsId);
 
     @Transactional(readOnly = true)
     @Query("""
-        SELECT ms
-        FROM MedicalSlot ms
-        LEFT JOIN FETCH ms.medicalProcedure
-        LEFT JOIN FETCH ms.basicHealthUnit
-        WHERE MONTH(ms.referenceMonth) = MONTH(NOW())
-        AND ms.currentSlots > 0
-    """)
+                SELECT ms
+                FROM MedicalSlot ms
+                LEFT JOIN FETCH ms.medicalProcedure
+                LEFT JOIN FETCH ms.basicHealthUnit
+                WHERE MONTH(ms.referenceMonth) = MONTH(NOW())
+                AND YEAR(ms.referenceMonth) = YEAR(NOW())
+                AND ms.currentSlots > 0
+            """)
     List<MedicalSlot> findAllAvailableSlotsByReferenceMonth();
 
 }
