@@ -1,6 +1,5 @@
 package br.com.tecsus.sigaubs.controllers;
 
-import br.com.tecsus.sigaubs.jobs.ContemplationSchedule;
 import br.com.tecsus.sigaubs.jobs.ContemplationScheduleV2;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
