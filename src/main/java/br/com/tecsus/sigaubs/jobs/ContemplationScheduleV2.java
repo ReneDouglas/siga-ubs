@@ -87,6 +87,8 @@ public class ContemplationScheduleV2 {
             log.info("========================================");
             log.info("=== ROTINA DE CONTEMPLAÇÃO FINALIZADA ===");
             log.info("========================================");
+            ContemplationScheduleStatus.status = ContemplationScheduleStatus.Status.DONE;
+            ContemplationScheduleStatus.endTime = LocalDateTime.now();
             return;
         }
 
