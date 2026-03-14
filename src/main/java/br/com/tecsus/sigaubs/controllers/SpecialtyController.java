@@ -6,7 +6,8 @@ import br.com.tecsus.sigaubs.security.SystemUserDetails;
 import br.com.tecsus.sigaubs.services.SpecialtyService;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
@@ -20,10 +21,11 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.util.List;
 
-@Slf4j
 @Controller
 @SessionScope
 public class SpecialtyController {
+
+    private static final Logger log = LoggerFactory.getLogger(SpecialtyController.class);
 
     private final SpecialtyService specialtyService;
     private final ObjectMapper objectMapper;

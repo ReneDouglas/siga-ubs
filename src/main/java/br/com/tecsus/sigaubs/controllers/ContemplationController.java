@@ -10,7 +10,8 @@ import br.com.tecsus.sigaubs.services.SpecialtyService;
 import br.com.tecsus.sigaubs.services.exceptions.CancelContemplationException;
 import br.com.tecsus.sigaubs.services.exceptions.ConfirmContemplationException;
 import br.com.tecsus.sigaubs.utils.DefaultValues;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -29,10 +30,11 @@ import java.time.YearMonth;
 import java.util.List;
 
 
-@Slf4j
 @Controller
 @SessionScope
 public class ContemplationController {
+
+    private static final Logger log = LoggerFactory.getLogger(ContemplationController.class);
 
     private final ContemplationService contemplationService;
     private final List<BasicHealthUnit> basicHealthUnits;

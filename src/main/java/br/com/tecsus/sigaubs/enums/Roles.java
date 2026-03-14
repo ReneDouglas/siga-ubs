@@ -1,8 +1,5 @@
 package br.com.tecsus.sigaubs.enums;
 
-import lombok.Getter;
-
-@Getter
 public enum Roles {
     ROLE_ADMIN("Administrador do Sistema", false),
     ROLE_USER("Usuário", true),
@@ -17,6 +14,14 @@ public enum Roles {
     Roles(String description, boolean permission) {
         this.description = description;
         this.permission = permission;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public Boolean getPermission() {
+        return permission;
     }
 
 }

@@ -6,7 +6,8 @@ import br.com.tecsus.sigaubs.security.SystemUserDetails;
 import br.com.tecsus.sigaubs.services.BasicHealthUnitService;
 import br.com.tecsus.sigaubs.services.SpecialtyService;
 import br.com.tecsus.sigaubs.services.SystemUserService;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -22,10 +23,11 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.util.List;
 
-@Slf4j
 @Controller
 @SessionScope
 public class BasicHealthUnitController {
+
+    private static final Logger log = LoggerFactory.getLogger(BasicHealthUnitController.class);
 
     private final BasicHealthUnitService basicHealthUnitService;
     private final SystemUserService systemUserService;

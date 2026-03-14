@@ -12,7 +12,8 @@ import br.com.tecsus.sigaubs.services.SpecialtyService;
 import br.com.tecsus.sigaubs.services.exceptions.AppointmentRegistrationFailureException;
 import br.com.tecsus.sigaubs.services.exceptions.CancelAppointmentException;
 import br.com.tecsus.sigaubs.services.exceptions.DuplicateAppointmentRegistrationException;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
@@ -23,10 +24,11 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.util.List;
 
-@Slf4j
 @Controller
 @SessionScope
 public class AppointmentController {
+
+    private static final Logger log = LoggerFactory.getLogger(AppointmentController.class);
 
     private final PatientService patientService;
     private final SpecialtyService specialtyService;

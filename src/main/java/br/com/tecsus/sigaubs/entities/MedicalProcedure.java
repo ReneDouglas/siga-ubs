@@ -13,12 +13,9 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
-import lombok.Getter;
-import lombok.Setter;
 import java.time.LocalDateTime;
+import java.util.Objects;
 
-@Getter
-@Setter
 @Entity
 @Table(name = "medical_procedures")
 public class MedicalProcedure {
@@ -45,5 +42,65 @@ public class MedicalProcedure {
     private String creationUser;
 
     public MedicalProcedure() {
+    }
+
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    public ProcedureType getProcedureType() {
+        return procedureType;
+    }
+
+    public void setProcedureType(ProcedureType procedureType) {
+        this.procedureType = procedureType;
+    }
+
+    public Specialty getSpecialty() {
+        return specialty;
+    }
+
+    public void setSpecialty(Specialty specialty) {
+        this.specialty = specialty;
+    }
+
+    public LocalDateTime getCreationDate() {
+        return creationDate;
+    }
+
+    public void setCreationDate(LocalDateTime creationDate) {
+        this.creationDate = creationDate;
+    }
+
+    public String getCreationUser() {
+        return creationUser;
+    }
+
+    public void setCreationUser(String creationUser) {
+        this.creationUser = creationUser;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof MedicalProcedure that)) return false;
+        return id != null && Objects.equals(id, that.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return getClass().hashCode();
     }
 }

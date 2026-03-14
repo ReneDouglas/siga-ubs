@@ -1,8 +1,5 @@
 package br.com.tecsus.sigaubs.enums;
 
-import lombok.Getter;
-
-@Getter
 public enum Priorities {
     MAIS_DE_QUATRO_MESES(1, "Mais de 4 meses", false), // Prioridade passiva
     URGENCIA(2, "Urgência", true), // Prioridade ativa
@@ -26,5 +23,17 @@ public enum Priorities {
         this.value = value;
         this.description = description;
         this.manual = manual;
+    }
+
+    public int getValue() {
+        return value;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public Boolean getManual() {
+        return manual;
     }
 }

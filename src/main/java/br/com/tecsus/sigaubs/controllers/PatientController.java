@@ -8,7 +8,8 @@ import br.com.tecsus.sigaubs.security.SystemUserDetails;
 import br.com.tecsus.sigaubs.services.BasicHealthUnitService;
 import br.com.tecsus.sigaubs.services.PatientService;
 import br.com.tecsus.sigaubs.utils.DefaultValues;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
@@ -26,10 +27,11 @@ import org.springframework.web.context.annotation.SessionScope;
 
 import java.util.List;
 
-@Slf4j
 @Controller
 @SessionScope
 public class PatientController {
+
+    private static final Logger log = LoggerFactory.getLogger(PatientController.class);
 
     private final PatientService patientService;
     private final BasicHealthUnitService basicHealthUnitService;

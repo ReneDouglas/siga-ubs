@@ -10,7 +10,8 @@ import br.com.tecsus.sigaubs.repositories.ContemplationRepository;
 import br.com.tecsus.sigaubs.security.SystemUserDetails;
 import br.com.tecsus.sigaubs.services.exceptions.CancelContemplationException;
 import br.com.tecsus.sigaubs.services.exceptions.ConfirmContemplationException;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -21,9 +22,10 @@ import java.time.LocalDateTime;
 import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
 
-@Slf4j
 @Service
 public class ContemplationService {
+
+    private static final Logger log = LoggerFactory.getLogger(ContemplationService.class);
 
     private final ContemplationRepository contemplationRepository;
     private final DateTimeFormatter formatter;
