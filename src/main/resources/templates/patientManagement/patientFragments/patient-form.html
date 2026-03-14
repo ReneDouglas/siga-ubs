@@ -1,5 +1,13 @@
 <div th:fragment="patientForm">
 
+    <th:block th:if="${message != null}">
+        <div th:classappend="${error} ? 'bg-red-100 text-red-700 border-red-300' : 'bg-emerald-100 text-emerald-700 border-emerald-300'"
+             class="border rounded-lg px-4 py-3 mx-4 mt-4 text-sm flex items-center justify-between">
+            <span th:text="${message}"></span>
+            <button type="button" class="ml-4 font-bold leading-none" onclick="this.parentElement.remove()">×</button>
+        </div>
+    </th:block>
+
     <form class="grid grid-flow-row grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 gap-x-4 py-4 px-4 w-full"
           th:attr="hx-post=${patient.id == null} ? @{/patient-management/create} : @{/patient-management/update}"
           hx-target="this"

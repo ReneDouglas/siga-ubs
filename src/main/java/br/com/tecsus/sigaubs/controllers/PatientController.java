@@ -72,22 +72,29 @@ public class PatientController {
                                   @AuthenticationPrincipal SystemUserDetails loggedUser,
                                   Model model) {
         try {
-            Patient newPatient = patientService.registerPatient(patient, loggedUser);
-            model.addAttribute("patient", newPatient);
+            patientService.registerPatient(patient, loggedUser);
+            patientToEdit = new Patient();
+            model.addAttribute("patient", patientToEdit);
             model.addAttribute("message", "Paciente cadastrado com sucesso.");
             model.addAttribute("error", false);
         } catch (DataIntegrityViolationException e) {
             log.error("Violação de integridade [Paciente]: {}", e.getMessage());
+            model.addAttribute("patient", patient);
             model.addAttribute("message", "CPF ou Cartão SUS já cadastrados no sistema.");
             model.addAttribute("error", true);
-            return "patientManagement/patientFragments/patient-form :: patientForm";
         } catch (Exception e) {
             log.error("Erro ao cadastrar paciente: {}", e.getMessage());
+            model.addAttribute("patient", patient);
             model.addAttribute("message", "Erro ao cadastrar paciente.");
             model.addAttribute("error", true);
-            return "patientManagement/patientFragments/patient-form :: patientForm";
         }
-        return "patientManagement/patientFragments/patient-info :: patientToEdit";
+        boolean isAdmin = loggedUser.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals(Roles.ROLE_SMS.toString()));
+        if (isAdmin) {
+            model.addAttribute("basicHealthUnits", basicHealthUnitService.findAllUBS());
+        } else {
+            model.addAttribute("systemUserUBS", basicHealthUnitService.findSystemUserUBS(loggedUser.getBasicHealthUnitId()));
+        }
+        return "patientManagement/patientFragments/patient-form :: patientForm";
     }
 
     @PostMapping("/patient-management/edit")
