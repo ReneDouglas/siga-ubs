@@ -7,8 +7,6 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import jakarta.persistence.GenerationType;
-import jakarta.persistence.Temporal;
-import jakarta.persistence.TemporalType;
 import jakarta.persistence.Column;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.Convert;
@@ -41,7 +39,6 @@ public class Patient {
     private String gender;
 
     @Column(name = "birth_date")
-    @Temporal(TemporalType.DATE)
     @DateTimeFormat(pattern = "yyyy-MM-dd")
     private LocalDate birthDate;
 
@@ -72,14 +69,12 @@ public class Patient {
     private BasicHealthUnit basicHealthUnit;
 
     @Column(name = "creation_date", updatable = false)
-    @Temporal(TemporalType.TIMESTAMP)
     private LocalDateTime creationDate;
 
     @Column(name = "creation_user", updatable = false)
     private String creationUser;
 
     @Column(name = "update_date")
-    @Temporal(TemporalType.TIMESTAMP)
     private LocalDateTime updateDate;
 
     @Column(name = "update_user")

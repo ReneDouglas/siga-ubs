@@ -5,8 +5,6 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import jakarta.persistence.GenerationType;
-import jakarta.persistence.Temporal;
-import jakarta.persistence.TemporalType;
 import jakarta.persistence.Column;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.CascadeType;
@@ -30,7 +28,6 @@ public class Specialty {
     private Set<MedicalProcedure> medicalProcedures = new HashSet<>();
 
     @Column(name = "creation_date", updatable = false)
-    @Temporal(TemporalType.TIMESTAMP)
     private LocalDateTime creationDate;
 
     @Column(name = "creation_user", updatable = false)

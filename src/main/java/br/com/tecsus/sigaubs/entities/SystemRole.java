@@ -7,8 +7,6 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.ManyToMany;
 import jakarta.persistence.Table;
-import jakarta.persistence.Temporal;
-import jakarta.persistence.TemporalType;
 import java.io.Serializable;
 import java.time.LocalDateTime;
 import java.util.HashSet;
@@ -31,14 +29,12 @@ public class SystemRole implements Serializable {
     private Boolean root;
 
     @Column(name = "creation_date", updatable = false)
-    @Temporal(TemporalType.TIMESTAMP)
     private LocalDateTime creationDate;
 
     @Column(name = "creation_user", updatable = false)
     private String creationUser;
 
     @Column(name = "update_date")
-    @Temporal(TemporalType.TIMESTAMP)
     private LocalDateTime updateDate;
 
     @Column(name = "update_user")
