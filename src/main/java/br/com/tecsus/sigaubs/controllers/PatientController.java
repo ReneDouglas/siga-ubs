@@ -200,6 +200,12 @@ public class PatientController {
         return "patientManagement/patientFragments/patientSearch-dropdown :: dropdownPatient";
     }
 
+    @GetMapping("/patient-management/cancel")
+    public String cancelPatientEdit() {
+        patientToEdit = new Patient();
+        return "redirect:/patient-management";
+    }
+
     @GetMapping("/patient-list/clear")
     public String clearPatientsPage() {
         patientToSearch = new Patient();
