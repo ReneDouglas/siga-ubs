@@ -65,16 +65,23 @@ services:
         condition: service_healthy
     env_file:
       - .env.prd
+    environment:
+      TZ: America/Sao_Paulo
     volumes:
       - sigaubs_mysql_backups:/backups
     restart: always
     entrypoint: >
       sh -c "
         while true; do
+          NOW=$$(date +%s);
+          TODAY_TARGET=$$(date -d 'today 01:00' +%s);
+          NEXT_TARGET=$$(date -d 'tomorrow 01:00' +%s);
+          if [ \"$$TODAY_TARGET\" -gt \"$$NOW\" ]; then SLEEP_SEC=$$((TODAY_TARGET - NOW)); else SLEEP_SEC=$$((NEXT_TARGET - NOW)); fi;
+          echo \"Próximo backup em $$((SLEEP_SEC / 3600))h$$(( (SLEEP_SEC % 3600) / 60))m ($$(date -d @$$((NOW + SLEEP_SEC)) '+%d/%m %H:%M'))\";
+          sleep $$SLEEP_SEC;
           TIMESTAMP=$$(date +%Y%m%d_%H%M%S);
           mysqldump -h mysql -u root -p\"$$MYSQL_ROOT_PASSWORD\" sigaubs > /backups/sigaubs_$$TIMESTAMP.sql && echo \"Backup $$TIMESTAMP concluído\";
           ls -1t /backups/sigaubs_*.sql | tail -n +8 | xargs -r rm --;
-          sleep 86400;
         done
       "
 
