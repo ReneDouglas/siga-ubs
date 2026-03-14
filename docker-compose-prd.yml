@@ -39,8 +39,12 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: prd
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/sigaubs?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=America/Sao_Paulo
-      LOGGING_FILE_NAME: ""
       JAVA_OPTS: "-Xms512m -Xmx768m -XX:+UseG1GC -XX:+UseContainerSupport"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "7"
     healthcheck:
       test: ["CMD-SHELL", "wget -q --spider http://localhost:8080/actuator/health || exit 1"]
       interval: 30s
@@ -53,5 +57,27 @@ services:
         limits:
           memory: 1536m
 
+  backup:
+    image: mysql:8.0
+    container_name: sigaubs-backup-prd
+    depends_on:
+      mysql:
+        condition: service_healthy
+    env_file:
+      - .env.prd
+    volumes:
+      - sigaubs_mysql_backups:/backups
+    restart: always
+    entrypoint: >
+      sh -c "
+        while true; do
+          TIMESTAMP=$$(date +%Y%m%d_%H%M%S);
+          mysqldump -h mysql -u root -p\"$$MYSQL_ROOT_PASSWORD\" sigaubs > /backups/sigaubs_$$TIMESTAMP.sql && echo \"Backup $$TIMESTAMP concluído\";
+          ls -1t /backups/sigaubs_*.sql | tail -n +8 | xargs -r rm --;
+          sleep 86400;
+        done
+      "
+
 volumes:
   sigaubs_mysql_prd_data:
+  sigaubs_mysql_backups:

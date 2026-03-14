@@ -84,7 +84,7 @@ public class DashboardService {
         LocalDate startOfMonth = currentMonth.atDay(1);
         LocalDate startOfNextMonth = currentMonth.plusMonths(1).atDay(1);
 
-        Object[] summary = dashboardRepository.findUBSSummaryByUbsId(ubsId, startOfMonth, startOfNextMonth);
+        UBSSingleSummaryDTO summary = dashboardRepository.findUBSSummaryByUbsId(ubsId, startOfMonth, startOfNextMonth);
         List<ContemplatedPatientRowDTO> rows = dashboardRepository
                 .findContemplatedPatientsByUbsThisMonth(ubsId, startOfMonth, startOfNextMonth);
 
@@ -93,10 +93,10 @@ public class DashboardService {
         }
 
         return new UBSDashboardDTO(
-                (String) summary[0],
-                ((Number) summary[1]).longValue(),
-                ((Number) summary[2]).longValue(),
-                ((Number) summary[3]).longValue(),
+                summary.name(),
+                summary.totalOpenAppointments(),
+                summary.totalContemplated(),
+                summary.totalPatients(),
                 rows);
     }
 

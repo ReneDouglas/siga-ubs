@@ -53,64 +53,76 @@ public class PatientRepositoryCustomImpl implements PatientRepositoryCustom {
     @Override
     public Page<Patient> findPatientsPaginated(Patient patient, Pageable page) {
 
-        StringBuilder jpql = new StringBuilder();
+        Long ubsId = validationUtils.attrIsNotNull(patient.getBasicHealthUnit().getId()) ? patient.getBasicHealthUnit().getId() : null;
+        String name = validationUtils.attrIsNotNull(patient.getName()) ? "%" + patient.getName() + "%" : null;
+        String phoneNumber = validationUtils.attrIsNotNull(patient.getPhoneNumber()) ? patient.getPhoneNumber() : null;
+        String cpf = validationUtils.attrIsNotNull(patient.getCpf()) ? patient.getCpf() : null;
+        String susNumber = validationUtils.attrIsNotNull(patient.getSusNumber()) ? patient.getSusNumber() : null;
+        String addressStreet = validationUtils.attrIsNotNull(patient.getAddressStreet()) ? "%" + patient.getAddressStreet() + "%" : null;
+        var socialSituationRating = validationUtils.attrIsNotNull(patient.getSocialSituationRating()) ? patient.getSocialSituationRating() : null;
+        String acsName = validationUtils.attrIsNotNull(patient.getAcsName()) ? patient.getAcsName() : null;
 
-        jpql.append("SELECT p.id FROM Patient p ");
+        TypedQuery<Long> idsQuery = em.createQuery("""
+            SELECT p.id FROM Patient p
+            WHERE (:ubsId IS NULL OR p.basicHealthUnit.id = :ubsId)
+                AND (:name IS NULL OR p.name LIKE :name)
+                AND (:phoneNumber IS NULL OR p.phoneNumber = :phoneNumber)
+                AND (:cpf IS NULL OR p.cpf = :cpf)
+                AND (:susNumber IS NULL OR p.susNumber = :susNumber)
+                AND (:addressStreet IS NULL OR p.addressStreet LIKE :addressStreet)
+                AND (:socialSituationRating IS NULL OR p.socialSituationRating = :socialSituationRating)
+                AND (:acsName IS NULL OR p.acsName = :acsName)
+            ORDER BY p.name
+        """, Long.class);
 
-        if (validationUtils.attrIsNotNull(patient.getBasicHealthUnit().getId())) {
-            jpql.append("WHERE p.basicHealthUnit.id = :ubsId ");
+        idsQuery.setParameter("ubsId", ubsId);
+        idsQuery.setParameter("name", name);
+        idsQuery.setParameter("phoneNumber", phoneNumber);
+        idsQuery.setParameter("cpf", cpf);
+        idsQuery.setParameter("susNumber", susNumber);
+        idsQuery.setParameter("addressStreet", addressStreet);
+        idsQuery.setParameter("socialSituationRating", socialSituationRating);
+        idsQuery.setParameter("acsName", acsName);
+        idsQuery.setFirstResult(page.getPageNumber() * page.getPageSize());
+        idsQuery.setMaxResults(page.getPageSize());
+
+        var ids = idsQuery.getResultList();
+        long totalCount = 0;
+
+        if (ids.size() < page.getPageSize()) {
+            totalCount = ids.size();
         } else {
-            jpql.append("WHERE 1=1 ");
-        }
-        if (validationUtils.attrIsNotNull(patient.getName())) {
-            jpql.append("AND p.name LIKE :name ");
-        }
-        if (validationUtils.attrIsNotNull(patient.getPhoneNumber())) {
-            jpql.append("AND p.phoneNumber = :phoneNumber ");
-        }
-        if (validationUtils.attrIsNotNull(patient.getCpf())) {
-            jpql.append("AND p.cpf = :cpf ");
-        }
-        if (validationUtils.attrIsNotNull(patient.getSusNumber())) {
-            jpql.append("AND p.susNumber = :susNumber ");
-        }
-        if (validationUtils.attrIsNotNull(patient.getAddressStreet())) {
-            jpql.append("AND p.addressStreet LIKE :addressStreet ");
-        }
-        if (validationUtils.attrIsNotNull(patient.getSocialSituationRating())) {
-            jpql.append("AND p.socialSituationRating = :socialSituationRating ");
-        }
-        if (validationUtils.attrIsNotNull(patient.getAcsName())) {
-            jpql.append("AND p.acsName = :acsName ");
-        }
+            TypedQuery<Long> countQuery = em.createQuery("""
+                SELECT COUNT(p.id) FROM Patient p
+                WHERE (:ubsId IS NULL OR p.basicHealthUnit.id = :ubsId)
+                    AND (:name IS NULL OR p.name LIKE :name)
+                    AND (:phoneNumber IS NULL OR p.phoneNumber = :phoneNumber)
+                    AND (:cpf IS NULL OR p.cpf = :cpf)
+                    AND (:susNumber IS NULL OR p.susNumber = :susNumber)
+                    AND (:addressStreet IS NULL OR p.addressStreet LIKE :addressStreet)
+                    AND (:socialSituationRating IS NULL OR p.socialSituationRating = :socialSituationRating)
+                    AND (:acsName IS NULL OR p.acsName = :acsName)
+            """, Long.class);
 
-        jpql.append("ORDER BY p.name");
-
-        TypedQuery<Long> patientsIdQueryPaginated = em.createQuery(jpql.toString(), Long.class);
-        attachParameters(patientsIdQueryPaginated, patient);
-
-        patientsIdQueryPaginated.setFirstResult(page.getPageNumber() * page.getPageSize());
-        patientsIdQueryPaginated.setMaxResults(page.getPageSize());
-
-        var patientsIdsPaginated = patientsIdQueryPaginated.getResultList();
-        long totalCountPatients = 0;
-
-        if (patientsIdsPaginated.size() < page.getPageSize()) {
-            totalCountPatients = patientsIdsPaginated.size();
-        } else {
-            Query count = em.createQuery(jpql.toString().replace("p.id", "count(p.id)"));
-            attachParameters(count, patient);
-            totalCountPatients = (long) count.getSingleResult();
+            countQuery.setParameter("ubsId", ubsId);
+            countQuery.setParameter("name", name);
+            countQuery.setParameter("phoneNumber", phoneNumber);
+            countQuery.setParameter("cpf", cpf);
+            countQuery.setParameter("susNumber", susNumber);
+            countQuery.setParameter("addressStreet", addressStreet);
+            countQuery.setParameter("socialSituationRating", socialSituationRating);
+            countQuery.setParameter("acsName", acsName);
+            totalCount = countQuery.getSingleResult();
         }
 
         TypedQuery<Patient> patientsQuery = em.createQuery("""
-                   SELECT p FROM Patient p WHERE p.id IN :ids
+            SELECT p FROM Patient p WHERE p.id IN :ids ORDER BY p.name
         """, Patient.class);
 
-        patientsQuery.setParameter("ids", patientsIdsPaginated);
+        patientsQuery.setParameter("ids", ids);
         List<Patient> patients = patientsQuery.getResultList();
 
-        return new PageImpl<>(patients, page, totalCountPatients);
+        return new PageImpl<>(patients, page, totalCount);
     }
 
     @Override
@@ -190,31 +202,4 @@ public class PatientRepositoryCustomImpl implements PatientRepositoryCustom {
         return new PageImpl<>(patientHistory, page, totalCountAppointmentsHistory);
     }
 
-    private void attachParameters(Query query, Patient patient){
-
-        if (validationUtils.attrIsNotNull(patient.getBasicHealthUnit().getId())) {
-            query.setParameter("ubsId", patient.getBasicHealthUnit().getId());
-        }
-        if (validationUtils.attrIsNotNull(patient.getName())) {
-            query.setParameter("name", "%" + patient.getName() + "%");
-        }
-        if (validationUtils.attrIsNotNull(patient.getPhoneNumber())) {
-            query.setParameter("phoneNumber", patient.getPhoneNumber());
-        }
-        if (validationUtils.attrIsNotNull(patient.getCpf())) {
-            query.setParameter("cpf", patient.getCpf());
-        }
-        if (validationUtils.attrIsNotNull(patient.getSusNumber())) {
-            query.setParameter("susNumber", patient.getSusNumber());
-        }
-        if (validationUtils.attrIsNotNull(patient.getAddressStreet())) {
-            query.setParameter("addressStreet", "%" + patient.getAddressStreet() + "%");
-        }
-        if (validationUtils.attrIsNotNull(patient.getSocialSituationRating())) {
-            query.setParameter("socialSituationRating", patient.getSocialSituationRating());
-        }
-        if (validationUtils.attrIsNotNull(patient.getAcsName())) {
-            query.setParameter("acsName", patient.getAcsName());
-        }
-    }
 }

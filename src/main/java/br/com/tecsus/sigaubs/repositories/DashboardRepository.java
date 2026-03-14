@@ -6,6 +6,7 @@ import br.com.tecsus.sigaubs.enums.Priorities;
 import br.com.tecsus.sigaubs.enums.ProcedureType;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
+import jakarta.persistence.Tuple;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -218,8 +219,7 @@ public class DashboardRepository {
         /**
          * Retorna resumo de indicadores de uma UBS específica.
          */
-        @SuppressWarnings("unchecked")
-        public Object[] findUBSSummaryByUbsId(Long ubsId, LocalDate startOfMonth, LocalDate startOfNextMonth) {
+        public UBSSingleSummaryDTO findUBSSummaryByUbsId(Long ubsId, LocalDate startOfMonth, LocalDate startOfNextMonth) {
 
                 String sql = """
                                 SELECT
@@ -239,13 +239,19 @@ public class DashboardRepository {
                                 WHERE bhu.id = :ubsId
                                 """;
 
-                List<Object[]> results = em.createNativeQuery(sql)
+                List<Tuple> results = em.createNativeQuery(sql, Tuple.class)
                                 .setParameter("ubsId", ubsId)
                                 .setParameter("startOfMonth", startOfMonth)
                                 .setParameter("startOfNextMonth", startOfNextMonth)
                                 .getResultList();
 
-                return results.isEmpty() ? null : results.get(0);
+                if (results.isEmpty()) return null;
+                Tuple row = results.get(0);
+                return new UBSSingleSummaryDTO(
+                                row.get("name", String.class),
+                                ((Number) row.get("total_open")).longValue(),
+                                ((Number) row.get("total_contemplated")).longValue(),
+                                ((Number) row.get("total_patients")).longValue());
         }
 
         /**
