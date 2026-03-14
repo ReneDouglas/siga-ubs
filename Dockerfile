@@ -36,9 +36,9 @@ RUN ./mvnw package -DskipTests -B
 # =============================================================================
 # Stage 2 — runtime: JRE slim
 # =============================================================================
-FROM eclipse-temurin:21-jre-jammy AS runtime
+FROM eclipse-temurin:21-jre-alpine AS runtime
 
-RUN groupadd --system sigaubs && useradd --system --gid sigaubs sigaubs
+RUN addgroup -S sigaubs && adduser -S -G sigaubs sigaubs
 
 WORKDIR /app
 
