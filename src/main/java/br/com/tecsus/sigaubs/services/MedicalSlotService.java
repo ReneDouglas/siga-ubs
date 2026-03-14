@@ -12,7 +12,9 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.YearMonth;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -66,7 +68,10 @@ public class MedicalSlotService {
     }
 
     public List<MedicalSlot> findAvailableSlotsByReferenceMonth() {
-        return medicalSlotRepository.findAllAvailableSlotsByReferenceMonth();
+        YearMonth current = YearMonth.now();
+        LocalDate startOfMonth = current.atDay(1);
+        LocalDate startOfNextMonth = current.plusMonths(1).atDay(1);
+        return medicalSlotRepository.findAllAvailableSlotsByReferenceMonth(startOfMonth, startOfNextMonth);
     }
 
     @Transactional

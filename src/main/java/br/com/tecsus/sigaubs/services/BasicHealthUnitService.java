@@ -11,6 +11,8 @@ import br.com.tecsus.sigaubs.security.SystemUserDetails;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -59,11 +61,12 @@ public class BasicHealthUnitService {
         return basicHealthUnitRepository.findByCityHallId(1L);
     }*/
 
-    //@Transactional(readOnly = true)
+    @Cacheable("ubs")
     public List<BasicHealthUnit> findAllUBS() {
         return basicHealthUnitRepository.findAll();
     }
 
+    @CacheEvict(value = "ubs", allEntries = true)
     @Transactional
     public void registerBasicHealthUnit(BasicHealthUnit basicHealthUnit, SystemUserDetails loggedUser) throws Exception{
 
@@ -72,6 +75,7 @@ public class BasicHealthUnitService {
         basicHealthUnitRepository.save(basicHealthUnit);
     }
 
+    @CacheEvict(value = "ubs", allEntries = true)
     @Transactional
     public void updateBasicHealthUnit(BasicHealthUnit basicHealthUnit, SystemUserDetails loggedUser) throws Exception{
 
@@ -80,6 +84,7 @@ public class BasicHealthUnitService {
         basicHealthUnitRepository.save(basicHealthUnit);
     }
 
+    @CacheEvict(value = "ubs", allEntries = true)
     @Transactional
     public void deleteBasicHealtUnit(Long id, SystemUserDetails loggedUser) throws Exception{
 

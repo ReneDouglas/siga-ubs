@@ -8,6 +8,8 @@ import br.com.tecsus.sigaubs.enums.ProcedureType;
 import br.com.tecsus.sigaubs.repositories.MedicalProcedureRepository;
 import br.com.tecsus.sigaubs.repositories.SpecialtyRepository;
 import br.com.tecsus.sigaubs.security.SystemUserDetails;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
@@ -26,6 +28,7 @@ public class SpecialtyService {
         this.medicalProcedureRepository = medicalProcedureRepository;
     }
 
+    @Cacheable("especialidades")
     public List<Specialty> findSpecialties() {
         return specialtyRepository.findAllByOrderByTitleAsc();
     }
@@ -51,6 +54,7 @@ public class SpecialtyService {
         return specialtyDTO;
     }
 
+    @CacheEvict(value = "especialidades", allEntries = true)
     @Transactional
     public void registerSpecialty(SpecialtyDTO specialtyDTO, SystemUserDetails loggedUser) throws Exception {
 
@@ -78,6 +82,7 @@ public class SpecialtyService {
         specialtyRepository.save(specialty);
     }
 
+    @CacheEvict(value = "especialidades", allEntries = true)
     @Transactional
     public void updateSpecialty(SpecialtyDTO specialtyDTO, SystemUserDetails loggedUser) throws Exception {
 

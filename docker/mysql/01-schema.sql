@@ -170,3 +170,12 @@ CREATE TABLE patient_history (
     update_user VARCHAR(255),
     CONSTRAINT fk_ph_appt FOREIGN KEY (id_appointment) REFERENCES appointments(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- =============================================================================
+-- Índices de performance — colunas de alta frequência em queries e filtros
+-- =============================================================================
+CREATE INDEX idx_appt_status     ON appointments(status);
+CREATE INDEX idx_appt_patient    ON appointments(id_patient);
+CREATE INDEX idx_ms_ref_month    ON medical_slots(reference_month);
+CREATE INDEX idx_cont_date       ON contemplations(contemplation_date);
+CREATE INDEX idx_specialty_title ON specialties(title);

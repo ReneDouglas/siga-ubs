@@ -48,7 +48,7 @@ RUN chown sigaubs:sigaubs app.jar
 USER sigaubs
 
 ENV SPRING_PROFILES_ACTIVE=prd
-ENV JAVA_OPTS="-Xms256m -Xmx512m -XX:+UseG1GC"
+ENV JAVA_OPTS="-Xms512m -Xmx768m -XX:+UseG1GC -XX:+UseContainerSupport"
 
 EXPOSE 8080
 

@@ -10,6 +10,7 @@ services:
     volumes:
       - sigaubs_mysql_prd_data:/var/lib/mysql
       - ./docker/mysql/01-schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - ./docker/mysql/my.cnf:/etc/mysql/conf.d/sigaubs.cnf:ro
     # Porta NÃO exposta — somente a app acessa via rede interna
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD}"]
@@ -39,7 +40,13 @@ services:
       SPRING_PROFILES_ACTIVE: prd
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/sigaubs?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=America/Sao_Paulo
       LOGGING_FILE_NAME: ""
-      JAVA_OPTS: "-Xms512m -Xmx1024m -XX:+UseG1GC"
+      JAVA_OPTS: "-Xms512m -Xmx768m -XX:+UseG1GC -XX:+UseContainerSupport"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:8080/actuator/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
     restart: always
     deploy:
       resources:

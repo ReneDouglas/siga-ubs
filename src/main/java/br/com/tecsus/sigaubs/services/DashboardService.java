@@ -7,51 +7,86 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
+import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
 @Service
 public class DashboardService {
 
     private final DashboardRepository dashboardRepository;
+    private final ContemplationScheduleStatus contemplationScheduleStatus;
     private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
 
     @Autowired
-    public DashboardService(DashboardRepository dashboardRepository) {
+    public DashboardService(DashboardRepository dashboardRepository,
+            ContemplationScheduleStatus contemplationScheduleStatus) {
         this.dashboardRepository = dashboardRepository;
+        this.contemplationScheduleStatus = contemplationScheduleStatus;
     }
 
-    @Transactional(readOnly = true)
     public DashboardDTO loadDashboardData() {
 
-        List<UBSSummaryDTO> ubsSummaries = dashboardRepository.findAllUBSSummaries();
-        List<DailyAppointmentDTO> dailyAppointments = dashboardRepository.findDailyAppointments();
-        List<MonthlyStatsDTO> monthlyOpen = dashboardRepository.findMonthlyOpenAppointments();
-        List<MonthlyStatsDTO> monthlyContemplations = dashboardRepository.findMonthlyContemplations();
-        List<PriorityDistributionDTO> priorityDistribution = dashboardRepository.findPriorityDistribution();
-        List<ProcedureTypeDistributionDTO> procedureTypeDistribution = dashboardRepository
-                .findProcedureTypeDistribution();
-        List<BottleneckDTO> topBottlenecks = dashboardRepository.findTopBottlenecks();
-        List<SlotOccupancyDTO> slotOccupancy = dashboardRepository.findSlotOccupancyByUBS();
+        YearMonth currentMonth = YearMonth.now();
+        LocalDate startOfMonth = currentMonth.atDay(1);
+        LocalDate startOfNextMonth = currentMonth.plusMonths(1).atDay(1);
+
+        CompletableFuture<List<UBSSummaryDTO>> ubsSummariesFuture = CompletableFuture
+                .supplyAsync(() -> dashboardRepository.findAllUBSSummaries(startOfMonth, startOfNextMonth));
+
+        CompletableFuture<List<DailyAppointmentDTO>> dailyAppointmentsFuture = CompletableFuture
+                .supplyAsync(dashboardRepository::findDailyAppointments);
+
+        CompletableFuture<List<MonthlyStatsDTO>> monthlyOpenFuture = CompletableFuture
+                .supplyAsync(dashboardRepository::findMonthlyOpenAppointments);
+
+        CompletableFuture<List<MonthlyStatsDTO>> monthlyContemplationsFuture = CompletableFuture
+                .supplyAsync(dashboardRepository::findMonthlyContemplations);
+
+        CompletableFuture<List<PriorityDistributionDTO>> priorityDistributionFuture = CompletableFuture
+                .supplyAsync(dashboardRepository::findPriorityDistribution);
+
+        CompletableFuture<List<ProcedureTypeDistributionDTO>> procedureTypeDistributionFuture = CompletableFuture
+                .supplyAsync(dashboardRepository::findProcedureTypeDistribution);
+
+        CompletableFuture<List<BottleneckDTO>> topBottlenecksFuture = CompletableFuture
+                .supplyAsync(dashboardRepository::findTopBottlenecks);
+
+        CompletableFuture<List<SlotOccupancyDTO>> slotOccupancyFuture = CompletableFuture
+                .supplyAsync(() -> dashboardRepository.findSlotOccupancyByUBS(startOfMonth, startOfNextMonth));
+
+        CompletableFuture.allOf(
+                ubsSummariesFuture, dailyAppointmentsFuture, monthlyOpenFuture,
+                monthlyContemplationsFuture, priorityDistributionFuture,
+                procedureTypeDistributionFuture, topBottlenecksFuture, slotOccupancyFuture
+        ).join();
+
         ContemplationStatusDTO contemplationStatus = buildContemplationStatus();
 
         return new DashboardDTO(
-                ubsSummaries,
-                dailyAppointments,
-                monthlyOpen,
-                monthlyContemplations,
-                priorityDistribution,
+                ubsSummariesFuture.join(),
+                dailyAppointmentsFuture.join(),
+                monthlyOpenFuture.join(),
+                monthlyContemplationsFuture.join(),
+                priorityDistributionFuture.join(),
                 contemplationStatus,
-                procedureTypeDistribution,
-                topBottlenecks,
-                slotOccupancy);
+                procedureTypeDistributionFuture.join(),
+                topBottlenecksFuture.join(),
+                slotOccupancyFuture.join());
     }
 
     @Transactional(readOnly = true)
     public UBSDashboardDTO loadUBSDashboardData(Long ubsId) {
 
-        Object[] summary = dashboardRepository.findUBSSummaryByUbsId(ubsId);
-        List<ContemplatedPatientRowDTO> rows = dashboardRepository.findContemplatedPatientsByUbsThisMonth(ubsId);
+        YearMonth currentMonth = YearMonth.now();
+        LocalDate startOfMonth = currentMonth.atDay(1);
+        LocalDate startOfNextMonth = currentMonth.plusMonths(1).atDay(1);
+
+        Object[] summary = dashboardRepository.findUBSSummaryByUbsId(ubsId, startOfMonth, startOfNextMonth);
+        List<ContemplatedPatientRowDTO> rows = dashboardRepository
+                .findContemplatedPatientsByUbsThisMonth(ubsId, startOfMonth, startOfNextMonth);
 
         if (summary == null) {
             return null;
@@ -67,16 +102,15 @@ public class DashboardService {
 
     private ContemplationStatusDTO buildContemplationStatus() {
 
-        String status = ContemplationScheduleStatus.status != null
-                ? ContemplationScheduleStatus.status.name()
+        ContemplationScheduleStatus.Status currentStatus = contemplationScheduleStatus.getStatus();
+        String status = currentStatus != null ? currentStatus.name() : null;
+
+        String startTime = contemplationScheduleStatus.getStartTime() != null
+                ? contemplationScheduleStatus.getStartTime().format(FORMATTER)
                 : null;
 
-        String startTime = ContemplationScheduleStatus.startTime != null
-                ? ContemplationScheduleStatus.startTime.format(FORMATTER)
-                : null;
-
-        String endTime = ContemplationScheduleStatus.endTime != null
-                ? ContemplationScheduleStatus.endTime.format(FORMATTER)
+        String endTime = contemplationScheduleStatus.getEndTime() != null
+                ? contemplationScheduleStatus.getEndTime().format(FORMATTER)
                 : null;
 
         Long totalToday = dashboardRepository.countTodayContemplations();
