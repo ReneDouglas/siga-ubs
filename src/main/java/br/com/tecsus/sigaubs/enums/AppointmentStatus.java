@@ -1,11 +1,8 @@
 package br.com.tecsus.sigaubs.enums;
 
-import lombok.Getter;
-
 import java.util.Arrays;
 import java.util.List;
 
-@Getter
 public enum AppointmentStatus {
 
     AGUARDANDO_CONTEMPLACAO("Aguardando Contemplação", false),
@@ -21,6 +18,14 @@ public enum AppointmentStatus {
     AppointmentStatus(String description, boolean contemplationFilter) {
         this.description = description;
         this.contemplationFilter = contemplationFilter;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public boolean isContemplationFilter() {
+        return contemplationFilter;
     }
 
     public static AppointmentStatus getByDescription(String d) {

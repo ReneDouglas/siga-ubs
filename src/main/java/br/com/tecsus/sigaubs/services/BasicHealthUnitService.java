@@ -8,7 +8,8 @@ import br.com.tecsus.sigaubs.entities.SystemUser;
 import br.com.tecsus.sigaubs.repositories.BasicHealthUnitRepository;
 import br.com.tecsus.sigaubs.repositories.MedicalProcedureRepository;
 import br.com.tecsus.sigaubs.security.SystemUserDetails;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,10 +18,11 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
-@Slf4j
 @Service
 @Transactional(readOnly = true)
 public class BasicHealthUnitService {
+
+    private static final Logger log = LoggerFactory.getLogger(BasicHealthUnitService.class);
 
     private final BasicHealthUnitRepository basicHealthUnitRepository;
     private final MedicalProcedureRepository medicalProcedureRepository;

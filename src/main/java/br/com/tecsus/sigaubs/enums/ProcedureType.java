@@ -1,10 +1,8 @@
 package br.com.tecsus.sigaubs.enums;
 
-import lombok.Getter;
 import java.util.Arrays;
 import java.util.List;
 
-@Getter
 public enum ProcedureType {
     CONSULTA("Consulta"),
     EXAME("Exame"),
@@ -14,6 +12,10 @@ public enum ProcedureType {
 
     ProcedureType(String description) {
         this.description = description;
+    }
+
+    public String getDescription() {
+        return description;
     }
 
     public static ProcedureType getProcedureTypeByDescription(String d) {

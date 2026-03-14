@@ -12,15 +12,12 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Convert;
-import lombok.Getter;
-import lombok.Setter;
 import org.hibernate.annotations.DynamicUpdate;
 
 import java.time.LocalDateTime;
+import java.util.Objects;
 
 @Entity
-@Getter
-@Setter
 @DynamicUpdate
 @Table(name = "contemplations")
 public class Contemplation {
@@ -60,7 +57,99 @@ public class Contemplation {
     public Contemplation() {
     }
 
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public LocalDateTime getContemplationDate() {
+        return contemplationDate;
+    }
+
+    public void setContemplationDate(LocalDateTime contemplationDate) {
+        this.contemplationDate = contemplationDate;
+    }
+
+    public Priorities getContemplatedBy() {
+        return contemplatedBy;
+    }
+
+    public void setContemplatedBy(Priorities contemplatedBy) {
+        this.contemplatedBy = contemplatedBy;
+    }
+
+    public Appointment getAppointment() {
+        return appointment;
+    }
+
+    public void setAppointment(Appointment appointment) {
+        this.appointment = appointment;
+    }
+
+    public MedicalSlot getMedicalSlot() {
+        return medicalSlot;
+    }
+
+    public void setMedicalSlot(MedicalSlot medicalSlot) {
+        this.medicalSlot = medicalSlot;
+    }
+
+    public String getObservation() {
+        return observation;
+    }
+
+    public void setObservation(String observation) {
+        this.observation = observation;
+    }
+
+    public LocalDateTime getCreationDate() {
+        return creationDate;
+    }
+
+    public void setCreationDate(LocalDateTime creationDate) {
+        this.creationDate = creationDate;
+    }
+
+    public String getCreationUser() {
+        return creationUser;
+    }
+
+    public void setCreationUser(String creationUser) {
+        this.creationUser = creationUser;
+    }
+
+    public LocalDateTime getUpdateDate() {
+        return updateDate;
+    }
+
+    public void setUpdateDate(LocalDateTime updateDate) {
+        this.updateDate = updateDate;
+    }
+
+    public String getUpdateUser() {
+        return updateUser;
+    }
+
+    public void setUpdateUser(String updateUser) {
+        this.updateUser = updateUser;
+    }
+
     public boolean isEmptyObservation() {
         return this.getObservation() == null || this.getObservation().isEmpty();
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof Contemplation that)) return false;
+        return id != null && Objects.equals(id, that.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return getClass().hashCode();
     }
 }

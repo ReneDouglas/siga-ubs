@@ -7,7 +7,8 @@ import br.com.tecsus.sigaubs.security.SystemUserDetails;
 import br.com.tecsus.sigaubs.services.*;
 import br.com.tecsus.sigaubs.services.exceptions.CancelContemplationException;
 import br.com.tecsus.sigaubs.utils.DefaultValues;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -27,10 +28,11 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import java.util.List;
 import java.util.Optional;
 
-@Slf4j
 @Controller
 @SessionScope
 public class QueueController {
+
+    private static final Logger log = LoggerFactory.getLogger(QueueController.class);
 
     private final AppointmentService appointmentService;
     private final MedicalSlotService medicalSlotService;

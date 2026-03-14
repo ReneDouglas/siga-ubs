@@ -5,7 +5,8 @@ import br.com.tecsus.sigaubs.entities.MedicalSlot;
 import br.com.tecsus.sigaubs.repositories.MedicalSlotRepository;
 import br.com.tecsus.sigaubs.security.SystemUserDetails;
 import br.com.tecsus.sigaubs.services.exceptions.DistinctAvailableMedicalSlotException;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -16,9 +17,10 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
-@Slf4j
 @Service
 public class MedicalSlotService {
+
+    private static final Logger log = LoggerFactory.getLogger(MedicalSlotService.class);
 
     private final MedicalSlotRepository medicalSlotRepository;
 

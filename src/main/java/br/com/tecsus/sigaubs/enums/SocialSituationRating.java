@@ -1,10 +1,8 @@
 package br.com.tecsus.sigaubs.enums;
 
-import lombok.Getter;
 import java.util.Arrays;
 import java.util.List;
 
-@Getter
 public enum SocialSituationRating {
     UM_QUARTO_DE_SALARIO_MINIMO(1, "1/4 salário mínimo (R$ 353,00)"),
     MEIO_SALARIO_MINIMO(2, "1/2 salário mínimo (R$ 706,00)"),
@@ -22,6 +20,14 @@ public enum SocialSituationRating {
     SocialSituationRating(int priority, String description) {
         this.priority = priority;
         this.description = description;
+    }
+
+    public int getPriority() {
+        return priority;
+    }
+
+    public String getDescription() {
+        return description;
     }
 
     public static List<String> getDescriptionSortedByRating() {

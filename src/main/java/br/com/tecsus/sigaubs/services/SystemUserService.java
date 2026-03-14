@@ -8,7 +8,8 @@ import br.com.tecsus.sigaubs.repositories.SystemRoleRepository;
 import br.com.tecsus.sigaubs.repositories.SystemUserRepository;
 import br.com.tecsus.sigaubs.security.SystemUserDetails;
 import br.com.tecsus.sigaubs.services.exceptions.InvalidConfirmPasswordException;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -27,9 +28,10 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-@Slf4j
 @Service
 public class SystemUserService implements UserDetailsService {
+
+    private static final Logger log = LoggerFactory.getLogger(SystemUserService.class);
 
     private final SystemUserRepository systemUserRepository;
     private final SystemRoleRepository systemRoleRepository;

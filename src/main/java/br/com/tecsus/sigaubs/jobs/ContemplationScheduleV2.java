@@ -11,7 +11,8 @@ import br.com.tecsus.sigaubs.services.AppointmentStatusHistoryService;
 import br.com.tecsus.sigaubs.services.ContemplationService;
 import br.com.tecsus.sigaubs.services.MedicalSlotService;
 import br.com.tecsus.sigaubs.utils.ContemplationScheduleStatus;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -31,9 +32,10 @@ import java.util.stream.Collectors;
 
 import static br.com.tecsus.sigaubs.utils.DefaultValues.QUATRO_MESES;
 
-@Slf4j
 @Component
 public class ContemplationScheduleV2 {
+
+    private static final Logger log = LoggerFactory.getLogger(ContemplationScheduleV2.class);
 
     private final MedicalSlotService medicalSlotService;
     private final AppointmentService appointmentService;
