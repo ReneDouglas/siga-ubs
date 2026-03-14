@@ -1,94 +1,103 @@
 <div th:fragment="patientToEdit">
-    <form
-            th:attr="hx-post=@{/patient-management/edit}"
-            th:object="${patient}"
-            hx-target="this"
-            hx-swap="outerHTML">
-        <div>
-            <label>Nome completo: </label><span th:text="${patient.name}"></span>
-            <input type="hidden" th:field="*{name}"/>
-        </div>
-        <div>
-            <label>Cartão SUS: </label><span th:text="${patient.susNumber}"></span>
-            <input type="hidden" th:field="*{susNumber}"/>
-        </div>
-        <div>
-            <label>CPF: </label><span th:text="${patient.cpf}"></span>
-            <input type="hidden" th:field="*{cpf}"/>
-        </div>
-        <div>
-            <label>Sexo: </label><span th:text="${patient.gender}"></span>
-            <input type="hidden" th:field="*{gender}"/>
-        </div>
-        <div>
-            <label>Data de Nascimento: </label><span th:text="${patient.formattedBirthDate()}"></span>
-            <input type="hidden" th:field="*{birthDate}"/>
-        </div>
-        <div>
-            <label>Situação Social: </label><span th:text="${patient.socialSituationRating.description}"></span>
-            <input type="hidden" th:field="*{socialSituationRating}"/>
-        </div>
-        <div>
-            <label>Telefone: </label><span th:text="${patient.phoneNumber}"></span>
-            <input type="hidden" th:field="*{phoneNumber}"/>
-        </div>
-        <div>
-            <label>Logradouro: </label><span th:text="${patient.addressStreet}"></span>
-            <input type="hidden" th:field="*{addressStreet}"/>
-        </div>
-        <div>
-            <label>Número: </label><span th:text="${patient.addressNumber}"></span>
-            <input type="hidden" th:field="*{addressNumber}"/>
-        </div>
-        <div>
-            <label>Complemento: </label><span th:text="${patient.addressComplement}"></span>
-            <input type="hidden" th:field="*{addressComplement}"/>
-        </div>
-        <div>
-            <label>Referência: </label><span th:text="${patient.addressReference}"></span>
-            <input type="hidden" th:field="*{addressReference}"/>
-        </div>
-        <div>
-            <label>ACS Responsável: </label><span th:text="${patient.acsName}"></span>
-            <input type="hidden" th:field="*{acsName}"/>
-        </div>
-        <div>
-            <label for="basicHealthUnit">UBS:</label>
-            <select id="basicHealthUnit" th:name="basicHealthUnit.id"
-                    disabled>
-<!--                <option th:value="${null}" th:selected="${patient.id == null}">Selecione</option>-->
-                <option th:value="${patient.basicHealthUnit.id}" th:text="${patient.basicHealthUnit.name}" th:selected="${patient.id != null}"></option>
-            </select>
-        </div>
-        <input type="hidden" id="id" th:field="*{id}"/>
-        <input type="hidden" id="ubsid" th:field="*{basicHealthUnit.id}"/>
-        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
-        <div>
-            <a th:href="@{/patient-management}">Novo Paciente</a>
-            <button type="submit">Editar</button>
-            <button>Cancelar</button>
-        </div>
-    </form>
-    <th:block th:if="${error != null and error == false}"> <!--  Se a variável 'error' não for nula e falsa, este bloco será renderizado como sucesso -->
-        <div class="text-white px-6 py-4 border-0 rounded relative mb-4 bg-emerald-500">
-            <span class="text-xl inline-block mr-5 align-middle">
-                <i class="fas fa-bell"></i>
-            </span>
-            <span class="inline-block align-middle mr-8" th:text="${message}"></span>
-            <button class="absolute bg-transparent text-2xl font-semibold leading-none right-0 top-0 mt-4 mr-6 outline-none focus:outline-none" onclick="closeAlert(event)">
-                <span>×</span>
-            </button>
+
+    <th:block th:if="${error != null and error == false}">
+        <div class="border border-emerald-300 bg-emerald-100 text-emerald-700 rounded-lg px-4 py-3 mx-4 mt-4 text-sm flex items-center justify-between">
+            <span th:text="${message}"></span>
+            <button type="button" class="ml-4 font-bold leading-none" onclick="this.parentElement.remove()">×</button>
         </div>
     </th:block>
     <th:block th:if="${error != null and error == true}">
-        <div class="text-white px-6 py-4 border-0 rounded relative mb-4 bg-red-500">
-            <span class="text-xl inline-block mr-5 align-middle">
-                <i class="fas fa-bell"></i>
-            </span>
-            <span class="inline-block align-middle mr-8" th:text="${message}"></span>
-            <button class="absolute bg-transparent text-2xl font-semibold leading-none right-0 top-0 mt-4 mr-6 outline-none focus:outline-none" onclick="closeAlert(event)">
-                <span>×</span>
-            </button>
+        <div class="border border-red-300 bg-red-100 text-red-700 rounded-lg px-4 py-3 mx-4 mt-4 text-sm flex items-center justify-between">
+            <span th:text="${message}"></span>
+            <button type="button" class="ml-4 font-bold leading-none" onclick="this.parentElement.remove()">×</button>
         </div>
     </th:block>
+
+    <form class="grid grid-flow-row grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 gap-x-4 py-4 px-4 w-full"
+          th:attr="hx-post=@{/patient-management/edit}"
+          th:object="${patient}"
+          hx-target="this"
+          hx-swap="outerHTML">
+
+        <div class="flex flex-col w-full col-span-2">
+            <label class="text-sm text-slate-500">Nome completo:</label>
+            <span class="text-sm py-2 pl-1 border-b border-slate-200 mt-1" th:text="${patient.name}"></span>
+            <input type="hidden" th:field="*{name}"/>
+        </div>
+        <div class="flex flex-col w-full">
+            <label class="text-sm text-slate-500">Cartão SUS:</label>
+            <span class="text-sm py-2 pl-1 border-b border-slate-200 mt-1" th:text="${patient.susNumber}"></span>
+            <input type="hidden" th:field="*{susNumber}"/>
+        </div>
+        <div class="flex flex-col w-full">
+            <label class="text-sm text-slate-500">CPF:</label>
+            <span class="text-sm py-2 pl-1 border-b border-slate-200 mt-1" th:text="${patient.cpf}"></span>
+            <input type="hidden" th:field="*{cpf}"/>
+        </div>
+        <div class="flex flex-col w-full">
+            <label class="text-sm text-slate-500">Sexo:</label>
+            <span class="text-sm py-2 pl-1 border-b border-slate-200 mt-1" th:text="${patient.gender}"></span>
+            <input type="hidden" th:field="*{gender}"/>
+        </div>
+        <div class="flex flex-col w-full">
+            <label class="text-sm text-slate-500">Data de Nascimento:</label>
+            <span class="text-sm py-2 pl-1 border-b border-slate-200 mt-1" th:text="${patient.formattedBirthDate()}"></span>
+            <input type="hidden" th:field="*{birthDate}"/>
+        </div>
+        <div class="flex flex-col w-full">
+            <label class="text-sm text-slate-500">Situação Social:</label>
+            <span class="text-sm py-2 pl-1 border-b border-slate-200 mt-1" th:text="${patient.socialSituationRating.description}"></span>
+            <input type="hidden" th:field="*{socialSituationRating}"/>
+        </div>
+        <div class="flex flex-col w-full">
+            <label class="text-sm text-slate-500">Telefone:</label>
+            <span class="text-sm py-2 pl-1 border-b border-slate-200 mt-1" th:text="${patient.phoneNumber}"></span>
+            <input type="hidden" th:field="*{phoneNumber}"/>
+        </div>
+        <div class="flex flex-col w-full col-span-2">
+            <label class="text-sm text-slate-500">Logradouro:</label>
+            <span class="text-sm py-2 pl-1 border-b border-slate-200 mt-1" th:text="${patient.addressStreet}"></span>
+            <input type="hidden" th:field="*{addressStreet}"/>
+        </div>
+        <div class="flex flex-col w-full">
+            <label class="text-sm text-slate-500">Número:</label>
+            <span class="text-sm py-2 pl-1 border-b border-slate-200 mt-1" th:text="${patient.addressNumber}"></span>
+            <input type="hidden" th:field="*{addressNumber}"/>
+        </div>
+        <div class="flex flex-col w-full">
+            <label class="text-sm text-slate-500">Complemento:</label>
+            <span class="text-sm py-2 pl-1 border-b border-slate-200 mt-1" th:text="${patient.addressComplement}"></span>
+            <input type="hidden" th:field="*{addressComplement}"/>
+        </div>
+        <div class="flex flex-col w-full">
+            <label class="text-sm text-slate-500">Referência:</label>
+            <span class="text-sm py-2 pl-1 border-b border-slate-200 mt-1" th:text="${patient.addressReference}"></span>
+            <input type="hidden" th:field="*{addressReference}"/>
+        </div>
+        <div class="flex flex-col w-full">
+            <label class="text-sm text-slate-500">ACS Responsável:</label>
+            <span class="text-sm py-2 pl-1 border-b border-slate-200 mt-1" th:text="${patient.acsName}"></span>
+            <input type="hidden" th:field="*{acsName}"/>
+        </div>
+        <div class="flex flex-col w-full">
+            <label class="text-sm text-slate-500">UBS:</label>
+            <span class="text-sm py-2 pl-1 border-b border-slate-200 mt-1" th:text="${patient.basicHealthUnit.name}"></span>
+            <input type="hidden" th:name="basicHealthUnit.id" th:value="${patient.basicHealthUnit.id}"/>
+        </div>
+
+        <input type="hidden" id="id" th:field="*{id}"/>
+        <input type="hidden" id="ubsid" th:field="*{basicHealthUnit.id}"/>
+        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+
+        <div class="flex items-center justify-center sm:justify-end sm:items-end space-x-4 mt-2 sm:mt-0 col-span-2 lg:col-span-4 w-full">
+            <a th:href="@{/patient-management}"
+               class="text-sm inline-block rounded-lg bg-slate-900 py-2.5 px-8 text-white cursor-pointer active:bg-blue-400 hover:bg-blue-500 transition duration-300">
+                Novo Paciente
+            </a>
+            <button type="submit"
+                    class="text-sm inline-block rounded-lg bg-slate-900 py-2.5 px-8 text-white cursor-pointer active:bg-blue-400 hover:bg-blue-500 transition duration-300">
+                Editar
+            </button>
+        </div>
+    </form>
 </div>

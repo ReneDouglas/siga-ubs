@@ -36,9 +36,9 @@ RUN ./mvnw package -DskipTests -B
 # =============================================================================
 # Stage 2 — runtime: JRE slim
 # =============================================================================
-FROM eclipse-temurin:21-jre-jammy AS runtime
+FROM eclipse-temurin:21-jre-alpine AS runtime
 
-RUN groupadd --system sigaubs && useradd --system --gid sigaubs sigaubs
+RUN addgroup -S sigaubs && adduser -S -G sigaubs sigaubs
 
 WORKDIR /app
 
@@ -48,7 +48,7 @@ RUN chown sigaubs:sigaubs app.jar
 USER sigaubs
 
 ENV SPRING_PROFILES_ACTIVE=prd
-ENV JAVA_OPTS="-Xms256m -Xmx512m -XX:+UseG1GC"
+ENV JAVA_OPTS="-Xms512m -Xmx768m -XX:+UseG1GC -XX:+UseContainerSupport"
 
 EXPOSE 8080
 

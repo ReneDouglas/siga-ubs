@@ -4,7 +4,7 @@ import br.com.tecsus.sigaubs.enums.SocialSituationRating;
 import jakarta.persistence.AttributeConverter;
 import jakarta.persistence.Converter;
 
-@Converter
+@Converter(autoApply = true)
 public class SocialSituationAttrConverter implements AttributeConverter<SocialSituationRating, Integer> {
 
     @Override

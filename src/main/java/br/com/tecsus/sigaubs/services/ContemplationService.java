@@ -76,7 +76,7 @@ public class ContemplationService {
     @Transactional
     public void cancelContemplationByAdmin(Long contemplatedId, String reason, SystemUserDetails loggedUser) throws CancelContemplationException {
 
-        Contemplation contemplated = contemplationRepository.getReferenceById(contemplatedId);
+        Contemplation contemplated = contemplationRepository.findFetchedForCancelById(contemplatedId);
         contemplated.getAppointment().setStatus(AppointmentStatus.CONTEMPLACAO_CANCELADA);
         contemplated.setUpdateUser(loggedUser.getName());
         contemplated.setUpdateDate(LocalDateTime.now());
@@ -98,7 +98,7 @@ public class ContemplationService {
     @Transactional
     public void confirmContemplationByAdmin(Long contemplationId, SystemUserDetails loggedUser) throws ConfirmContemplationException {
 
-        Contemplation contemplated = contemplationRepository.getReferenceById(contemplationId);
+        Contemplation contemplated = contemplationRepository.findFetchedForCancelById(contemplationId);
         contemplated.getAppointment().setStatus(AppointmentStatus.PRESENCA_CONFIRMADA);
         contemplated.setUpdateUser(loggedUser.getName());
         contemplated.setUpdateDate(LocalDateTime.now());

@@ -1,14 +1,18 @@
 package br.com.tecsus.sigaubs.entities.converters;
 
-import br.com.tecsus.sigaubs.enums.AppointmentStatus;
 import br.com.tecsus.sigaubs.enums.Priorities;
 import jakarta.persistence.AttributeConverter;
 import jakarta.persistence.Converter;
 
-import java.util.stream.Stream;
+import java.util.Arrays;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Converter(autoApply = true)
 public class PriorityConverter implements AttributeConverter<Priorities, Integer> {
+
+    private static final Map<Integer, Priorities> LOOKUP = Arrays.stream(Priorities.values())
+            .collect(Collectors.toUnmodifiableMap(Priorities::getValue, p -> p));
 
     @Override
     public Integer convertToDatabaseColumn(Priorities priority) {
@@ -23,11 +27,10 @@ public class PriorityConverter implements AttributeConverter<Priorities, Integer
         if (dbData == null) {
             return null;
         }
-
-        return Stream.of(Priorities.values())
-                .filter(p -> p.getValue() == dbData)
-                .findFirst()
-                .orElseThrow(() -> new IllegalArgumentException("Unexpected value: " + dbData));
-
+        Priorities result = LOOKUP.get(dbData);
+        if (result == null) {
+            throw new IllegalArgumentException("Unexpected value: " + dbData);
+        }
+        return result;
     }
 }

@@ -9,12 +9,15 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.ProviderManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
-import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.factory.PasswordEncoderFactories;
+import org.springframework.security.crypto.password.DelegatingPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.logout.HeaderWriterLogoutHandler;
@@ -28,7 +31,6 @@ import java.util.List;
 
 import static br.com.tecsus.sigaubs.security.UrlPatternConfig.PRIVATE_MATCHERS;
 import static br.com.tecsus.sigaubs.security.UrlPatternConfig.PUBLIC_MATCHERS;
-import static org.springframework.security.config.Customizer.withDefaults;
 import static org.springframework.security.web.header.writers.ClearSiteDataHeaderWriter.Directive.COOKIES;
 
 @Configuration
@@ -55,13 +57,14 @@ public class WebSecurityConfig {
 
         http.authorizeHttpRequests(authConfig -> {
             authConfig.requestMatchers(PUBLIC_MATCHERS).permitAll();
+            authConfig.requestMatchers("/actuator/health").permitAll();
+            authConfig.requestMatchers("/actuator/**").hasRole("ADMIN");
             authConfig.requestMatchers(PRIVATE_MATCHERS).authenticated();
-            //authConfig.anyRequest().authenticated();
+            authConfig.anyRequest().authenticated();
         });
         http.formLogin(login -> {
             login.loginPage("/login");
             login.defaultSuccessUrl("/", true);
-            //login.failureUrl("/login-error");
         });
         http.logout(logout -> {
             logout.logoutUrl("/logout");
@@ -70,16 +73,16 @@ public class WebSecurityConfig {
             logout.addLogoutHandler(new HeaderWriterLogoutHandler(new ClearSiteDataHeaderWriter(COOKIES)));
             logout.invalidateHttpSession(true);
         });
-        //http.csrf(AbstractHttpConfigurer::disable);
         http.csrf(Customizer.withDefaults());
-        http.httpBasic(withDefaults());
+        http.httpBasic(AbstractHttpConfigurer::disable);
         http.sessionManagement(session -> {
             session.sessionConcurrency(concurrency -> {
-                concurrency.maximumSessions(1).expiredUrl("/expired");//.maxSessionsPreventsLogin(true)
+                concurrency.maximumSessions(3).expiredUrl("/expired").maxSessionsPreventsLogin(true);
             });
         });
-        //http.requiresChannel(channel -> channel.anyRequest().requiresSecure()); // habilita https
-        //http.requiresChannel(channel -> channel.requestMatchers(new AntPathRequestMatcher("/login")).requiresSecure());
+        http.headers(headers -> headers
+                .frameOptions(frame -> frame.deny())
+        );
 
         return http.build();
     }
@@ -92,7 +95,10 @@ public class WebSecurityConfig {
 
     @Bean
     public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
+        DelegatingPasswordEncoder encoder = (DelegatingPasswordEncoder) PasswordEncoderFactories.createDelegatingPasswordEncoder();
+        // Senhas legadas sem prefixo {id} são tratadas como BCrypt
+        encoder.setDefaultPasswordEncoderForMatches(new BCryptPasswordEncoder());
+        return encoder;
     }
 
     @Bean
@@ -113,7 +119,7 @@ public class WebSecurityConfig {
         CorsConfiguration configuration = new CorsConfiguration().applyPermitDefaultValues();
         configuration.setAllowedMethods(List.of("POST", "GET", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowCredentials(true);
-        configuration.addAllowedHeader("*");
+        configuration.setAllowedHeaders(List.of("Content-Type", "X-CSRF-TOKEN", "X-Requested-With"));
         configuration.addExposedHeader("Authorization");
         configuration.addExposedHeader("Content-Type");
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();

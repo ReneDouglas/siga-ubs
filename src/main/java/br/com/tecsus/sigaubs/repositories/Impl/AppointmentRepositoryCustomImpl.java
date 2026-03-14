@@ -123,183 +123,84 @@ public class AppointmentRepositoryCustomImpl implements AppointmentRepositoryCus
     @Override
     public Page<PatientOpenAppointmentDTO> findOpenAppointmentsQueuePaginatedV2(Long ubsId, Long specialtyId, Long medicalProcedureId, Pageable pageable) {
 
-        StringBuilder queryBuilder = new StringBuilder();
-        queryBuilder.append("SELECT a.id FROM Appointment a ");
-        queryBuilder.append("LEFT JOIN a.medicalProcedure mp ");
-        queryBuilder.append("LEFT JOIN mp.specialty s ");
-        queryBuilder.append("LEFT JOIN a.patient p ");
-        queryBuilder.append("LEFT JOIN p.basicHealthUnit ubs ");
-        queryBuilder.append("WHERE a.contemplation IS NULL ");
-
-        if (ubsId != null) queryBuilder.append("AND ubs.id = :ubsId ");
-        if (specialtyId != null) queryBuilder.append("AND s.id = :specialtyId ");
-        if (medicalProcedureId != null) queryBuilder.append("AND mp.id = :medicalProcedureId ");
-
-        queryBuilder.append("AND a.status = br.com.tecsus.sigaubs.enums.AppointmentStatus.AGUARDANDO_CONTEMPLACAO ");
-        queryBuilder.append("ORDER BY ");
-
-        if (ubsId == null) queryBuilder.append("ubs.name, ");
-        if (specialtyId == null) queryBuilder.append("s.title, ");
-        if (medicalProcedureId == null) queryBuilder.append("mp.description, ");
-
-        queryBuilder.append("CASE WHEN a.requestDate <= :dateLimit THEN 1 ELSE 2 END ASC, ");
-        queryBuilder.append("a.priority ASC, ");
-        queryBuilder.append("p.birthDate ASC, ");
-        queryBuilder.append("p.socialSituationRating ASC, ");
-        queryBuilder.append("a.requestDate ASC");
-
-        TypedQuery<Long> openAppointmentsIdsQueryPaginated = entityManager.createQuery(queryBuilder.toString(), Long.class);
-        /*TypedQuery<Long> openAppointmentsIdsQueryPaginated = entityManager.createQuery("""
-            SELECT
-                a.id
-            FROM
-                Appointment a
-            LEFT JOIN a.contemplation c
+        TypedQuery<Long> idsQuery = entityManager.createQuery("""
+            SELECT a.id FROM Appointment a
             LEFT JOIN a.medicalProcedure mp
             LEFT JOIN mp.specialty s
             LEFT JOIN a.patient p
             LEFT JOIN p.basicHealthUnit ubs
-            WHERE c.appointment IS NULL
-                AND mp.id = :medicalProcedureId
-                AND ubs.id = :ubsId
-                AND a.status = br.com.tecsus.sigaubs.enums.AppointmentStatus.AGUARDANDO
+            WHERE a.contemplation IS NULL
+                AND (:ubsId IS NULL OR ubs.id = :ubsId)
+                AND (:specialtyId IS NULL OR s.id = :specialtyId)
+                AND (:medicalProcedureId IS NULL OR mp.id = :medicalProcedureId)
+                AND a.status = br.com.tecsus.sigaubs.enums.AppointmentStatus.AGUARDANDO_CONTEMPLACAO
             ORDER BY
-                    CASE WHEN a.requestDate <= :dateLimit THEN 1 ELSE 2 END ASC,
-                    a.priority ASC,
-                    p.birthDate ASC,
-                    p.socialSituationRating ASC,
-                    a.requestDate ASC
-        """, Long.class);*/
-        //   CASE WHEN a.priority = br.com.tecsus.sigaubs.enums.Priorities.ELETIVO THEN p.birthDate END ASC,
-        //   CASE WHEN a.priority = br.com.tecsus.sigaubs.enums.Priorities.ELETIVO THEN p.socialSituationRating END ASC,
+                ubs.name ASC,
+                s.title ASC,
+                mp.description ASC,
+                CASE WHEN a.requestDate <= :dateLimit THEN 1 ELSE 2 END ASC,
+                a.priority ASC,
+                p.birthDate ASC,
+                p.socialSituationRating ASC,
+                a.requestDate ASC
+        """, Long.class);
 
-        // remover specialtyId. Não é necessário
-        //openAppointmentsIdsQueryPaginated.setParameter("specialtyId", specialtyId);
-        openAppointmentsIdsQueryPaginated.setParameter("dateLimit", LocalDateTime.now().minusMonths(QUATRO_MESES));
-        if (medicalProcedureId != null) openAppointmentsIdsQueryPaginated.setParameter("medicalProcedureId", medicalProcedureId);
-        if (ubsId != null) openAppointmentsIdsQueryPaginated.setParameter("ubsId", ubsId);
-        if (specialtyId != null) openAppointmentsIdsQueryPaginated.setParameter("specialtyId", specialtyId);
+        idsQuery.setParameter("ubsId", ubsId);
+        idsQuery.setParameter("specialtyId", specialtyId);
+        idsQuery.setParameter("medicalProcedureId", medicalProcedureId);
+        idsQuery.setParameter("dateLimit", LocalDateTime.now().minusMonths(QUATRO_MESES));
+        idsQuery.setFirstResult(pageable.getPageNumber() * pageable.getPageSize());
+        idsQuery.setMaxResults(pageable.getPageSize());
 
-        openAppointmentsIdsQueryPaginated.setFirstResult(pageable.getPageNumber() * pageable.getPageSize());
-        openAppointmentsIdsQueryPaginated.setMaxResults(pageable.getPageSize());
+        var ids = idsQuery.getResultList();
+        long totalCount = ids.size();
 
-        var openAppointmentsQueueIdsPaginated = openAppointmentsIdsQueryPaginated.getResultList();
-        long totalCountOpenAppointmentsQueue = openAppointmentsQueueIdsPaginated.size();
-
-        if (openAppointmentsQueueIdsPaginated.size() >= pageable.getPageSize()) {
-
-            StringBuilder countBuilder = new StringBuilder();
-            countBuilder.append("SELECT COUNT(a.id) FROM Appointment a ");
-            countBuilder.append("LEFT JOIN a.medicalProcedure mp ");
-            countBuilder.append("LEFT JOIN mp.specialty s ");
-            countBuilder.append("LEFT JOIN a.patient p ");
-            countBuilder.append("LEFT JOIN p.basicHealthUnit ubs ");
-            countBuilder.append("WHERE a.contemplation IS NULL ");
-            countBuilder.append("AND a.status = br.com.tecsus.sigaubs.enums.AppointmentStatus.AGUARDANDO_CONTEMPLACAO ");
-            if (ubsId != null) countBuilder.append("AND ubs.id = :ubsId ");
-            if (specialtyId != null) countBuilder.append("AND s.id = :specialtyId ");
-            if (medicalProcedureId != null) countBuilder.append("AND mp.id = :medicalProcedureId ");
-
-
-            /*TypedQuery<Long> count = entityManager.createQuery("""
-                SELECT
-                    COUNT(a.id)
-                FROM
-                    Appointment a
-                LEFT JOIN a.contemplation c
+        if (ids.size() >= pageable.getPageSize()) {
+            TypedQuery<Long> countQuery = entityManager.createQuery("""
+                SELECT COUNT(a.id) FROM Appointment a
                 LEFT JOIN a.medicalProcedure mp
                 LEFT JOIN mp.specialty s
                 LEFT JOIN a.patient p
                 LEFT JOIN p.basicHealthUnit ubs
-                WHERE c.appointment IS NULL
-                    AND mp.id = :medicalProcedureId
-                    AND ubs.id = :ubsId
-                    AND a.status = br.com.tecsus.sigaubs.enums.AppointmentStatus.AGUARDANDO
-            """, Long.class);*/
+                WHERE a.contemplation IS NULL
+                    AND (:ubsId IS NULL OR ubs.id = :ubsId)
+                    AND (:specialtyId IS NULL OR s.id = :specialtyId)
+                    AND (:medicalProcedureId IS NULL OR mp.id = :medicalProcedureId)
+                    AND a.status = br.com.tecsus.sigaubs.enums.AppointmentStatus.AGUARDANDO_CONTEMPLACAO
+            """, Long.class);
 
-            TypedQuery<Long> count = entityManager.createQuery(countBuilder.toString(), Long.class);
-
-            if (medicalProcedureId != null) count.setParameter("medicalProcedureId", medicalProcedureId);
-            if (ubsId != null) count.setParameter("ubsId", ubsId);
-            if(specialtyId != null) count.setParameter("specialtyId", specialtyId);
-
-            totalCountOpenAppointmentsQueue = count.getSingleResult();
+            countQuery.setParameter("ubsId", ubsId);
+            countQuery.setParameter("specialtyId", specialtyId);
+            countQuery.setParameter("medicalProcedureId", medicalProcedureId);
+            totalCount = countQuery.getSingleResult();
         }
 
-        StringBuilder queueBuilder = new StringBuilder();
-        queueBuilder.append("SELECT new br.com.tecsus.sigaubs.dtos.PatientOpenAppointmentDTO(");
-        queueBuilder.append("a.requestDate, ");
-        queueBuilder.append("a.priority, ");
-        queueBuilder.append("mp.procedureType, ");
-        queueBuilder.append("mp.id, ");
-        queueBuilder.append("mp.description, ");
-        queueBuilder.append("s.title, ");
-        queueBuilder.append("ubs.name, ");
-        queueBuilder.append("COALESCE(a.observation, 'Sem observações.'), ");
-        queueBuilder.append("a.id, ");
-        queueBuilder.append("p.id, ");
-        queueBuilder.append("p.name, ");
-        queueBuilder.append("p.cpf, ");
-        queueBuilder.append("p.gender, ");
-        queueBuilder.append("p.birthDate, ");
-        queueBuilder.append("p.socialSituationRating) ");
-        queueBuilder.append("FROM ");
-        queueBuilder.append("Appointment a ");
-        queueBuilder.append("LEFT JOIN a.medicalProcedure mp ");
-        queueBuilder.append("LEFT JOIN mp.specialty s ");
-        queueBuilder.append("LEFT JOIN a.patient p ");
-        queueBuilder.append("LEFT JOIN p.basicHealthUnit ubs ");
-        queueBuilder.append("WHERE a.id IN :ids ");
-        queueBuilder.append("ORDER BY ");
-        if (ubsId == null) queueBuilder.append("ubs.name, ");
-        if (specialtyId == null) queueBuilder.append("s.title, ");
-        if (medicalProcedureId == null) queueBuilder.append("mp.description, ");
-        queueBuilder.append("CASE WHEN a.requestDate <= :dateLimit THEN 1 ELSE 2 END ASC, ");
-        queueBuilder.append("a.priority ASC, ");
-        queueBuilder.append("p.birthDate ASC, ");
-        queueBuilder.append("p.socialSituationRating ASC, ");
-        queueBuilder.append("a.requestDate ASC");
+        TypedQuery<PatientOpenAppointmentDTO> queueQuery = entityManager.createQuery("""
+            SELECT new br.com.tecsus.sigaubs.dtos.PatientOpenAppointmentDTO(
+                a.requestDate, a.priority, mp.procedureType, mp.id, mp.description,
+                s.title, ubs.name, COALESCE(a.observation, 'Sem observações.'),
+                a.id, p.id, p.name, p.cpf, p.gender, p.birthDate, p.socialSituationRating)
+            FROM Appointment a
+            LEFT JOIN a.medicalProcedure mp
+            LEFT JOIN mp.specialty s
+            LEFT JOIN a.patient p
+            LEFT JOIN p.basicHealthUnit ubs
+            WHERE a.id IN :ids
+            ORDER BY
+                ubs.name ASC,
+                s.title ASC,
+                mp.description ASC,
+                CASE WHEN a.requestDate <= :dateLimit THEN 1 ELSE 2 END ASC,
+                a.priority ASC,
+                p.birthDate ASC,
+                p.socialSituationRating ASC,
+                a.requestDate ASC
+        """, PatientOpenAppointmentDTO.class);
 
-        TypedQuery<PatientOpenAppointmentDTO> openAppointmentsQueueQuery = entityManager
-                .createQuery(queueBuilder.toString(), PatientOpenAppointmentDTO.class);
+        queueQuery.setParameter("ids", ids);
+        queueQuery.setParameter("dateLimit", LocalDateTime.now().minusMonths(QUATRO_MESES));
+        var openAppointmentsQueue = queueQuery.getResultList();
 
-        /*TypedQuery<PatientOpenAppointmentDTO> openAppointmentsQueueQuery = entityManager.createQuery("""
-                SELECT
-                    new br.com.tecsus.sigaubs.dtos.PatientOpenAppointmentDTO(
-                    a.requestDate,
-                    a.priority,
-                    mp.procedureType,
-                    mp.id,
-                    mp.description,
-                    s.title,
-                    ubs.name,
-                    COALESCE(a.observation, 'Sem observações.'),
-                    a.id,
-                    p.id,
-                    p.name,
-                    p.cpf,
-                    p.gender,
-                    p.birthDate,
-                    p.socialSituationRating)
-                FROM
-                    Appointment a
-                LEFT JOIN a.medicalProcedure mp
-                LEFT JOIN mp.specialty s
-                LEFT JOIN a.patient p
-                LEFT JOIN p.basicHealthUnit ubs
-                WHERE a.id IN :ids
-                ORDER BY
-                    CASE WHEN a.requestDate <= :dateLimit THEN 1 ELSE 2 END ASC,
-                    a.priority ASC,
-                    p.birthDate ASC,
-                    p.socialSituationRating ASC,
-                    a.requestDate ASC
-            """, PatientOpenAppointmentDTO.class);*/
-
-        openAppointmentsQueueQuery.setParameter("dateLimit", LocalDateTime.now().minusMonths(QUATRO_MESES));
-        openAppointmentsQueueQuery.setParameter("ids", openAppointmentsQueueIdsPaginated);
-        var openAppointmentsQueue = openAppointmentsQueueQuery.getResultList();
-
-        return new PageImpl<>(openAppointmentsQueue, pageable, totalCountOpenAppointmentsQueue);
+        return new PageImpl<>(openAppointmentsQueue, pageable, totalCount);
     }
 }

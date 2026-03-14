@@ -118,12 +118,12 @@ public class ContemplationRepositoryCustomImpl implements ContemplationRepositor
             if (specialtyId != null) countBuilder.append("AND s.id = :specialtyId ");
             countBuilder.append("AND mp.procedureType = :type ");
             if (status == null) {
-                queryBuilder.append("AND a.status <> br.com.tecsus.sigaubs.enums.AppointmentStatus.AGUARDANDO_CONTEMPLACAO ");
-                queryBuilder.append("AND a.status <> br.com.tecsus.sigaubs.enums.AppointmentStatus.CONTEMPLACAO_CANCELADA ");
-                queryBuilder.append("AND a.status <> br.com.tecsus.sigaubs.enums.AppointmentStatus.ATENDIMENTO_CONCLUIDO ");
+                countBuilder.append("AND a.status <> br.com.tecsus.sigaubs.enums.AppointmentStatus.AGUARDANDO_CONTEMPLACAO ");
+                countBuilder.append("AND a.status <> br.com.tecsus.sigaubs.enums.AppointmentStatus.CONTEMPLACAO_CANCELADA ");
+                countBuilder.append("AND a.status <> br.com.tecsus.sigaubs.enums.AppointmentStatus.ATENDIMENTO_CONCLUIDO ");
             }
             else {
-                queryBuilder.append("AND a.status = :status ");
+                countBuilder.append("AND a.status = :status ");
             }
 
             TypedQuery<Long> count = em.createQuery(countBuilder.toString(), Long.class);
