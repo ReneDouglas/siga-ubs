@@ -64,7 +64,7 @@ public class PatientController {
             model.addAttribute("systemUserUBS", basicHealthUnitService.findSystemUserUBS(loggedUser.getBasicHealthUnitId()));
         }
 
-        return "patientManagement/patient-management";
+        return "patientManagement/patient_management";
     }
 
     @PostMapping("/patient-management/create")
@@ -94,7 +94,7 @@ public class PatientController {
         } else {
             model.addAttribute("systemUserUBS", basicHealthUnitService.findSystemUserUBS(loggedUser.getBasicHealthUnitId()));
         }
-        return "patientManagement/patientFragments/patient-form :: patientForm";
+        return "patientManagement/patientFragments/patient_form";
     }
 
     @PostMapping("/patient-management/edit")
@@ -102,7 +102,7 @@ public class PatientController {
                                 Model model) {
 
         model.addAttribute("patient", patient);
-        return "patientManagement/patientFragments/patient-form :: patientForm";
+        return "patientManagement/patientFragments/patient_form";
     }
 
     @PostMapping("/patient-management/update")
@@ -120,9 +120,9 @@ public class PatientController {
             model.addAttribute("message", "Erro ao atualizar paciente.");
             model.addAttribute("error", true);
             log.error("Erro ao atualizar paciente: {}", e.getMessage());
-            return "patientManagement/patientFragments/patient-form :: patientForm";
+            return "patientManagement/patientFragments/patient_form";
         }
-        return "patientManagement/patientFragments/patient-info :: patientToEdit";
+        return "patientManagement/patientFragments/patient_info";
     }
 
     @GetMapping("/patient-list")
@@ -143,9 +143,9 @@ public class PatientController {
         model.addAttribute("patient", patientToSearch);
 
         if (!isPagination) {
-            return "patientManagement/patient-list";
+            return "patientManagement/patient_list";
         }
-        return "patientManagement/patientFragments/patient-datatable :: patientDatatable";
+        return "patientManagement/patientFragments/patient_datatable";
 
     }
 
@@ -165,7 +165,7 @@ public class PatientController {
                 .findPatientAppointmentsHistoryPage(this.patientHistoryId, PageRequest.of(currentPage, pageSizeHistory), loggedUser);
 
         model.addAttribute("patientHistoryPage", patientHistoryPage);
-        return "patientManagement/patientFragments/patient-history :: patientHistoryDatatable";
+        return "patientManagement/patientFragments/patient_history";
     }
 
     @GetMapping(value = "/patient-list/search", produces = MediaType.TEXT_HTML_VALUE)
@@ -177,27 +177,27 @@ public class PatientController {
         if (patient.isEmpty()) {
             model.addAttribute("patients", List.of());
             if (autocomplete) {
-                return "patientManagement/patientFragments/patientSearch-dropdown :: dropdownPatientAutocomplete";
+                return "patientManagement/patientFragments/patient_search_autocomplete";
             }
-            return "patientManagement/patientFragments/patientSearch-dropdown :: dropdownPatient";
+            return "patientManagement/patientFragments/patient_search_dropdown";
         }
 
         final int THRESHOLD = 4;
         if (patient.length() < THRESHOLD) {
             model.addAttribute("patients", List.of());
             if (autocomplete) {
-                return "patientManagement/patientFragments/patientSearch-dropdown :: dropdownPatientAutocomplete";
+                return "patientManagement/patientFragments/patient_search_autocomplete";
             }
-            return "patientManagement/patientFragments/patientSearch-dropdown :: dropdownPatient";
+            return "patientManagement/patientFragments/patient_search_dropdown";
         }
 
         model.addAttribute("patients", patientService.searchNativePatients(patient, loggedUser.getBasicHealthUnitId()));
 
         if (autocomplete) {
-            return "patientManagement/patientFragments/patientSearch-dropdown :: dropdownPatientAutocomplete";
+            return "patientManagement/patientFragments/patient_search_autocomplete";
         }
 
-        return "patientManagement/patientFragments/patientSearch-dropdown :: dropdownPatient";
+        return "patientManagement/patientFragments/patient_search_dropdown";
     }
 
     @GetMapping("/patient-management/cancel")

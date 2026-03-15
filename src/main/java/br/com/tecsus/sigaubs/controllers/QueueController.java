@@ -60,14 +60,14 @@ public class QueueController {
         model.addAttribute("basicHealthUnits", this.basicHealthUnits);
         model.addAttribute("specialties", this.specialties);
         model.addAttribute("consultasPage",
-                new PageImpl<Contemplation>(List.of(), PageRequest.of(0, DefaultValues.PAGE_SIZE), 0));
+                new PageImpl<PatientOpenAppointmentDTO>(List.of(), PageRequest.of(0, DefaultValues.PAGE_SIZE), 0));
         model.addAttribute("examesPage",
-                new PageImpl<Contemplation>(List.of(), PageRequest.of(0, DefaultValues.PAGE_SIZE), 0));
+                new PageImpl<PatientOpenAppointmentDTO>(List.of(), PageRequest.of(0, DefaultValues.PAGE_SIZE), 0));
         model.addAttribute("cirurgiasPage",
-                new PageImpl<Contemplation>(List.of(), PageRequest.of(0, DefaultValues.PAGE_SIZE), 0));
+                new PageImpl<PatientOpenAppointmentDTO>(List.of(), PageRequest.of(0, DefaultValues.PAGE_SIZE), 0));
         model.addAttribute("hide", "hidden");
 
-        return "queueManagement/queue-management";
+        return "queueManagement/queue_management";
     }
 
     @GetMapping("/queue-management/v2")
@@ -107,7 +107,7 @@ public class QueueController {
         model.addAttribute("selectedProcedureType", procedureType);
         model.addAttribute("procedures", List.of());
 
-        return "queueManagement/queue-management-v2";
+        return "queueManagement/queue_management_v2";
 
     }
 
@@ -150,7 +150,7 @@ public class QueueController {
         model.addAttribute("totalMedicalProcedures", totalMedicalProcedures);
         model.addAttribute("hide", "hidden");
 
-        return "queueManagement/queue-management";
+        return "queueManagement/queue_management";
     }
 
     @GetMapping("/queue-management/v2/search")
@@ -183,7 +183,7 @@ public class QueueController {
         model.addAttribute("specialties", this.specialties);
         model.addAttribute("queuePage", queuePage);
 
-        return "queueManagement/queueFragments/queue-tabs-v2 :: queue-datatable";
+        return "queueManagement/queueFragments/queue_datatable";
     }
 
     @PreAuthorize("hasAnyRole('ADMIN', 'SMS')")
@@ -210,7 +210,7 @@ public class QueueController {
                             ubs,
                             specialty,
                             PageRequest.of(currentPage, consultasPageSize)));
-            return "queueManagement/queueFragments/queue-tabs :: consultas-datatable";
+            return "queueManagement/queueFragments/queue_tabs_consultas";
         } else if (procedureType.equals(ProcedureType.EXAME.toString())) {
             model.addAttribute("examesPage", appointmentService
                     .findOpenAppointmentsQueuePaginated(
@@ -218,7 +218,7 @@ public class QueueController {
                             ubs,
                             specialty,
                             PageRequest.of(currentPage, examesPageSize)));
-            return "queueManagement/queueFragments/queue-tabs :: exames-datatable";
+            return "queueManagement/queueFragments/queue_tabs_exames";
         } else if (procedureType.equals(ProcedureType.CIRURGIA.toString())) {
             model.addAttribute("cirurgiasPage", appointmentService
                     .findOpenAppointmentsQueuePaginated(
@@ -226,10 +226,10 @@ public class QueueController {
                             ubs,
                             specialty,
                             PageRequest.of(currentPage, cirurgiasPageSize)));
-            return "queueManagement/contemplationFragments/queue-tabs :: cirurgias-datatable";
+            return "queueManagement/queueFragments/queue_tabs_cirurgias";
 
         }
-        return "queueManagement/queue-management";
+        return "queueManagement/queue_management";
     }
 
     @GetMapping("/queue-management/v2/paginated")
@@ -261,7 +261,7 @@ public class QueueController {
                         medicalProcedure,
                         PageRequest.of(page, size)));
 
-        return "queueManagement/queueFragments/queue-tabs-v2 :: queue-datatable";
+        return "queueManagement/queueFragments/queue_datatable";
     }
 
     @PreAuthorize("hasAnyRole('ADMIN', 'SMS')")
@@ -291,7 +291,7 @@ public class QueueController {
         model.addAttribute("medicalSlotId", medicalSlot.getId());
         model.addAttribute("patientOpenAppointments", patientOpenAppointments);
 
-        return "queueManagement/queueFragments/patientAppointment-info :: patientAppointmentInfo";
+        return "queueManagement/queueFragments/patientAppointment_info";
     }
 
     @PreAuthorize("hasAnyRole('ADMIN', 'SMS')")
@@ -325,7 +325,7 @@ public class QueueController {
         model.addAttribute("medicalSlotId", availableSlots.map(MedicalSlot::getId).orElse(null));
         model.addAttribute("patientOpenAppointments", patientOpenAppointments);
 
-        return "queueManagement/queueFragments/patientAppointment-info :: patientAppointmentInfo";
+        return "queueManagement/queueFragments/patientAppointment_info";
     }
 
     @PreAuthorize("hasAnyRole('ADMIN', 'SMS')")
@@ -402,7 +402,7 @@ public class QueueController {
         List<MedicalProcedure> procedures = loadProcedures(procedureType, specialtyId);
         model.addAttribute("procedures", procedures);
 
-        return "queueManagement/queueFragments/medicalProcedures :: medicalProcedures";
+        return "queueManagement/queueFragments/medical_procedures_dropdown";
     }
 
     @GetMapping("/queue-management/v2/clear")

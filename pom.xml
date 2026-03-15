@@ -26,16 +26,13 @@
             <artifactId>spring-boot-starter-security</artifactId>
         </dependency>
         <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-thymeleaf</artifactId>
+            <groupId>gg.jte</groupId>
+            <artifactId>jte-spring-boot-starter-4</artifactId>
+            <version>3.2.3</version>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.thymeleaf.extras</groupId>
-            <artifactId>thymeleaf-extras-springsecurity6</artifactId>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -84,6 +81,33 @@
             <artifactId>caffeine</artifactId>
         </dependency>
     </dependencies>
+
+    <profiles>
+        <profile>
+            <id>precompile-jte</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>gg.jte</groupId>
+                        <artifactId>jte-maven-plugin</artifactId>
+                        <version>3.2.3</version>
+                        <executions>
+                            <execution>
+                                <id>precompile-jte</id>
+                                <phase>prepare-package</phase>
+                                <goals><goal>precompile</goal></goals>
+                                <configuration>
+                                    <sourceDirectory>${project.basedir}/src/main/jte</sourceDirectory>
+                                    <targetDirectory>${project.build.outputDirectory}</targetDirectory>
+                                    <contentType>Html</contentType>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 
     <build>
         <plugins>
