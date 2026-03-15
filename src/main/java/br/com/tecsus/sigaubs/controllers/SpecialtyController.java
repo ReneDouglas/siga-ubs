@@ -43,7 +43,7 @@ public class SpecialtyController {
         model.addAttribute("specialties", specialtyService.findSpecialties());
         model.addAttribute("procedures", List.of());
 
-        return "specialtyManagement/specialty-management";
+        return "specialtyManagement/specialty_management";
     }
 
     @PreAuthorize("hasAnyRole('ADMIN', 'SMS')")
@@ -56,7 +56,7 @@ public class SpecialtyController {
         model.addAttribute("specialties", specialtyService.findSpecialties());
         model.addAttribute("procedures", specialtyDTO.getProcedures());
 
-        return "specialtyManagement/specialty-management";
+        return "specialtyManagement/specialty_management";
     }
 
     @PreAuthorize("hasAnyRole('ADMIN', 'SMS')")

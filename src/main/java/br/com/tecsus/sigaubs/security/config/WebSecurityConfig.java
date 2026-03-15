@@ -64,6 +64,7 @@ public class WebSecurityConfig {
         });
         http.formLogin(login -> {
             login.loginPage("/login");
+            login.failureUrl("/login-error");
             login.defaultSuccessUrl("/", true);
         });
         http.logout(logout -> {

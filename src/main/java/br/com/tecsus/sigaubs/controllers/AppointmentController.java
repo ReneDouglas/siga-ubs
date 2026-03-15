@@ -53,7 +53,7 @@ public class AppointmentController {
         model.addAttribute("specialties", specialtyService.findSpecialties());
         model.addAttribute("loaded", false);
 
-        return "appointmentManagement/appointment-management";
+        return "appointmentManagement/appointment_management";
     }
 
 
@@ -70,7 +70,7 @@ public class AppointmentController {
         model.addAttribute("specialties", specialtyService.findSpecialties());
         model.addAttribute("patientOpenAppointments", appointmentService.findPatientOpenAppointments(idPatient));
         model.addAttribute("loaded", true);
-        return "appointmentManagement/appointment-management";
+        return "appointmentManagement/appointment_management";
     }
 
     @GetMapping(value = "/appointment-management/procedures", produces = MediaType.TEXT_HTML_VALUE)
@@ -94,7 +94,7 @@ public class AppointmentController {
 
         model.addAttribute("procedures", procedures);
         model.addAttribute("priorities", priorities);
-        return "appointmentManagement/appointmentFragments/appointment-procedureAndPriority :: proceduresAndPriorities";
+        return "appointmentManagement/appointmentFragments/procedure_priority_dropdown";
     }
 
     @PostMapping("/appointment-management/create")

@@ -31,12 +31,13 @@ COPY tailwind.config.js postcss.config.js ./
 RUN mkdir -p target/classes/static/css && npm run build:postcss
 
 # 2) Empacotar JAR SEM clean (preserva o CSS gerado no passo anterior)
-RUN ./mvnw package -DskipTests -B
+# -Pprecompile-jte compila os templates JTE em bytecode para produção (gg.jte.usePrecompiledTemplates=true)
+RUN ./mvnw package -DskipTests -B -Pprecompile-jte
 
 # =============================================================================
 # Stage 2 — runtime: JRE slim
 # =============================================================================
-FROM eclipse-temurin:21-jre-jammy AS runtime
+FROM eclipse-temurin:21-jre-alpine AS runtime
 
 RUN groupadd --system sigaubs && useradd --system --gid sigaubs sigaubs
 

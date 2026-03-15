@@ -57,7 +57,7 @@ public class MedicalSlotController {
         model.addAttribute("medicalSlotsPage",
                 medicalSlotService.findMedicalSlotsPaginated(PageRequest.of(0, DefaultValues.PAGE_SIZE)));
 
-        return "medicalSlotManagement/medicalSlot-management";
+        return "medicalSlotManagement/medicalSlot_management";
     }
 
     @PreAuthorize("hasAnyRole('ADMIN', 'SMS')")
@@ -78,7 +78,7 @@ public class MedicalSlotController {
         this.availableMedicalSlotsFormDTO.addRow(availableMedicalSlot);
         model.addAttribute("availableMedicalSlotsForm", availableMedicalSlotsFormDTO);
 
-        return "medicalSlotManagement/medicalSlotFragments/availableMedicalSlotsForm :: availableMedicalSlotsFormTable";
+        return "medicalSlotManagement/medicalSlotFragments/available_slots_form_table";
 
     }
 
@@ -110,7 +110,7 @@ public class MedicalSlotController {
             Model model) {
         this.availableMedicalSlotsFormDTO.removeRow(index);
         model.addAttribute("availableMedicalSlotsForm", this.availableMedicalSlotsFormDTO);
-        return "medicalSlotManagement/medicalSlotFragments/availableMedicalSlotsForm :: availableMedicalSlotsFormTable";
+        return "medicalSlotManagement/medicalSlotFragments/available_slots_form_table";
     }
 
     @PreAuthorize("hasAnyRole('ADMIN', 'SMS')")
@@ -122,7 +122,7 @@ public class MedicalSlotController {
 
         model.addAttribute("medicalSlotsPage",
                 medicalSlotService.findMedicalSlotsPaginated(PageRequest.of(currentPage, pageSize)));
-        return "medicalSlotManagement/medicalSlotFragments/medicalSlot-datatable :: medicalSlotsDatatable";
+        return "medicalSlotManagement/medicalSlotFragments/medicalSlot_datatable";
     }
 
     @PreAuthorize("hasAnyRole('ADMIN', 'SMS')")
@@ -144,6 +144,6 @@ public class MedicalSlotController {
 
         model.addAttribute("procedures", procedures);
 
-        return "medicalSlotManagement/medicalSlotFragments/medicalProcedures :: medicalProcedures";
+        return "medicalSlotManagement/medicalSlotFragments/medicalProcedures";
     }
 }

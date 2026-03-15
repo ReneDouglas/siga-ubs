@@ -82,7 +82,7 @@ public class ContemplationController {
         model.addAttribute("examesPage", exames);
         model.addAttribute("cirurgiasPage", cirurgias);
         model.addAttribute("hide", "hidden");
-        return "contemplationManagement/contemplation-management";
+        return "contemplationManagement/contemplation_management";
     }
 
     @PreAuthorize("hasAnyRole('ADMIN', 'SMS')")
@@ -130,7 +130,7 @@ public class ContemplationController {
         model.addAttribute("cirurgiasPage", cirurgias);
         model.addAttribute("hide", "hidden");
 
-        return "contemplationManagement/contemplation-management";
+        return "contemplationManagement/contemplation_management";
         /*return List.of(
                 new ModelAndView("contemplationManagement/contemplationFragments/contemplation-tabs :: consultas-datatable",
                         Map.of("consultasPage", consultas)),
@@ -168,7 +168,7 @@ public class ContemplationController {
                             referenceMonth,
                             status,
                             PageRequest.of(currentPage, consultasPageSize)));
-            return "contemplationManagement/contemplationFragments/contemplation-tabs :: consultas-datatable";
+            return "contemplationManagement/contemplationFragments/consultas_datatable";
         } else if (procedureType.equals(ProcedureType.EXAME.toString())) {
             model.addAttribute("examesPage", contemplationService
                     .findContemplationsByUBSAndSpecialty(
@@ -178,7 +178,7 @@ public class ContemplationController {
                             referenceMonth,
                             status,
                             PageRequest.of(currentPage, examesPageSize)));
-            return "contemplationManagement/contemplationFragments/contemplation-tabs :: exames-datatable";
+            return "contemplationManagement/contemplationFragments/exames_datatable";
         } else if (procedureType.equals(ProcedureType.CIRURGIA.toString())) {
             model.addAttribute("cirurgiasPage", contemplationService
                     .findContemplationsByUBSAndSpecialty(
@@ -188,10 +188,10 @@ public class ContemplationController {
                             referenceMonth,
                             status,
                             PageRequest.of(currentPage, cirurgiasPageSize)));
-            return "contemplationManagement/contemplationFragments/contemplation-tabs :: cirurgias-datatable";
+            return "contemplationManagement/contemplationFragments/cirurgias_datatable";
 
         }
-        return "contemplationManagement/contemplation-management";
+        return "contemplationManagement/contemplation_management";
     }
 
     @PreAuthorize("hasAnyRole('ADMIN', 'SMS')")
@@ -208,8 +208,7 @@ public class ContemplationController {
         model.addAttribute("contemplated", contemplationService.loadContemplatedById(id));
         model.addAttribute("isContemplated", true);
 
-        //return "contemplationManagement/contemplationFragments/contemplation-info :: contemplationInfo";
-        return "queueManagement/queueFragments/patientAppointment-info :: patientAppointmentInfo";
+        return "queueManagement/queueFragments/patientAppointment_info";
     }
 
     @PreAuthorize("hasAnyRole('ADMIN', 'SMS')")

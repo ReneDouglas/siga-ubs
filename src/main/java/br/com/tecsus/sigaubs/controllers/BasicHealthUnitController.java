@@ -54,7 +54,7 @@ public class BasicHealthUnitController {
         model.addAttribute("ubsUsers", List.of());
         model.addAttribute("specialties", specialtyService.findSpecialties());
 
-        return "basicHealthUnitManagement/basicHealthUnit-management";
+        return "basicHealthUnitManagement/basicHealthUnit_management";
     }
 
     @PreAuthorize("hasAnyRole('ADMIN', 'SMS')")
@@ -91,7 +91,7 @@ public class BasicHealthUnitController {
                 .findAllUBS());
         model.addAttribute("ubsUsers", List.of());
 
-        return "basicHealthUnitManagement/basicHealthUnit-management";
+        return "basicHealthUnitManagement/basicHealthUnit_management";
     }
 
     @PreAuthorize("hasAnyRole('ADMIN', 'SMS')")
@@ -123,17 +123,17 @@ public class BasicHealthUnitController {
         List<UBSsystemUserDTO> ubsUsers = List.of();
         if (basicHealthUnit == null) {
             model.addAttribute("ubsUsers", ubsUsers);
-            return "basicHealthUnitManagement/ubsFragments/systemUsersUBSTable :: emptySystemUsersUBStable";
+            return "basicHealthUnitManagement/ubsFragments/emptySystemUsersUBSTable";
         }
 
         ubsUsers = basicHealthUnitService.findUBSsystemUsersByUBSid(basicHealthUnit);
         model.addAttribute("ubsUsers", ubsUsers);
 
         if (ubsUsers.isEmpty()) {
-            return "basicHealthUnitManagement/ubsFragments/systemUsersUBSTable :: emptySystemUsersUBStable";
+            return "basicHealthUnitManagement/ubsFragments/emptySystemUsersUBSTable";
         }
 
-        return "basicHealthUnitManagement/ubsFragments/systemUsersUBSTable :: systemUsersUBStable";
+        return "basicHealthUnitManagement/ubsFragments/systemUsersUBSTable";
     }
 
     @PreAuthorize("hasAnyRole('ADMIN', 'SMS')")
@@ -143,18 +143,18 @@ public class BasicHealthUnitController {
 
         if (systemUser.isEmpty()) {
             model.addAttribute("users", List.of());
-            return "basicHealthUnitManagement/ubsFragments/dropdownUserUBS :: dropdownUser";
+            return "basicHealthUnitManagement/ubsFragments/dropdownUserUBS";
         }
 
         final int THRESHOLD = 3;
         if (systemUser.length() < THRESHOLD) {
             model.addAttribute("users", List.of());
-            return "basicHealthUnitManagement/ubsFragments/dropdownUserUBS :: dropdownUser";
+            return "basicHealthUnitManagement/ubsFragments/dropdownUserUBS";
         }
 
         model.addAttribute("users", systemUserService.findSystemUserByNameContaining(systemUser));
 
-        return "basicHealthUnitManagement/ubsFragments/dropdownUserUBS :: dropdownUser";
+        return "basicHealthUnitManagement/ubsFragments/dropdownUserUBS";
     }
 
     @PreAuthorize("hasAnyRole('ADMIN', 'SMS')")
@@ -204,9 +204,9 @@ public class BasicHealthUnitController {
         model.addAttribute("ubsUsers", ubsUsers);
 
         if (ubsUsers.isEmpty()) {
-            return "basicHealthUnitManagement/ubsFragments/systemUsersUBSTable :: emptySystemUsersUBStable";
+            return "basicHealthUnitManagement/ubsFragments/emptySystemUsersUBSTable";
         }
-        return "basicHealthUnitManagement/ubsFragments/systemUsersUBSTable :: systemUsersUBStable";
+        return "basicHealthUnitManagement/ubsFragments/systemUsersUBSTable";
     }
 
     @PreAuthorize("hasAnyRole('ADMIN', 'SMS')")
@@ -232,9 +232,9 @@ public class BasicHealthUnitController {
         model.addAttribute("ubsUsers", ubsUsers);
 
         if (ubsUsers.isEmpty()) {
-            return "basicHealthUnitManagement/ubsFragments/systemUsersUBSTable :: emptySystemUsersUBStable";
+            return "basicHealthUnitManagement/ubsFragments/emptySystemUsersUBSTable";
         }
-        return "basicHealthUnitManagement/ubsFragments/systemUsersUBSTable :: systemUsersUBStable";
+        return "basicHealthUnitManagement/ubsFragments/systemUsersUBSTable";
     }
 
 }

@@ -113,9 +113,9 @@ public class SessionController {
         model.addAttribute("systemUsersPage", systemUsersPage);
 
         if ("searchRequest".equals(request.getHeader("X-Requested-With"))) {
-            return "sessionManagement/sessionFragments/systemUserList-datatable :: systemUser-datatable";
+            return "sessionManagement/sessionFragments/systemUser_datatable";
         } else {
-            return "sessionManagement/systemUser-management";
+            return "sessionManagement/systemUser_management";
         }
 
     }
@@ -167,7 +167,7 @@ public class SessionController {
                         PageRequest.of(0, DefaultValues.PAGE_SIZE, Sort.Direction.valueOf("DESC"), "creationDate"));
         model.addAttribute("systemUsersPage", systemUsersPage);
 
-        return "sessionManagement/systemUser-management";
+        return "sessionManagement/systemUser_management";
     }
 
     @PreAuthorize("hasAnyRole('ADMIN', 'SMS')")
