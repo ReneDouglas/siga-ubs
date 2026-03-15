@@ -33,7 +33,7 @@ RUN addgroup -S sigaubs && adduser -S -G sigaubs sigaubs
 
 WORKDIR /app
 
-COPY --from=builder /app/target/SCCUBS-0.0.1-SNAPSHOT.jar app.jar
+COPY --from=builder /app/target/sigaubs-0.0.1-SNAPSHOT.jar app.jar
 RUN chown sigaubs:sigaubs app.jar
 
 USER sigaubs

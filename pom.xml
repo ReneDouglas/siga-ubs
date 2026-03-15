@@ -9,10 +9,10 @@
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
     <groupId>br.com.tecsus</groupId>
-    <artifactId>SCCUBS</artifactId>
+    <artifactId>sigaubs</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <name>SCCUBS</name>
-    <description>SCCUBS</description>
+    <name>SIGA-UBS</name>
+    <description>SIGA-UBS</description>
     <properties>
         <java.version>21</java.version>
     </properties>

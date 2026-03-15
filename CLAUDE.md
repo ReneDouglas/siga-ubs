@@ -11,7 +11,7 @@ SIGA-UBS is a Brazilian healthcare management system for Basic Health Units (UBS
 **Backend (Maven + Spring Boot 3.3.4, Java 21):**
 ```bash
 ./mvnw spring-boot:run              # Run with dev profile (default)
-./mvnw clean package                # Build JAR (output: SCCUBS-0.0.1-SNAPSHOT-dev.jar)
+./mvnw clean package                # Build JAR (output: sigaubs-0.0.1-SNAPSHOT-dev.jar)
 ./mvnw test                         # Run all tests (most are @Disabled, require MySQL)
 ./mvnw test -Dtest=TestClassName    # Run a single test class
 ```
@@ -28,7 +28,7 @@ Both the Spring Boot app and `npm run watch:postcss` need to run simultaneously 
 
 MySQL on `localhost:3306/sigaubs`. Dev credentials: `root/root` (overridable via `PASSWORD` env var). Schema DDL in `src/main/resources/database.sql`, seed data in `src/main/resources/inserts.sql`.
 
-The only existing test (`SccubsApplicationTests`) is `@Disabled` with a note that it requires a live MySQL connection to run.
+The only existing test (`SigaubsApplicationTests`) is `@Disabled` with a note that it requires a live MySQL connection to run.
 
 ## Architecture
 

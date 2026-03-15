@@ -1,5 +1,5 @@
 {
-  "name": "sccubs",
+  "name": "sigaubs",
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
@@ -18,6 +18,6 @@
     "tailwindcss": "^3.4.17"
   },
   "dependencies": {
-    "sccubs": "file:"
+    "sigaubs": "file:"
   }
 }

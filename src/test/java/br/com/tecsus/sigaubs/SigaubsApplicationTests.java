@@ -6,7 +6,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 
 @SpringBootTest
 @Disabled("Requer conexão com banco de dados MySQL. Executar apenas em ambiente com banco disponível.")
-class SccubsApplicationTests {
+class SigaubsApplicationTests {
 
     @Test
     void contextLoads() {
