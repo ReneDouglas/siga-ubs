@@ -11,7 +11,7 @@
 @param Long selectedSpecialty = null
 @param Long selectedMedicalProcedure = null
 @param String selectedProcedureType = null
-@param Long selectedMonth = null
+@param String selectedMonth = null
 <div class="grid gap-6 mt-4 p-2">
     <%-- Seção de Detalhes do Agendamento --%>
     <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">

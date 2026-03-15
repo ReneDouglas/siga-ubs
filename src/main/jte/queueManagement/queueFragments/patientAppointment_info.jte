@@ -12,7 +12,7 @@
 @param Long selectedSpecialty = null
 @param Long selectedMedicalProcedure = null
 @param String selectedProcedureType = null
-@param Long selectedMonth = null
+@param String selectedMonth = null
 !{var appt = isContemplated ? contemplated.getAppointment() : appointment;}
 <%-- Main modal --%>
 <div id="patientAppointment-modal" tabindex="-1" aria-hidden="false"
