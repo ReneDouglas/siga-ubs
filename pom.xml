@@ -15,6 +15,7 @@
     <description>SIGA-UBS</description>
     <properties>
         <java.version>21</java.version>
+        <jacoco.version>0.8.13</jacoco.version>
     </properties>
     <dependencies>
         <dependency>
@@ -116,6 +117,72 @@
 
     <build>
         <plugins>
+            <plugin>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+                <version>${jacoco.version}</version>
+                <configuration>
+                    <excludes>
+                        <exclude>br/com/tecsus/sigaubs/SigaubsApplication*</exclude>
+                        <exclude>br/com/tecsus/sigaubs/dtos/*</exclude>
+                        <exclude>br/com/tecsus/sigaubs/entities/Appointment*</exclude>
+                        <exclude>br/com/tecsus/sigaubs/entities/BasicHealthUnit*</exclude>
+                        <exclude>br/com/tecsus/sigaubs/entities/Contemplation*</exclude>
+                        <exclude>br/com/tecsus/sigaubs/entities/MedicalProcedure*</exclude>
+                        <exclude>br/com/tecsus/sigaubs/entities/MedicalSlot*</exclude>
+                        <exclude>br/com/tecsus/sigaubs/entities/Patient*</exclude>
+                        <exclude>br/com/tecsus/sigaubs/entities/Specialty*</exclude>
+                        <exclude>br/com/tecsus/sigaubs/entities/SystemAdmin*</exclude>
+                        <exclude>br/com/tecsus/sigaubs/entities/SystemRole*</exclude>
+                        <exclude>br/com/tecsus/sigaubs/entities/SystemUser*</exclude>
+                        <exclude>br/com/tecsus/sigaubs/entities/Tenant*</exclude>
+                        <exclude>br/com/tecsus/sigaubs/services/exceptions/*</exclude>
+                        <exclude>br/com/tecsus/sigaubs/security/config/HttpsWebServerConfig*</exclude>
+                        <exclude>gg/jte/generated/**</exclude>
+                    </excludes>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>prepare-agent</id>
+                        <goals>
+                            <goal>prepare-agent</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>report</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>report</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>check</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>check</goal>
+                        </goals>
+                        <configuration>
+                            <rules>
+                                <rule>
+                                    <element>BUNDLE</element>
+                                    <limits>
+                                        <limit>
+                                            <counter>INSTRUCTION</counter>
+                                            <value>COVEREDRATIO</value>
+                                            <minimum>0.80</minimum>
+                                        </limit>
+                                        <limit>
+                                            <counter>LINE</counter>
+                                            <value>COVEREDRATIO</value>
+                                            <minimum>0.80</minimum>
+                                        </limit>
+                                    </limits>
+                                </rule>
+                            </rules>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>

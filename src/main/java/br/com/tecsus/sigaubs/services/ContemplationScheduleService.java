@@ -207,7 +207,7 @@ public class ContemplationScheduleService {
             return currentPatient.priority();
         } else if (currentPatient.patientBirthDate().isBefore(nextPatient.patientBirthDate())) {
             return Priorities.IDADE;
-        } else if (currentPatient.patientSocialSituationRating().getPriority() > nextPatient
+        } else if (currentPatient.patientSocialSituationRating().getPriority() < nextPatient
                 .patientSocialSituationRating().getPriority()) {
             return Priorities.SITUACAO_SOCIAL;
         } else if (currentPatient.patientGender().equals("Feminino")
