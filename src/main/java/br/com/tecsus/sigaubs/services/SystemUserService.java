@@ -2,12 +2,16 @@ package br.com.tecsus.sigaubs.services;
 
 import br.com.tecsus.sigaubs.dtos.UBSsystemUserDTO;
 import br.com.tecsus.sigaubs.entities.SystemRole;
+import br.com.tecsus.sigaubs.entities.SystemAdmin;
 import br.com.tecsus.sigaubs.entities.SystemUser;
 import br.com.tecsus.sigaubs.enums.Roles;
 import br.com.tecsus.sigaubs.repositories.SystemRoleRepository;
+import br.com.tecsus.sigaubs.repositories.SystemAdminRepository;
 import br.com.tecsus.sigaubs.repositories.SystemUserRepository;
 import br.com.tecsus.sigaubs.security.SystemUserDetails;
 import br.com.tecsus.sigaubs.services.exceptions.InvalidConfirmPasswordException;
+import br.com.tecsus.sigaubs.tenancy.TenantContext;
+import br.com.tecsus.sigaubs.tenancy.TenantContextHolder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -35,12 +39,17 @@ public class SystemUserService implements UserDetailsService {
 
     private final SystemUserRepository systemUserRepository;
     private final SystemRoleRepository systemRoleRepository;
+    private final SystemAdminRepository systemAdminRepository;
     private final PasswordEncoder passwordEncoder;
 
     @Autowired
-    public SystemUserService(SystemUserRepository systemUserRepository, SystemRoleRepository systemRoleRepository, PasswordEncoder passwordEncoder) {
+    public SystemUserService(SystemUserRepository systemUserRepository,
+            SystemRoleRepository systemRoleRepository,
+            SystemAdminRepository systemAdminRepository,
+            PasswordEncoder passwordEncoder) {
         this.systemUserRepository = systemUserRepository;
         this.systemRoleRepository = systemRoleRepository;
+        this.systemAdminRepository = systemAdminRepository;
         this.passwordEncoder = passwordEncoder;
     }
 
@@ -48,9 +57,21 @@ public class SystemUserService implements UserDetailsService {
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException, BadCredentialsException {
 
+        TenantContext tenant = TenantContextHolder.getCurrent()
+                .orElseThrow(() -> new UsernameNotFoundException("Tenant não informado."));
+
+        var admin = systemAdminRepository.findByUsername(username);
+        if (admin.isPresent()) {
+            return buildAdminDetails(admin.get(), tenant);
+        }
+
         SystemUser systemUser = systemUserRepository
                 .findByUsername(username)
                 .orElseThrow(() -> new UsernameNotFoundException("Usuário não cadastrado."));
+
+        if (!Boolean.TRUE.equals(systemUser.getActive())) {
+            throw new UsernameNotFoundException("Usuário inativo.");
+        }
 
         return new SystemUserDetails(
                 systemUser.getUsername(),
@@ -59,9 +80,28 @@ public class SystemUserService implements UserDetailsService {
                 systemUser.getName(),
                 systemUser.getEmail(),
                 systemUser.getActive(),
-                (systemUser.getBasicHealthUnit() != null) ? systemUser.getBasicHealthUnit().getId() : null
+                (systemUser.getBasicHealthUnit() != null) ? systemUser.getBasicHealthUnit().getId() : null,
+                tenant.id(),
+                tenant.slug()
                 );
 
+    }
+
+    private UserDetails buildAdminDetails(SystemAdmin admin, TenantContext tenant) {
+        if (!Boolean.TRUE.equals(admin.getActive())) {
+            throw new UsernameNotFoundException("Administrador inativo.");
+        }
+
+        return new SystemUserDetails(
+                admin.getUsername(),
+                admin.getPassword(),
+                Set.of(new SimpleGrantedAuthority(Roles.ROLE_ADMIN.toString())),
+                admin.getName(),
+                admin.getEmail(),
+                admin.getActive(),
+                null,
+                tenant.id(),
+                tenant.slug());
     }
 
     @Transactional
@@ -145,7 +185,14 @@ public class SystemUserService implements UserDetailsService {
 
     @Transactional(readOnly = true)
     public boolean validateSystemUserByPassword(String password, SystemUserDetails loggedUser) {
-        SystemUser su = systemUserRepository.findByUsername(loggedUser.getUsername()).orElse(new SystemUser());
-        return passwordEncoder.matches(password, su.getPassword());
+        if (loggedUser.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals(Roles.ROLE_ADMIN.toString()))) {
+            return systemAdminRepository.findByUsername(loggedUser.getUsername())
+                    .map(admin -> passwordEncoder.matches(password, admin.getPassword()))
+                    .orElse(false);
+        }
+
+        return systemUserRepository.findByUsername(loggedUser.getUsername())
+                .map(su -> passwordEncoder.matches(password, su.getPassword()))
+                .orElse(false);
     }
 }

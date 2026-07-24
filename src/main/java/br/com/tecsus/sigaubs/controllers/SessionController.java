@@ -65,11 +65,6 @@ public class SessionController {
         return "sessionManagement/login";
     }
 
-    @GetMapping("/logout")
-    public String getLogoutPage() {
-        return "sessionManagement/login";
-    }
-
     @GetMapping("/login-error")
     public String getLoginErrorPage(Model model) {
         model.addAttribute("loginError", true);

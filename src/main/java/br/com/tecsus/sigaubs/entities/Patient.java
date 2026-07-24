@@ -11,6 +11,7 @@ import jakarta.persistence.Column;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.Convert;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.UniqueConstraint;
 import org.hibernate.annotations.DynamicUpdate;
 import org.springframework.format.annotation.DateTimeFormat;
 import java.time.LocalDate;
@@ -21,8 +22,11 @@ import java.util.Objects;
 
 @Entity
 @DynamicUpdate
-@Table(name = "patients")
-public class Patient {
+@Table(name = "patients", uniqueConstraints = {
+        @UniqueConstraint(name = "uk_pat_tenant_sus", columnNames = {"tenant_id", "sus_card_number"}),
+        @UniqueConstraint(name = "uk_pat_tenant_cpf", columnNames = {"tenant_id", "cpf"})
+})
+public class Patient extends TenantScopedEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -256,7 +260,9 @@ public class Patient {
     public boolean equals(Object o) {
         if (this == o) return true;
         if (!(o instanceof Patient that)) return false;
-        return susNumber != null && Objects.equals(susNumber, that.susNumber);
+        return susNumber != null
+                && Objects.equals(susNumber, that.susNumber)
+                && Objects.equals(getTenantId(), that.getTenantId());
     }
 
     @Override

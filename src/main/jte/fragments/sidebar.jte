@@ -1,7 +1,9 @@
+@import br.com.tecsus.sigaubs.security.CsrfHelper
 @import br.com.tecsus.sigaubs.security.SecurityHelper
 @import br.com.tecsus.sigaubs.security.StaticResourceHelper
 @param SecurityHelper secHelper
 @param StaticResourceHelper res
+@param CsrfHelper csrf
 <aside x-data="{ open: true }"
        x-bind:class="open ? 'w-64' : 'w-16'"
        @mouseenter="open = true"
@@ -99,9 +101,12 @@
         <%-- Buttons-Section End --%>
     </div>
     <div class="flex flex-col flex-1 mt-2.5 bg-white bg-opacity-5 rounded-lg">
-        <a href="/logout" class="text-sm inline-flex items-center flex-nowrap p-2.5 gap-x-2 tracking-wide rounded-lg text-white hover:bg-white hover:text-slate-900 overflow-hidden flex-shrink-0 min-h-10">
-            <span class="material-symbols-outlined inline-block align-middle hover:text-red-500">logout</span>
-            <p :class="open ? 'block' : 'hidden'" class="text-nowrap">Sair</p>
-        </a>
+        <form action="/logout" method="post" class="m-0">
+            <input type="hidden" name="${csrf.parameterName()}" value="${csrf.token()}"/>
+            <button type="submit" class="w-full text-sm inline-flex items-center flex-nowrap p-2.5 gap-x-2 tracking-wide rounded-lg text-white hover:bg-white hover:text-slate-900 overflow-hidden flex-shrink-0 min-h-10 text-left">
+                <span class="material-symbols-outlined inline-block align-middle hover:text-red-500">logout</span>
+                <span :class="open ? 'block' : 'hidden'" class="text-nowrap">Sair</span>
+            </button>
+        </form>
     </div>
 </aside>

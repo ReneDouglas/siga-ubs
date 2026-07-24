@@ -1,0 +1,56 @@
+services:
+
+  gateway:
+    image: nginx:1.27-alpine
+    container_name: sigaubs-gateway-dev
+    depends_on:
+      app:
+        condition: service_started
+    ports:
+      - "${GATEWAY_HTTP_PORT:-80}:80"
+    volumes:
+      - ./nginx/dev.conf:/etc/nginx/nginx.conf:ro
+    restart: unless-stopped
+
+  mysql:
+    image: mysql:8.0
+    container_name: sigaubs-mysql-dev
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-sigaubs}
+    ports:
+      - "127.0.0.1:${MYSQL_PORT:-3306}:3306"
+    volumes:
+      - sigaubs_mysql_dev_data:/var/lib/mysql
+      - ./docker/mysql/01-schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - ./docker/mysql/02-seed.sql:/docker-entrypoint-initdb.d/02-seed.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u root -p\"$${MYSQL_ROOT_PASSWORD}\""]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    restart: unless-stopped
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: sigaubs-app-dev
+    depends_on:
+      mysql:
+        condition: service_healthy
+    expose:
+      - "8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-dev}
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/${MYSQL_DATABASE:-sigaubs}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=America/Sao_Paulo
+      SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME:-root}
+      SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD:-root}
+      SIGAUBS_TENANCY_BASE_DOMAIN: ${SIGAUBS_TENANCY_BASE_DOMAIN:-localhost}
+    volumes:
+      - ./src/main/jte:/app/src/main/jte:ro
+    restart: unless-stopped
+
+volumes:
+  sigaubs_mysql_dev_data:

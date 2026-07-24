@@ -17,7 +17,7 @@
 <html lang="pt-br">
 @template.fragments.head(title = "Gestão de Especialidades", res = res)
 <body class="flex w-full flex-1 h-dvh justify-between items-center bg-slate-300">
-@template.fragments.sidebar(secHelper = secHelper, res = res)
+@template.fragments.sidebar(secHelper = secHelper, res = res, csrf = csrf)
 <main class="flex flex-col h-full w-full overflow-hidden">
     @template.fragments.header(secHelper = secHelper, res = res)
     @template.fragments.dialogs(error = error, message = message)

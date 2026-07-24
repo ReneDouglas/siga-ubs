@@ -1,11 +1,11 @@
 package br.com.tecsus.sigaubs;
 
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ActiveProfiles;
 
 @SpringBootTest
-@Disabled("Requer conexão com banco de dados MySQL. Executar apenas em ambiente com banco disponível.")
+@ActiveProfiles("test")
 class SigaubsApplicationTests {
 
     @Test

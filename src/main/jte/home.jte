@@ -1,16 +1,18 @@
 @import br.com.tecsus.sigaubs.dtos.DashboardDTO
 @import br.com.tecsus.sigaubs.dtos.UBSDashboardDTO
+@import br.com.tecsus.sigaubs.security.CsrfHelper
 @import br.com.tecsus.sigaubs.security.SecurityHelper
 @import br.com.tecsus.sigaubs.security.StaticResourceHelper
 @param SecurityHelper secHelper
 @param StaticResourceHelper res
+@param CsrfHelper csrf
 @param DashboardDTO dashboard = null
 @param UBSDashboardDTO ubsDashboard = null
 <!DOCTYPE html>
 <html lang="pt-br">
 @template.fragments.head(title = "SIGA-UBS", res = res)
 <body id="body" class="flex w-screen h-dvh items-center">
-@template.fragments.sidebar(secHelper = secHelper, res = res)
+@template.fragments.sidebar(secHelper = secHelper, res = res, csrf = csrf)
 <main class="flex flex-col h-full w-full overflow-auto">
     @template.fragments.header(secHelper = secHelper, res = res)
 

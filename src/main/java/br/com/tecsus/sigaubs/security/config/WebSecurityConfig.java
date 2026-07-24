@@ -1,8 +1,8 @@
 package br.com.tecsus.sigaubs.security.config;
 
-import br.com.tecsus.sigaubs.repositories.SystemRoleRepository;
-import br.com.tecsus.sigaubs.repositories.SystemUserRepository;
 import br.com.tecsus.sigaubs.services.SystemUserService;
+import br.com.tecsus.sigaubs.tenancy.TenantResolutionFilter;
+import br.com.tecsus.sigaubs.tenancy.TenantSessionValidationFilter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -10,17 +10,17 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.ProviderManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
-import org.springframework.security.config.Customizer;
-import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.factory.PasswordEncoderFactories;
 import org.springframework.security.crypto.password.DelegatingPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.logout.HeaderWriterLogoutHandler;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.header.writers.ClearSiteDataHeaderWriter;
 import org.springframework.security.web.session.HttpSessionEventPublisher;
 import org.springframework.web.cors.CorsConfiguration;
@@ -38,17 +38,14 @@ import static org.springframework.security.web.header.writers.ClearSiteDataHeade
 @EnableMethodSecurity
 public class WebSecurityConfig {
 
-    private SystemUserRepository systemUserRepository;
-    private SystemRoleRepository systemRoleRepository;
+    private final TenantResolutionFilter tenantResolutionFilter;
+    private final TenantSessionValidationFilter tenantSessionValidationFilter;
 
     @Autowired
-    public void setSystemRoleRepository(SystemRoleRepository systemRoleRepository) {
-        this.systemRoleRepository = systemRoleRepository;
-    }
-
-    @Autowired
-    public void setSystemUserRepository(SystemUserRepository systemUserRepository) {
-        this.systemUserRepository = systemUserRepository;
+    public WebSecurityConfig(TenantResolutionFilter tenantResolutionFilter,
+            TenantSessionValidationFilter tenantSessionValidationFilter) {
+        this.tenantResolutionFilter = tenantResolutionFilter;
+        this.tenantSessionValidationFilter = tenantSessionValidationFilter;
     }
 
     // authorization
@@ -72,6 +69,8 @@ public class WebSecurityConfig {
             logout.logoutSuccessUrl("/login");
             logout.permitAll();
             logout.addLogoutHandler(new HeaderWriterLogoutHandler(new ClearSiteDataHeaderWriter(COOKIES)));
+            logout.clearAuthentication(true);
+            logout.deleteCookies("JSESSIONID");
             logout.invalidateHttpSession(true);
         });
         http.csrf(Customizer.withDefaults());
@@ -84,16 +83,13 @@ public class WebSecurityConfig {
         http.headers(headers -> headers
                 .frameOptions(frame -> frame.deny())
         );
+        http.addFilterBefore(tenantResolutionFilter, UsernamePasswordAuthenticationFilter.class);
+        http.addFilterAfter(tenantSessionValidationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
 
     // authentication
-    @Bean
-    public UserDetailsService userDetailsService(){
-        return new SystemUserService(systemUserRepository, systemRoleRepository, passwordEncoder());
-    }
-
     @Bean
     public PasswordEncoder passwordEncoder() {
         DelegatingPasswordEncoder encoder = (DelegatingPasswordEncoder) PasswordEncoderFactories.createDelegatingPasswordEncoder();
@@ -109,8 +105,8 @@ public class WebSecurityConfig {
 
     // Método importante para 'fazer enxergar' o userDetailsService
     @Bean
-    public AuthenticationManager authenticationManager(){
-        DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider(userDetailsService());
+    public AuthenticationManager authenticationManager(SystemUserService systemUserService){
+        DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider(systemUserService);
         authProvider.setPasswordEncoder(passwordEncoder());
         return new ProviderManager(authProvider);
     }
@@ -120,7 +116,7 @@ public class WebSecurityConfig {
         CorsConfiguration configuration = new CorsConfiguration().applyPermitDefaultValues();
         configuration.setAllowedMethods(List.of("POST", "GET", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowCredentials(true);
-        configuration.setAllowedHeaders(List.of("Content-Type", "X-CSRF-TOKEN", "X-Requested-With"));
+        configuration.setAllowedHeaders(List.of("Content-Type", "X-CSRF-TOKEN", "X-Requested-With", "X-Tenant-Slug"));
         configuration.addExposedHeader("Authorization");
         configuration.addExposedHeader("Content-Type");
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();

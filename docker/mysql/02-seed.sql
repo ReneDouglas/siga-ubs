@@ -7,6 +7,13 @@
 USE sigaubs;
 
 -- -----------------------------------------------------------------------------
+-- Tenants
+-- -----------------------------------------------------------------------------
+INSERT INTO tenants (id, slug, name, domain, status, creation_date, creation_user) VALUES
+(1, 'afogados', 'Afogados da Ingazeira', 'afogados.sigaubs.com.br', 'ACTIVE', NOW(6), 'sistema'),
+(2, 'caruaru',  'Caruaru',               'caruaru.sigaubs.com.br',  'ACTIVE', NOW(6), 'sistema');
+
+-- -----------------------------------------------------------------------------
 -- Perfis de acesso
 -- -----------------------------------------------------------------------------
 INSERT INTO system_roles (id, `role`, title, description, root, creation_date, creation_user) VALUES
@@ -18,31 +25,41 @@ INSERT INTO system_roles (id, `role`, title, description, root, creation_date, c
 (6, 'ROLE_USER',       'Usuário',                'Usuário padrão da Unidade Básica de Saúde',              FALSE, NOW(6), 'sistema');
 
 -- -----------------------------------------------------------------------------
+-- Administradores globais
+-- Hash BCrypt (custo 10) da senha padrão:
+--   admin123 → $2b$10$yHZY3T5CccLi.gG8FhUrtekFVlb7Xuk2yc5Mf6Fj62kre7abaFFWa
+-- -----------------------------------------------------------------------------
+INSERT INTO system_admins (id, username, `password`, name, email, active, creation_date, creation_user) VALUES
+(1, 'admin', '$2b$10$yHZY3T5CccLi.gG8FhUrtekFVlb7Xuk2yc5Mf6Fj62kre7abaFFWa', 'Administrador do Sistema', 'admin@sigaubs.local', 1, NOW(6), 'sistema');
+
+-- -----------------------------------------------------------------------------
 -- Unidades Básicas de Saúde
 -- -----------------------------------------------------------------------------
-INSERT INTO basic_health_units (id, name, neighborhood, creation_date, creation_user) VALUES
-(1, 'UBS Central',   'Centro',        NOW(6), 'sistema'),
-(2, 'UBS Leste',     'Bairro Leste',  NOW(6), 'sistema');
+INSERT INTO basic_health_units (id, tenant_id, name, neighborhood, creation_date, creation_user) VALUES
+(1, 1, 'UBS Central',         'Centro',        NOW(6), 'sistema'),
+(2, 1, 'UBS Leste',           'Bairro Leste',  NOW(6), 'sistema'),
+(3, 2, 'UBS Central Caruaru', 'Centro',        NOW(6), 'sistema');
 
 -- -----------------------------------------------------------------------------
 -- Usuários do sistema
 -- Hashes BCrypt (custo 10) das senhas padrão:
---   admin123 → $2b$10$yHZY3T5CccLi.gG8FhUrtekFVlb7Xuk2yc5Mf6Fj62kre7abaFFWa
 --   sms123   → $2b$10$yVOU/qiqTg2C5TUi3oW3mOjkuBBUuTKgjfS3ZgshRTuH4i2aCXbHS
 --   user123  → $2b$10$bsKGvbAi45.Ga33soqVuaeh4qTW6uBRdLjOt5ET46wUyFph7lcEh6
 -- -----------------------------------------------------------------------------
-INSERT INTO system_users (id, username, `password`, name, email, active, id_basic_health_unit, creation_date, creation_user) VALUES
-(1, 'admin', '$2b$10$yHZY3T5CccLi.gG8FhUrtekFVlb7Xuk2yc5Mf6Fj62kre7abaFFWa', 'Administrador do Sistema', 'admin@sigaubs.local',   1, NULL, NOW(6), 'sistema'),
-(2, 'sms',   '$2b$10$yVOU/qiqTg2C5TUi3oW3mOjkuBBUuTKgjfS3ZgshRTuH4i2aCXbHS', 'Secretaria Municipal',     'sms@sigaubs.local',     1, NULL, NOW(6), 'sistema'),
-(3, 'user',  '$2b$10$bsKGvbAi45.Ga33soqVuaeh4qTW6uBRdLjOt5ET46wUyFph7lcEh6', 'Usuário UBS Central',      'usuario@sigaubs.local', 1, 1,    NOW(6), 'sistema');
+INSERT INTO system_users (id, tenant_id, username, `password`, name, email, active, id_basic_health_unit, creation_date, creation_user) VALUES
+(1, 1, 'sms',  '$2b$10$yVOU/qiqTg2C5TUi3oW3mOjkuBBUuTKgjfS3ZgshRTuH4i2aCXbHS', 'Secretaria Municipal',        'sms@afogados.sigaubs.local',  1, NULL, NOW(6), 'sistema'),
+(2, 1, 'user', '$2b$10$bsKGvbAi45.Ga33soqVuaeh4qTW6uBRdLjOt5ET46wUyFph7lcEh6', 'Usuário UBS Central',         'user@afogados.sigaubs.local', 1, 1,    NOW(6), 'sistema'),
+(3, 2, 'sms',  '$2b$10$yVOU/qiqTg2C5TUi3oW3mOjkuBBUuTKgjfS3ZgshRTuH4i2aCXbHS', 'Secretaria Municipal Caruaru','sms@caruaru.sigaubs.local',   1, NULL, NOW(6), 'sistema'),
+(4, 2, 'user', '$2b$10$bsKGvbAi45.Ga33soqVuaeh4qTW6uBRdLjOt5ET46wUyFph7lcEh6', 'Usuário UBS Central Caruaru', 'user@caruaru.sigaubs.local',  1, 3,    NOW(6), 'sistema');
 
 -- -----------------------------------------------------------------------------
 -- Associação de perfis aos usuários
 -- -----------------------------------------------------------------------------
 INSERT INTO system_users_roles (id_system_user, id_system_role) VALUES
-(1, 1), -- admin  → ROLE_ADMIN
-(2, 2), -- sms    → ROLE_SMS
-(3, 6); -- user   → ROLE_USER
+(1, 2), -- sms afogados  → ROLE_SMS
+(2, 6), -- user afogados → ROLE_USER
+(3, 2), -- sms caruaru   → ROLE_SMS
+(4, 6); -- user caruaru  → ROLE_USER
 
 -- -----------------------------------------------------------------------------
 -- Especialidades médicas

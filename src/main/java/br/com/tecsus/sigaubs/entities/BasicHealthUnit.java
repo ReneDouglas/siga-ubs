@@ -15,7 +15,7 @@ import java.util.Objects;
 
 @Entity
 @Table(name = "basic_health_units")
-public class BasicHealthUnit {
+public class BasicHealthUnit extends TenantScopedEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

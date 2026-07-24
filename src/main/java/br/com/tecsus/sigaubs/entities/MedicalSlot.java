@@ -22,7 +22,7 @@ import java.util.Set;
 @Entity
 @DynamicUpdate
 @Table(name = "medical_slots")
-public class MedicalSlot {
+public class MedicalSlot extends TenantScopedEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

@@ -4,6 +4,7 @@ import br.com.tecsus.sigaubs.dtos.*;
 import br.com.tecsus.sigaubs.enums.AppointmentStatus;
 import br.com.tecsus.sigaubs.enums.Priorities;
 import br.com.tecsus.sigaubs.enums.ProcedureType;
+import br.com.tecsus.sigaubs.tenancy.TenantContextHolder;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import jakarta.persistence.Tuple;
@@ -26,6 +27,7 @@ public class DashboardRepository {
          */
         @SuppressWarnings("unchecked")
         public List<UBSSummaryDTO> findAllUBSSummaries(LocalDate startOfMonth, LocalDate startOfNextMonth) {
+                Long tenantId = TenantContextHolder.getRequiredTenantId();
 
                 String sql = """
                                 SELECT
@@ -33,31 +35,38 @@ public class DashboardRepository {
                                     bhu.name,
                                     bhu.neighborhood,
                                     (SELECT COUNT(a.id) FROM appointments a
-                                     JOIN patients p ON a.id_patient = p.id
+                                     JOIN patients p ON a.id_patient = p.id AND p.tenant_id = a.tenant_id
                                      WHERE p.id_basic_health_unit = bhu.id
+                                     AND a.tenant_id = :tenantId
                                      AND a.status = 'Aguardando Contemplação') AS total_open_appointments,
                                     (SELECT COUNT(c.id) FROM contemplations c
-                                     JOIN medical_slots ms ON c.id_available_medical_slot = ms.id
+                                     JOIN medical_slots ms ON c.id_available_medical_slot = ms.id AND ms.tenant_id = c.tenant_id
                                      WHERE ms.id_basic_health_unit = bhu.id
+                                     AND c.tenant_id = :tenantId
                                      AND ms.reference_month >= :startOfMonth
                                      AND ms.reference_month < :startOfNextMonth) AS total_contemplated,
                                     (SELECT COUNT(p.id) FROM patients p
-                                     WHERE p.id_basic_health_unit = bhu.id) AS total_patients,
+                                     WHERE p.id_basic_health_unit = bhu.id
+                                     AND p.tenant_id = :tenantId) AS total_patients,
                                     (SELECT COALESCE(SUM(ms.current_slots), 0) FROM medical_slots ms
                                      WHERE ms.id_basic_health_unit = bhu.id
+                                     AND ms.tenant_id = :tenantId
                                      AND ms.reference_month >= :startOfMonth
                                      AND ms.reference_month < :startOfNextMonth) AS total_available_slots,
                                     (SELECT COALESCE(ROUND(AVG(DATEDIFF(c.contemplation_date, a.request_date))), 0)
                                      FROM contemplations c
-                                     JOIN appointments a ON a.id_contemplation = c.id
-                                     JOIN patients p ON a.id_patient = p.id
+                                     JOIN appointments a ON a.id_contemplation = c.id AND a.tenant_id = c.tenant_id
+                                     JOIN patients p ON a.id_patient = p.id AND p.tenant_id = a.tenant_id
                                      WHERE p.id_basic_health_unit = bhu.id
+                                     AND c.tenant_id = :tenantId
                                      AND c.contemplation_date >= DATE_SUB(NOW(), INTERVAL 6 MONTH)) AS average_wait_days
                                 FROM basic_health_units bhu
+                                WHERE bhu.tenant_id = :tenantId
                                 ORDER BY bhu.name
                                 """;
 
                 List<Object[]> results = em.createNativeQuery(sql)
+                                .setParameter("tenantId", tenantId)
                                 .setParameter("startOfMonth", startOfMonth)
                                 .setParameter("startOfNextMonth", startOfNextMonth)
                                 .getResultList();
@@ -80,16 +89,20 @@ public class DashboardRepository {
          */
         @SuppressWarnings("unchecked")
         public List<DailyAppointmentDTO> findDailyAppointments() {
+                Long tenantId = TenantContextHolder.getRequiredTenantId();
 
                 String sql = """
                                 SELECT DATE_FORMAT(a.request_date, '%d/%m') AS dia, COUNT(a.id) AS total
                                 FROM appointments a
-                                WHERE a.request_date >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+                                WHERE a.tenant_id = :tenantId
+                                AND a.request_date >= DATE_SUB(NOW(), INTERVAL 7 DAY)
                                 GROUP BY DATE(a.request_date), DATE_FORMAT(a.request_date, '%d/%m')
                                 ORDER BY DATE(a.request_date)
                                 """;
 
-                List<Object[]> results = em.createNativeQuery(sql).getResultList();
+                List<Object[]> results = em.createNativeQuery(sql)
+                                .setParameter("tenantId", tenantId)
+                                .getResultList();
 
                 return results.stream()
                                 .map(row -> new DailyAppointmentDTO(
@@ -103,17 +116,21 @@ public class DashboardRepository {
          */
         @SuppressWarnings("unchecked")
         public List<MonthlyStatsDTO> findMonthlyOpenAppointments() {
+                Long tenantId = TenantContextHolder.getRequiredTenantId();
 
                 String sql = """
                                 SELECT DATE_FORMAT(a.request_date, '%b/%Y') AS mes, COUNT(a.id) AS total
                                 FROM appointments a
-                                WHERE a.status = 'Aguardando Contemplação'
+                                WHERE a.tenant_id = :tenantId
+                                AND a.status = 'Aguardando Contemplação'
                                 AND a.request_date >= DATE_SUB(NOW(), INTERVAL 6 MONTH)
                                 GROUP BY DATE_FORMAT(a.request_date, '%Y-%m'), DATE_FORMAT(a.request_date, '%b/%Y')
                                 ORDER BY DATE_FORMAT(a.request_date, '%Y-%m')
                                 """;
 
-                List<Object[]> results = em.createNativeQuery(sql).getResultList();
+                List<Object[]> results = em.createNativeQuery(sql)
+                                .setParameter("tenantId", tenantId)
+                                .getResultList();
 
                 return results.stream()
                                 .map(row -> new MonthlyStatsDTO(
@@ -127,16 +144,20 @@ public class DashboardRepository {
          */
         @SuppressWarnings("unchecked")
         public List<MonthlyStatsDTO> findMonthlyContemplations() {
+                Long tenantId = TenantContextHolder.getRequiredTenantId();
 
                 String sql = """
                                 SELECT DATE_FORMAT(c.contemplation_date, '%b/%Y') AS mes, COUNT(c.id) AS total
                                 FROM contemplations c
-                                WHERE c.contemplation_date >= DATE_SUB(NOW(), INTERVAL 6 MONTH)
+                                WHERE c.tenant_id = :tenantId
+                                AND c.contemplation_date >= DATE_SUB(NOW(), INTERVAL 6 MONTH)
                                 GROUP BY DATE_FORMAT(c.contemplation_date, '%Y-%m'), DATE_FORMAT(c.contemplation_date, '%b/%Y')
                                 ORDER BY DATE_FORMAT(c.contemplation_date, '%Y-%m')
                                 """;
 
-                List<Object[]> results = em.createNativeQuery(sql).getResultList();
+                List<Object[]> results = em.createNativeQuery(sql)
+                                .setParameter("tenantId", tenantId)
+                                .getResultList();
 
                 return results.stream()
                                 .map(row -> new MonthlyStatsDTO(
@@ -150,17 +171,21 @@ public class DashboardRepository {
          */
         @SuppressWarnings("unchecked")
         public List<PriorityDistributionDTO> findPriorityDistribution() {
+                Long tenantId = TenantContextHolder.getRequiredTenantId();
 
                 String sql = """
                                 SELECT a.priority AS prioridade, COUNT(a.id) AS total
                                 FROM appointments a
-                                WHERE a.status = 'Aguardando Contemplação'
+                                WHERE a.tenant_id = :tenantId
+                                AND a.status = 'Aguardando Contemplação'
                                 AND a.priority IN (2, 3, 4, 8, 9)
                                 GROUP BY a.priority
                                 ORDER BY total DESC
                                 """;
 
-                List<Object[]> results = em.createNativeQuery(sql).getResultList();
+                List<Object[]> results = em.createNativeQuery(sql)
+                                .setParameter("tenantId", tenantId)
+                                .getResultList();
 
                 return results.stream()
                                 .map(row -> {
@@ -180,17 +205,21 @@ public class DashboardRepository {
          */
         @SuppressWarnings("unchecked")
         public List<ProcedureTypeDistributionDTO> findProcedureTypeDistribution() {
+                Long tenantId = TenantContextHolder.getRequiredTenantId();
 
                 String sql = """
                                 SELECT mp.type AS tipo, COUNT(a.id) AS total
                                 FROM appointments a
                                 JOIN medical_procedures mp ON a.id_medical_procedure = mp.id
-                                WHERE a.status = 'Aguardando Contemplação'
+                                WHERE a.tenant_id = :tenantId
+                                AND a.status = 'Aguardando Contemplação'
                                 GROUP BY mp.type
                                 ORDER BY total DESC
                                 """;
 
-                List<Object[]> results = em.createNativeQuery(sql).getResultList();
+                List<Object[]> results = em.createNativeQuery(sql)
+                                .setParameter("tenantId", tenantId)
+                                .getResultList();
 
                 return results.stream()
                                 .map(row -> {
@@ -205,14 +234,18 @@ public class DashboardRepository {
          * Q6: Total de contemplados hoje.
          */
         public Long countTodayContemplations() {
+                Long tenantId = TenantContextHolder.getRequiredTenantId();
 
                 String sql = """
                                 SELECT COUNT(c.id)
                                 FROM contemplations c
-                                WHERE DATE(c.contemplation_date) = CURDATE()
+                                WHERE c.tenant_id = :tenantId
+                                AND DATE(c.contemplation_date) = CURDATE()
                                 """;
 
-                Object result = em.createNativeQuery(sql).getSingleResult();
+                Object result = em.createNativeQuery(sql)
+                                .setParameter("tenantId", tenantId)
+                                .getSingleResult();
                 return ((Number) result).longValue();
         }
 
@@ -220,27 +253,33 @@ public class DashboardRepository {
          * Retorna resumo de indicadores de uma UBS específica.
          */
         public UBSSingleSummaryDTO findUBSSummaryByUbsId(Long ubsId, LocalDate startOfMonth, LocalDate startOfNextMonth) {
+                Long tenantId = TenantContextHolder.getRequiredTenantId();
 
                 String sql = """
                                 SELECT
                                     bhu.name,
                                     (SELECT COUNT(a.id) FROM appointments a
-                                     JOIN patients p ON a.id_patient = p.id
+                                     JOIN patients p ON a.id_patient = p.id AND p.tenant_id = a.tenant_id
                                      WHERE p.id_basic_health_unit = :ubsId
+                                     AND a.tenant_id = :tenantId
                                      AND a.status = 'Aguardando Contemplação') AS total_open,
                                     (SELECT COUNT(c.id) FROM contemplations c
-                                     JOIN medical_slots ms ON c.id_available_medical_slot = ms.id
+                                     JOIN medical_slots ms ON c.id_available_medical_slot = ms.id AND ms.tenant_id = c.tenant_id
                                      WHERE ms.id_basic_health_unit = :ubsId
+                                     AND c.tenant_id = :tenantId
                                      AND ms.reference_month >= :startOfMonth
                                      AND ms.reference_month < :startOfNextMonth) AS total_contemplated,
                                     (SELECT COUNT(p.id) FROM patients p
-                                     WHERE p.id_basic_health_unit = :ubsId) AS total_patients
+                                     WHERE p.id_basic_health_unit = :ubsId
+                                     AND p.tenant_id = :tenantId) AS total_patients
                                 FROM basic_health_units bhu
                                 WHERE bhu.id = :ubsId
+                                AND bhu.tenant_id = :tenantId
                                 """;
 
                 List<Tuple> results = em.createNativeQuery(sql, Tuple.class)
                                 .setParameter("ubsId", ubsId)
+                                .setParameter("tenantId", tenantId)
                                 .setParameter("startOfMonth", startOfMonth)
                                 .setParameter("startOfNextMonth", startOfNextMonth)
                                 .getResultList();
@@ -260,6 +299,7 @@ public class DashboardRepository {
         @SuppressWarnings("unchecked")
         public List<ContemplatedPatientRowDTO> findContemplatedPatientsByUbsThisMonth(Long ubsId,
                         LocalDate startOfMonth, LocalDate startOfNextMonth) {
+                Long tenantId = TenantContextHolder.getRequiredTenantId();
 
                 String sql = """
                                 SELECT
@@ -269,12 +309,13 @@ public class DashboardRepository {
                                     mp.description,
                                     a.status
                                 FROM contemplations c
-                                JOIN medical_slots ms   ON c.id_available_medical_slot = ms.id
+                                JOIN medical_slots ms   ON c.id_available_medical_slot = ms.id AND ms.tenant_id = c.tenant_id
                                 JOIN medical_procedures mp ON ms.id_medical_procedure = mp.id
                                 JOIN specialties s         ON mp.id_specialty = s.id
-                                JOIN appointments a        ON a.id_contemplation = c.id
-                                JOIN patients p            ON a.id_patient = p.id
+                                JOIN appointments a        ON a.id_contemplation = c.id AND a.tenant_id = c.tenant_id
+                                JOIN patients p            ON a.id_patient = p.id AND p.tenant_id = a.tenant_id
                                 WHERE ms.id_basic_health_unit = :ubsId
+                                  AND c.tenant_id = :tenantId
                                   AND ms.reference_month >= :startOfMonth
                                   AND ms.reference_month < :startOfNextMonth
                                 ORDER BY c.contemplation_date DESC
@@ -282,6 +323,7 @@ public class DashboardRepository {
 
                 List<Object[]> results = em.createNativeQuery(sql)
                                 .setParameter("ubsId", ubsId)
+                                .setParameter("tenantId", tenantId)
                                 .setParameter("startOfMonth", startOfMonth)
                                 .setParameter("startOfNextMonth", startOfNextMonth)
                                 .getResultList();
@@ -302,19 +344,23 @@ public class DashboardRepository {
          */
         @SuppressWarnings("unchecked")
         public List<BottleneckDTO> findTopBottlenecks() {
+                Long tenantId = TenantContextHolder.getRequiredTenantId();
 
                 String sql = """
                                 SELECT s.title, mp.description, COUNT(a.id) AS total_fila
                                 FROM appointments a
                                 JOIN medical_procedures mp ON a.id_medical_procedure = mp.id
                                 JOIN specialties s ON mp.id_specialty = s.id
-                                WHERE a.status = 'Aguardando Contemplação'
+                                WHERE a.tenant_id = :tenantId
+                                AND a.status = 'Aguardando Contemplação'
                                 GROUP BY s.title, mp.description
                                 ORDER BY total_fila DESC
                                 LIMIT 10
                                 """;
 
-                List<Object[]> results = em.createNativeQuery(sql).getResultList();
+                List<Object[]> results = em.createNativeQuery(sql)
+                                .setParameter("tenantId", tenantId)
+                                .getResultList();
 
                 return results.stream()
                                 .map(row -> new BottleneckDTO(
@@ -330,20 +376,23 @@ public class DashboardRepository {
          */
         @SuppressWarnings("unchecked")
         public List<SlotOccupancyDTO> findSlotOccupancyByUBS(LocalDate startOfMonth, LocalDate startOfNextMonth) {
+                Long tenantId = TenantContextHolder.getRequiredTenantId();
 
                 String sql = """
                                 SELECT bhu.name,
                                        COALESCE(SUM(ms.total_slots), 0) AS vagas_totais,
                                        COALESCE(SUM(ms.total_slots - ms.current_slots), 0) AS vagas_consumidas
                                 FROM medical_slots ms
-                                JOIN basic_health_units bhu ON ms.id_basic_health_unit = bhu.id
-                                WHERE ms.reference_month >= :startOfMonth
+                                JOIN basic_health_units bhu ON ms.id_basic_health_unit = bhu.id AND bhu.tenant_id = ms.tenant_id
+                                WHERE ms.tenant_id = :tenantId
+                                  AND ms.reference_month >= :startOfMonth
                                   AND ms.reference_month < :startOfNextMonth
                                 GROUP BY bhu.name
                                 ORDER BY bhu.name
                                 """;
 
                 List<Object[]> results = em.createNativeQuery(sql)
+                                .setParameter("tenantId", tenantId)
                                 .setParameter("startOfMonth", startOfMonth)
                                 .setParameter("startOfNextMonth", startOfNextMonth)
                                 .getResultList();

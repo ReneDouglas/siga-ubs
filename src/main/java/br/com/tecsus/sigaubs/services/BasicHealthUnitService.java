@@ -61,7 +61,7 @@ public class BasicHealthUnitService {
         return basicHealthUnitRepository.findByCityHallId(1L);
     }*/
 
-    @Cacheable("ubs")
+    @Cacheable(value = "ubs", key = "T(br.com.tecsus.sigaubs.tenancy.TenantContextHolder).getRequiredTenantId()")
     public List<BasicHealthUnit> findAllUBS() {
         return basicHealthUnitRepository.findAll();
     }

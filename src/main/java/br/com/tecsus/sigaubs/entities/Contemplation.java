@@ -20,7 +20,7 @@ import java.util.Objects;
 @Entity
 @DynamicUpdate
 @Table(name = "contemplations")
-public class Contemplation {
+public class Contemplation extends TenantScopedEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

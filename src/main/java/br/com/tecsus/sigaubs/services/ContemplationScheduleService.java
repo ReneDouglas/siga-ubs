@@ -6,13 +6,15 @@ import br.com.tecsus.sigaubs.entities.Contemplation;
 import br.com.tecsus.sigaubs.entities.MedicalSlot;
 import br.com.tecsus.sigaubs.enums.AppointmentStatus;
 import br.com.tecsus.sigaubs.enums.Priorities;
+import br.com.tecsus.sigaubs.tenancy.TenantContextHolder;
+import br.com.tecsus.sigaubs.tenancy.TenantResolverService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.LocalDateTime;
 import java.time.YearMonth;
@@ -34,25 +36,59 @@ public class ContemplationScheduleService {
     private final AppointmentService appointmentService;
     private final ContemplationService contemplationService;
     private final AppointmentStatusHistoryService appointmentStatusHistoryService;
+    private final TenantResolverService tenantResolverService;
+    private final TransactionTemplate transactionTemplate;
 
     @Autowired
     public ContemplationScheduleService(MedicalSlotService medicalSlotService,
             AppointmentService appointmentService,
             ContemplationService contemplationService,
-            AppointmentStatusHistoryService appointmentStatusHistoryService) {
+            AppointmentStatusHistoryService appointmentStatusHistoryService,
+            TenantResolverService tenantResolverService,
+            TransactionTemplate transactionTemplate) {
         this.medicalSlotService = medicalSlotService;
         this.appointmentService = appointmentService;
         this.contemplationService = contemplationService;
         this.appointmentStatusHistoryService = appointmentStatusHistoryService;
+        this.tenantResolverService = tenantResolverService;
+        this.transactionTemplate = transactionTemplate;
     }
 
-    @Transactional
     public void executeContemplation() {
+        var tenants = tenantResolverService.findActiveTenants();
 
+        if (tenants.isEmpty()) {
+            log.info("Nenhum tenant ativo encontrado para executar a rotina de contemplação.");
+            return;
+        }
+
+        RuntimeException firstFailure = null;
+
+        for (var tenant : tenants) {
+            TenantContextHolder.setTenant(tenant.getId(), tenant.getSlug());
+            try {
+                transactionTemplate.executeWithoutResult(status -> executeContemplationForCurrentTenant());
+            } catch (RuntimeException e) {
+                log.error("Erro ao executar rotina de contemplação para o tenant [{}].", tenant.getSlug(), e);
+                if (firstFailure == null) {
+                    firstFailure = e;
+                }
+            } finally {
+                TenantContextHolder.clear();
+            }
+        }
+
+        if (firstFailure != null) {
+            throw firstFailure;
+        }
+    }
+
+    private void executeContemplationForCurrentTenant() {
         YearMonth referenceMonth = YearMonth.now();
         var availableSlots = medicalSlotService.findAvailableSlotsByReferenceMonth();
 
         log.info("==> Carregando todas as vagas disponíveis");
+        log.info("> Tenant: {}", TenantContextHolder.getRequiredTenantSlug());
         log.info("> Mês de Referência: {}", referenceMonth.getMonth().name().toUpperCase());
 
         if (availableSlots.isEmpty()) {

@@ -15,7 +15,7 @@ import org.hibernate.annotations.DynamicUpdate;
 @Entity
 @DynamicUpdate
 @Table(name = "appointments")
-public class Appointment {
+public class Appointment extends TenantScopedEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

@@ -9,7 +9,7 @@ import java.util.Objects;
 
 @Entity
 @Table(name = "appointment_status_history")
-public class AppointmentStatusHistory {
+public class AppointmentStatusHistory extends TenantScopedEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

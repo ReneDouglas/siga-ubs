@@ -13,6 +13,7 @@ import jakarta.persistence.ManyToMany;
 import jakarta.persistence.NamedEntityGraph;
 import jakarta.persistence.NamedAttributeNode;
 import jakarta.persistence.Transient;
+import jakarta.persistence.UniqueConstraint;
 import java.io.Serializable;
 import java.time.LocalDateTime;
 import java.util.HashSet;
@@ -21,7 +22,9 @@ import java.util.Set;
 
 
 @Entity
-@Table(name = "system_users")
+@Table(name = "system_users", uniqueConstraints = {
+        @UniqueConstraint(name = "uk_su_tenant_username", columnNames = {"tenant_id", "username"})
+})
 @NamedEntityGraph(name = "SystemUserGraph",
         attributeNodes =
                 {       // Adicione relacionamentos que devem ser inicializados com esta entidade
@@ -29,13 +32,13 @@ import java.util.Set;
                         @NamedAttributeNode("basicHealthUnit")
                 }
 )
-public class SystemUser implements Serializable {
+public class SystemUser extends TenantScopedEntity implements Serializable {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(unique = true, updatable=false)
+    @Column(updatable=false)
     private String username;
     private String password;
     @Transient private String confirmPassword;
@@ -204,7 +207,9 @@ public class SystemUser implements Serializable {
     public boolean equals(Object o) {
         if (this == o) return true;
         if (!(o instanceof SystemUser that)) return false;
-        return username != null && Objects.equals(username, that.username);
+        return username != null
+                && Objects.equals(username, that.username)
+                && Objects.equals(getTenantId(), that.getTenantId());
     }
 
     @Override

@@ -17,7 +17,7 @@
 <html lang="pt-br">
 @template.fragments.head(title = "Lista de Pacientes", res = res)
 <body class="flex w-full h-dvh justify-between items-center bg-slate-100">
-@template.fragments.sidebar(secHelper = secHelper, res = res)
+@template.fragments.sidebar(secHelper = secHelper, res = res, csrf = csrf)
 
 <main class="flex flex-col h-full w-full overflow-auto">
     @template.fragments.header(secHelper = secHelper, res = res)

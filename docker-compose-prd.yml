@@ -1,19 +1,43 @@
 services:
 
+  gateway:
+    image: nginx:1.27-alpine
+    container_name: sigaubs-gateway-prd
+    depends_on:
+      app:
+        condition: service_healthy
+    ports:
+      - "${GATEWAY_HTTP_PORT:-80}:80"
+      - "${GATEWAY_HTTPS_PORT:-443}:443"
+    volumes:
+      - ./nginx/prd.conf:/etc/nginx/nginx.conf:ro
+      - ./certs:/etc/nginx/ssl:ro
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "7"
+    healthcheck:
+      test: ["CMD", "nginx", "-t"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    restart: always
+
   mysql:
     image: mysql:8.0
     container_name: sigaubs-mysql-prd
-    env_file:
-      - .env.prd
     environment:
-      MYSQL_DATABASE: sigaubs
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Defina MYSQL_ROOT_PASSWORD no arquivo .env.prd}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-sigaubs}
     volumes:
       - sigaubs_mysql_prd_data:/var/lib/mysql
       - ./docker/mysql/01-schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
       - ./docker/mysql/my.cnf:/etc/mysql/conf.d/sigaubs.cnf:ro
     # Porta NÃO exposta — somente a app acessa via rede interna
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD}"]
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u root -p\"$${MYSQL_ROOT_PASSWORD}\""]
       interval: 15s
       timeout: 5s
       retries: 10
@@ -32,12 +56,14 @@ services:
     depends_on:
       mysql:
         condition: service_healthy
-    ports:
-      - "8080:8080"
-    env_file:
-      - .env.prd
+    expose:
+      - "8080"
     environment:
-      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/sigaubs?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=America/Sao_Paulo
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:?Defina SPRING_PROFILES_ACTIVE no arquivo .env.prd}
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/${MYSQL_DATABASE:-sigaubs}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=America/Sao_Paulo
+      SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME:?Defina SPRING_DATASOURCE_USERNAME no arquivo .env.prd}
+      SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD:?Defina SPRING_DATASOURCE_PASSWORD no arquivo .env.prd}
+      SIGAUBS_TENANCY_BASE_DOMAIN: ${SIGAUBS_TENANCY_BASE_DOMAIN:-sigaubs.com.br}
     logging:
       driver: "json-file"
       options:
@@ -55,34 +81,5 @@ services:
         limits:
           memory: 1536m
 
-  backup:
-    image: mysql:8.0
-    container_name: sigaubs-backup-prd
-    depends_on:
-      mysql:
-        condition: service_healthy
-    env_file:
-      - .env.prd
-    environment:
-      TZ: America/Sao_Paulo
-    volumes:
-      - sigaubs_mysql_backups:/backups
-    restart: always
-    entrypoint: >
-      sh -c "
-        while true; do
-          NOW=$$(date +%s);
-          TODAY_TARGET=$$(date -d 'today 01:00' +%s);
-          NEXT_TARGET=$$(date -d 'tomorrow 01:00' +%s);
-          if [ \"$$TODAY_TARGET\" -gt \"$$NOW\" ]; then SLEEP_SEC=$$((TODAY_TARGET - NOW)); else SLEEP_SEC=$$((NEXT_TARGET - NOW)); fi;
-          echo \"Próximo backup em $$((SLEEP_SEC / 3600))h$$(( (SLEEP_SEC % 3600) / 60))m ($$(date -d @$$((NOW + SLEEP_SEC)) '+%d/%m %H:%M'))\";
-          sleep $$SLEEP_SEC;
-          TIMESTAMP=$$(date +%Y%m%d_%H%M%S);
-          mysqldump -h mysql -u root -p\"$$MYSQL_ROOT_PASSWORD\" sigaubs > /backups/sigaubs_$$TIMESTAMP.sql && echo \"Backup $$TIMESTAMP concluído\";
-          ls -1t /backups/sigaubs_*.sql | tail -n +8 | xargs -r rm --;
-        done
-      "
-
 volumes:
   sigaubs_mysql_prd_data:
-  sigaubs_mysql_backups:

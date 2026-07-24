@@ -6,6 +6,20 @@
 CREATE DATABASE IF NOT EXISTS sigaubs CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE sigaubs;
 
+CREATE TABLE tenants (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    slug VARCHAR(80) NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    domain VARCHAR(255),
+    status VARCHAR(30) NOT NULL DEFAULT 'ACTIVE',
+    creation_date DATETIME(6) NOT NULL,
+    creation_user VARCHAR(255) NOT NULL,
+    update_date DATETIME(6),
+    update_user VARCHAR(255),
+    CONSTRAINT uk_tenants_slug UNIQUE (slug),
+    CONSTRAINT uk_tenants_domain UNIQUE (domain)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE system_roles (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
     `role` VARCHAR(100) NOT NULL,
@@ -18,19 +32,36 @@ CREATE TABLE system_roles (
     update_user VARCHAR(255)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE system_admins (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    username VARCHAR(100) NOT NULL,
+    `password` VARCHAR(255) NOT NULL,
+    name VARCHAR(200) NOT NULL,
+    email VARCHAR(100) NOT NULL,
+    active TINYINT(1) NOT NULL DEFAULT 1,
+    creation_date DATETIME(6) NOT NULL,
+    creation_user VARCHAR(255) NOT NULL,
+    update_date DATETIME(6),
+    update_user VARCHAR(255),
+    CONSTRAINT uk_system_admins_username UNIQUE (username)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE basic_health_units (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    tenant_id BIGINT NOT NULL,
     name VARCHAR(255) NOT NULL,
     neighborhood VARCHAR(200) NOT NULL,
     creation_date DATETIME(6) NOT NULL,
     creation_user VARCHAR(255) NOT NULL,
     update_date DATETIME(6),
-    update_user VARCHAR(255)
+    update_user VARCHAR(255),
+    CONSTRAINT fk_bhu_tenant FOREIGN KEY (tenant_id) REFERENCES tenants(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE system_users (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
-    username VARCHAR(100) NOT NULL UNIQUE,
+    tenant_id BIGINT NOT NULL,
+    username VARCHAR(100) NOT NULL,
     `password` VARCHAR(255) NOT NULL,
     name VARCHAR(200) NOT NULL,
     email VARCHAR(100) NOT NULL,
@@ -40,7 +71,9 @@ CREATE TABLE system_users (
     creation_user VARCHAR(255) NOT NULL,
     update_date DATETIME(6),
     update_user VARCHAR(255),
-    CONSTRAINT fk_su_bhu FOREIGN KEY (id_basic_health_unit) REFERENCES basic_health_units(id)
+    CONSTRAINT fk_su_tenant FOREIGN KEY (tenant_id) REFERENCES tenants(id),
+    CONSTRAINT fk_su_bhu FOREIGN KEY (id_basic_health_unit) REFERENCES basic_health_units(id),
+    CONSTRAINT uk_su_tenant_username UNIQUE (tenant_id, username)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE system_users_roles (
@@ -62,8 +95,10 @@ CREATE TABLE specialties (
 
 CREATE TABLE basic_health_units_specialties (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    tenant_id BIGINT NOT NULL,
     id_basic_health_unit BIGINT NOT NULL,
     id_specialties BIGINT NOT NULL,
+    CONSTRAINT fk_bhus_tenant FOREIGN KEY (tenant_id) REFERENCES tenants(id),
     CONSTRAINT fk_bhus_bhu FOREIGN KEY (id_basic_health_unit) REFERENCES basic_health_units(id),
     CONSTRAINT fk_bhus_spec FOREIGN KEY (id_specialties) REFERENCES specialties(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -80,12 +115,13 @@ CREATE TABLE medical_procedures (
 
 CREATE TABLE patients (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    tenant_id BIGINT NOT NULL,
     name VARCHAR(255) NOT NULL,
     birth_date DATE NOT NULL,
     gender VARCHAR(100) NOT NULL,
     social_sit_rating INT NOT NULL,
-    sus_card_number VARCHAR(20) UNIQUE,
-    cpf VARCHAR(14) UNIQUE,
+    sus_card_number VARCHAR(20),
+    cpf VARCHAR(14),
     phone_number VARCHAR(20),
     address_street VARCHAR(255),
     address_number VARCHAR(50),
@@ -97,7 +133,10 @@ CREATE TABLE patients (
     creation_user VARCHAR(255) NOT NULL,
     update_date DATETIME(6),
     update_user VARCHAR(255),
-    CONSTRAINT fk_pat_bhu FOREIGN KEY (id_basic_health_unit) REFERENCES basic_health_units(id)
+    CONSTRAINT fk_pat_tenant FOREIGN KEY (tenant_id) REFERENCES tenants(id),
+    CONSTRAINT fk_pat_bhu FOREIGN KEY (id_basic_health_unit) REFERENCES basic_health_units(id),
+    CONSTRAINT uk_pat_tenant_sus UNIQUE (tenant_id, sus_card_number),
+    CONSTRAINT uk_pat_tenant_cpf UNIQUE (tenant_id, cpf)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 ALTER TABLE patients ADD FULLTEXT INDEX idx_fulltext_patient (name, sus_card_number, cpf);
@@ -105,6 +144,7 @@ ALTER TABLE patients ADD FULLTEXT INDEX idx_fulltext_patient (name, sus_card_num
 -- medical_slots: renomeada de available_appointments → available_medical_slots → medical_slots (v1.4)
 CREATE TABLE medical_slots (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    tenant_id BIGINT NOT NULL,
     reference_month DATE NOT NULL,
     total_slots INT NOT NULL,
     current_slots INT DEFAULT 0,
@@ -114,6 +154,7 @@ CREATE TABLE medical_slots (
     creation_user VARCHAR(255) NOT NULL,
     update_date DATETIME(6),
     update_user VARCHAR(255),
+    CONSTRAINT fk_ms_tenant FOREIGN KEY (tenant_id) REFERENCES tenants(id),
     CONSTRAINT fk_ms_procedure FOREIGN KEY (id_medical_procedure) REFERENCES medical_procedures(id),
     CONSTRAINT available_medical_slots_FK FOREIGN KEY (id_basic_health_unit) REFERENCES basic_health_units(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -121,6 +162,7 @@ CREATE TABLE medical_slots (
 -- contemplations: id_appointment foi REMOVIDO na v1.6 (appointments agora aponta para contemplations)
 CREATE TABLE contemplations (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    tenant_id BIGINT NOT NULL,
     contemplation_date DATETIME(6) NOT NULL,
     contemplated_by INT NOT NULL,
     id_available_medical_slot BIGINT NOT NULL,
@@ -129,12 +171,14 @@ CREATE TABLE contemplations (
     creation_user VARCHAR(255) NOT NULL,
     update_date DATETIME(6),
     update_user VARCHAR(255),
+    CONSTRAINT fk_cont_tenant FOREIGN KEY (tenant_id) REFERENCES tenants(id),
     CONSTRAINT fk_cont_slot FOREIGN KEY (id_available_medical_slot) REFERENCES medical_slots(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- appointments: status (varchar 50) substituiu canceled na v1.5; id_contemplation adicionado na v1.6
 CREATE TABLE appointments (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    tenant_id BIGINT NOT NULL,
     request_date DATETIME(6) NOT NULL,
     priority INT NOT NULL,
     observation TEXT,
@@ -145,6 +189,7 @@ CREATE TABLE appointments (
     id_medical_procedure BIGINT NOT NULL,
     id_patient BIGINT NOT NULL,
     id_contemplation BIGINT,
+    CONSTRAINT fk_appt_tenant FOREIGN KEY (tenant_id) REFERENCES tenants(id),
     CONSTRAINT fk_appt_procedure FOREIGN KEY (id_medical_procedure) REFERENCES medical_procedures(id),
     CONSTRAINT fk_appt_patient FOREIGN KEY (id_patient) REFERENCES patients(id),
     CONSTRAINT appointments_FK FOREIGN KEY (id_contemplation) REFERENCES contemplations(id)
@@ -153,21 +198,25 @@ CREATE TABLE appointments (
 -- appointment_status_history: adicionada na v1.6.0
 CREATE TABLE appointment_status_history (
     id BIGINT NOT NULL AUTO_INCREMENT,
+    tenant_id BIGINT NOT NULL,
     status VARCHAR(100) NOT NULL,
     id_appointment BIGINT NOT NULL,
     creation_date DATETIME(6) NOT NULL,
     creation_user VARCHAR(100) NOT NULL,
     PRIMARY KEY (id),
+    CONSTRAINT fk_ash_tenant FOREIGN KEY (tenant_id) REFERENCES tenants(id),
     CONSTRAINT fk_ash_appt FOREIGN KEY (id_appointment) REFERENCES appointments(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE patient_history (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    tenant_id BIGINT NOT NULL,
     id_appointment BIGINT NOT NULL,
     creation_date DATETIME(6) NOT NULL,
     creation_user VARCHAR(255) NOT NULL,
     update_date DATETIME(6),
     update_user VARCHAR(255),
+    CONSTRAINT fk_ph_tenant FOREIGN KEY (tenant_id) REFERENCES tenants(id),
     CONSTRAINT fk_ph_appt FOREIGN KEY (id_appointment) REFERENCES appointments(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -175,7 +224,11 @@ CREATE TABLE patient_history (
 -- Índices de performance — colunas de alta frequência em queries e filtros
 -- =============================================================================
 CREATE INDEX idx_appt_status     ON appointments(status);
-CREATE INDEX idx_appt_patient    ON appointments(id_patient);
-CREATE INDEX idx_ms_ref_month    ON medical_slots(reference_month);
-CREATE INDEX idx_cont_date       ON contemplations(contemplation_date);
+CREATE INDEX idx_appt_tenant_status ON appointments(tenant_id, status);
+CREATE INDEX idx_appt_patient    ON appointments(tenant_id, id_patient);
+CREATE INDEX idx_ms_ref_month    ON medical_slots(tenant_id, reference_month);
+CREATE INDEX idx_ms_tenant_ubs_proc_month ON medical_slots(tenant_id, id_basic_health_unit, id_medical_procedure, reference_month);
+CREATE INDEX idx_cont_date       ON contemplations(tenant_id, contemplation_date);
+CREATE INDEX idx_bhu_tenant_name ON basic_health_units(tenant_id, name);
+CREATE INDEX idx_su_tenant_bhu ON system_users(tenant_id, id_basic_health_unit);
 CREATE INDEX idx_specialty_title ON specialties(title);

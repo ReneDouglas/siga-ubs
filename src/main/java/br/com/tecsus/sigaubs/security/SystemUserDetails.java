@@ -10,6 +10,8 @@ public class SystemUserDetails extends User {
     private String email;
     private Boolean active;
     private Long basicHealthUnitId;
+    private Long tenantId;
+    private String tenantSlug;
 
     public SystemUserDetails(String username,
                              String password,
@@ -17,12 +19,16 @@ public class SystemUserDetails extends User {
                              String name,
                              String email,
                              Boolean active,
-                             Long basicHealthUnitId) {
+                             Long basicHealthUnitId,
+                             Long tenantId,
+                             String tenantSlug) {
         super(username, password, authorities);
         this.name = name;
         this.email = email;
         this.active = active;
         this.basicHealthUnitId = basicHealthUnitId;
+        this.tenantId = tenantId;
+        this.tenantSlug = tenantSlug;
     }
 
     public String getName() {
@@ -55,5 +61,21 @@ public class SystemUserDetails extends User {
 
     public void setBasicHealthUnitId(Long basicHealthUnitId) {
         this.basicHealthUnitId = basicHealthUnitId;
+    }
+
+    public Long getTenantId() {
+        return tenantId;
+    }
+
+    public void setTenantId(Long tenantId) {
+        this.tenantId = tenantId;
+    }
+
+    public String getTenantSlug() {
+        return tenantSlug;
+    }
+
+    public void setTenantSlug(String tenantSlug) {
+        this.tenantSlug = tenantSlug;
     }
 }

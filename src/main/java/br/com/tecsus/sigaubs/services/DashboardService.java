@@ -11,7 +11,6 @@ import java.time.LocalDate;
 import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
 
 @Service
 public class DashboardService {
@@ -33,48 +32,27 @@ public class DashboardService {
         LocalDate startOfMonth = currentMonth.atDay(1);
         LocalDate startOfNextMonth = currentMonth.plusMonths(1).atDay(1);
 
-        CompletableFuture<List<UBSSummaryDTO>> ubsSummariesFuture = CompletableFuture
-                .supplyAsync(() -> dashboardRepository.findAllUBSSummaries(startOfMonth, startOfNextMonth));
-
-        CompletableFuture<List<DailyAppointmentDTO>> dailyAppointmentsFuture = CompletableFuture
-                .supplyAsync(dashboardRepository::findDailyAppointments);
-
-        CompletableFuture<List<MonthlyStatsDTO>> monthlyOpenFuture = CompletableFuture
-                .supplyAsync(dashboardRepository::findMonthlyOpenAppointments);
-
-        CompletableFuture<List<MonthlyStatsDTO>> monthlyContemplationsFuture = CompletableFuture
-                .supplyAsync(dashboardRepository::findMonthlyContemplations);
-
-        CompletableFuture<List<PriorityDistributionDTO>> priorityDistributionFuture = CompletableFuture
-                .supplyAsync(dashboardRepository::findPriorityDistribution);
-
-        CompletableFuture<List<ProcedureTypeDistributionDTO>> procedureTypeDistributionFuture = CompletableFuture
-                .supplyAsync(dashboardRepository::findProcedureTypeDistribution);
-
-        CompletableFuture<List<BottleneckDTO>> topBottlenecksFuture = CompletableFuture
-                .supplyAsync(dashboardRepository::findTopBottlenecks);
-
-        CompletableFuture<List<SlotOccupancyDTO>> slotOccupancyFuture = CompletableFuture
-                .supplyAsync(() -> dashboardRepository.findSlotOccupancyByUBS(startOfMonth, startOfNextMonth));
-
-        CompletableFuture.allOf(
-                ubsSummariesFuture, dailyAppointmentsFuture, monthlyOpenFuture,
-                monthlyContemplationsFuture, priorityDistributionFuture,
-                procedureTypeDistributionFuture, topBottlenecksFuture, slotOccupancyFuture
-        ).join();
+        List<UBSSummaryDTO> ubsSummaries = dashboardRepository.findAllUBSSummaries(startOfMonth, startOfNextMonth);
+        List<DailyAppointmentDTO> dailyAppointments = dashboardRepository.findDailyAppointments();
+        List<MonthlyStatsDTO> monthlyOpen = dashboardRepository.findMonthlyOpenAppointments();
+        List<MonthlyStatsDTO> monthlyContemplations = dashboardRepository.findMonthlyContemplations();
+        List<PriorityDistributionDTO> priorityDistribution = dashboardRepository.findPriorityDistribution();
+        List<ProcedureTypeDistributionDTO> procedureTypeDistribution = dashboardRepository.findProcedureTypeDistribution();
+        List<BottleneckDTO> topBottlenecks = dashboardRepository.findTopBottlenecks();
+        List<SlotOccupancyDTO> slotOccupancy = dashboardRepository.findSlotOccupancyByUBS(startOfMonth, startOfNextMonth);
 
         ContemplationStatusDTO contemplationStatus = buildContemplationStatus();
 
         return new DashboardDTO(
-                ubsSummariesFuture.join(),
-                dailyAppointmentsFuture.join(),
-                monthlyOpenFuture.join(),
-                monthlyContemplationsFuture.join(),
-                priorityDistributionFuture.join(),
+                ubsSummaries,
+                dailyAppointments,
+                monthlyOpen,
+                monthlyContemplations,
+                priorityDistribution,
                 contemplationStatus,
-                procedureTypeDistributionFuture.join(),
-                topBottlenecksFuture.join(),
-                slotOccupancyFuture.join());
+                procedureTypeDistribution,
+                topBottlenecks,
+                slotOccupancy);
     }
 
     @Transactional(readOnly = true)
