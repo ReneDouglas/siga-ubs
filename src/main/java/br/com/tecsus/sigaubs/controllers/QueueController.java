@@ -22,14 +22,12 @@ import org.springframework.web.util.UriComponentsBuilder;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.context.annotation.SessionScope;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.util.List;
 import java.util.Optional;
 
 @Controller
-@SessionScope
 public class QueueController {
 
     private static final Logger log = LoggerFactory.getLogger(QueueController.class);
@@ -37,8 +35,7 @@ public class QueueController {
     private final AppointmentService appointmentService;
     private final MedicalSlotService medicalSlotService;
     private final BasicHealthUnitService basicHealthUnitService;
-    private final List<BasicHealthUnit> basicHealthUnits;
-    private final List<Specialty> specialties;
+    private final SpecialtyService specialtyService;
     private final ContemplationService contemplationService;
 
     @Autowired
@@ -46,8 +43,7 @@ public class QueueController {
             AppointmentService appointmentService, MedicalSlotService medicalSlotService,
             ContemplationService contemplationService) {
         this.basicHealthUnitService = basicHealthUnitService;
-        this.basicHealthUnits = basicHealthUnitService.findAllUBS();
-        this.specialties = specialtyService.findSpecialties();
+        this.specialtyService = specialtyService;
         this.appointmentService = appointmentService;
         this.medicalSlotService = medicalSlotService;
         this.contemplationService = contemplationService;
@@ -57,8 +53,7 @@ public class QueueController {
     @GetMapping("/queue-management")
     public String getQueuePage(Model model) {
 
-        model.addAttribute("basicHealthUnits", this.basicHealthUnits);
-        model.addAttribute("specialties", this.specialties);
+        addFilterOptions(model);
         model.addAttribute("consultasPage",
                 new PageImpl<PatientOpenAppointmentDTO>(List.of(), PageRequest.of(0, DefaultValues.PAGE_SIZE), 0));
         model.addAttribute("examesPage",
@@ -88,10 +83,10 @@ public class QueueController {
                             ? List.of(basicHealthUnitService.findSystemUserUBS(basicHealthUnit))
                             : List.of());
         } else {
-            model.addAttribute("basicHealthUnits", this.basicHealthUnits);
+            model.addAttribute("basicHealthUnits", basicHealthUnitService.findAllUBS());
         }
 
-        model.addAttribute("specialties", this.specialties);
+        model.addAttribute("specialties", specialtyService.findSpecialties());
 
         var queuePage = appointmentService
                 .findOpenAppointmentsQueuePaginatedV2(
@@ -140,9 +135,9 @@ public class QueueController {
         var totalMedicalProcedures = appointmentService.findMedicalProceduresTotal(basicHealthUnit, specialty);
 
         model.addAttribute("selectedUBS", basicHealthUnit);
-        model.addAttribute("basicHealthUnits", this.basicHealthUnits);
+        model.addAttribute("basicHealthUnits", basicHealthUnitService.findAllUBS());
         model.addAttribute("selectedSpecialty", specialty);
-        model.addAttribute("specialties", this.specialties);
+        model.addAttribute("specialties", specialtyService.findSpecialties());
         model.addAttribute("consultasPage", consultas);
         model.addAttribute("examesPage", exames);
         model.addAttribute("cirurgiasPage", cirurgias);
@@ -176,11 +171,11 @@ public class QueueController {
                         PageRequest.of(0, DefaultValues.PAGE_SIZE));
 
         model.addAttribute("selectedUBS", basicHealthUnit);
-        model.addAttribute("basicHealthUnits", this.basicHealthUnits);
+        model.addAttribute("basicHealthUnits", basicHealthUnitService.findAllUBS());
         model.addAttribute("selectedSpecialty", specialty);
         model.addAttribute("selectedMedicalProcedure", medicalProcedure);
         model.addAttribute("selectedProcedureType", procedureType);
-        model.addAttribute("specialties", this.specialties);
+        model.addAttribute("specialties", specialtyService.findSpecialties());
         model.addAttribute("queuePage", queuePage);
 
         return "queueManagement/queueFragments/queue_datatable";
@@ -418,6 +413,11 @@ public class QueueController {
         } else {
             return appointmentService.findBySpecialtyIdAndProcedureType(specialtyId, ProcedureType.CIRURGIA);
         }
+    }
+
+    private void addFilterOptions(Model model) {
+        model.addAttribute("basicHealthUnits", basicHealthUnitService.findAllUBS());
+        model.addAttribute("specialties", specialtyService.findSpecialties());
     }
 
 }

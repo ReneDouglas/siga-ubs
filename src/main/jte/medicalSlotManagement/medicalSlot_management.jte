@@ -45,6 +45,7 @@
                                 <form id="availableMedicalSlotAddRow"
                                       hx-post="/medicalSlot-management/slots/add"
                                       hx-target="#availableMedicalSlotsFormTable"
+                                      hx-include="#availableMedicalSlotsFormTable"
                                       hx-on::after-request="if(event.detail.elt.tagName != 'SELECT') clearFormAndSetCurrentMonth()"
                                       hx-swap="outerHTML"
                                       class="space-y-4 bg-slate-50 p-4 rounded-lg">

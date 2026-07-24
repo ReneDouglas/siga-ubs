@@ -1,6 +1,7 @@
 @import br.com.tecsus.sigaubs.dtos.PatientAppointmentsHistoryDTO
 @import org.springframework.data.domain.Page
 @param Page<PatientAppointmentsHistoryDTO> patientHistoryPage
+@param Long patientHistoryId = null
 <div id="patientHistoryDatatable">
     <div class="overflow-auto">
         <table class="table-auto w-full text-base">
@@ -64,7 +65,7 @@
             <label class="text-sm text-slate-500" for="pageSizeHistory">Linhas por página:</label>
             <select id="pageSizeHistory" name="pageSizeHistory"
                     class="rounded-lg text-sm text-slate-500 border border-stroke py-1 outline-none focus:ring-2 hover:ring-gray-400 hover:ring-2 hover:border-white focus:border-white focus:ring-blue-500"
-                    hx-get="/patient-list/history?page=${patientHistoryPage.getNumber()}&pagination=true"
+                    hx-get="/patient-list/history?id=${patientHistoryId}&page=${patientHistoryPage.getNumber()}&pagination=true"
                     hx-target="#patientHistoryDatatable"
                     hx-swap="outerHTML">
                 <option value="10" selected="${patientHistoryPage.getSize() == 10}">10</option>
@@ -76,7 +77,7 @@
             <div class="flex items-center">
                 <button id="prevPageHistory" class="inline-flex p-2 rounded-lg bg-slate-100 hover:bg-slate-200"
                         disabled="${!patientHistoryPage.hasPrevious()}"
-                        hx-get="/patient-list/history?page=${patientHistoryPage.getNumber() - 1}&pagination=true"
+                        hx-get="/patient-list/history?id=${patientHistoryId}&page=${patientHistoryPage.getNumber() - 1}&pagination=true"
                         hx-target="#patientHistoryDatatable"
                         hx-include="[name='pageSizeHistory']"
                         hx-swap="outerHTML"
@@ -87,7 +88,7 @@
                 <button id="nextPageHistory"
                         class="inline-flex p-2 rounded-lg bg-slate-100 hover:bg-slate-200"
                         disabled="${!patientHistoryPage.hasNext()}"
-                        hx-get="/patient-list/history?page=${patientHistoryPage.getNumber() + 1}&pagination=true"
+                        hx-get="/patient-list/history?id=${patientHistoryId}&page=${patientHistoryPage.getNumber() + 1}&pagination=true"
                         hx-target="#patientHistoryDatatable"
                         hx-include="[name='pageSizeHistory']"
                         hx-swap="outerHTML"

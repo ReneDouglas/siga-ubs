@@ -73,20 +73,20 @@ class MedicalSlotControllerTest {
     }
 
     @Test
-    void deveAdicionarERemoverLinhaDaListaEmSessao() {
+    void deveAdicionarERemoverLinhaUsandoFormularioComoFonteDaVerdade() {
         MedicalSlot slot = TestDataFactory.slot(10L, TestDataFactory.ubs(1L, "Stub"), procedure, 10, 10);
         when(basicHealthUnitService.findSystemUserUBS(1L)).thenReturn(ubs);
         when(basicHealthUnitService.getFetchedAssociations(any(MedicalSlot.class))).thenAnswer(invocation -> invocation.getArgument(0));
         var model = model();
 
-        assertThat(controller.addAvailableMedicalSlotsRow(slot, model))
+        assertThat(controller.addAvailableMedicalSlotsRow(slot, new AvailableMedicalSlotsFormDTO(), model))
                 .isEqualTo("medicalSlotManagement/medicalSlotFragments/available_slots_form_table");
         AvailableMedicalSlotsFormDTO form = (AvailableMedicalSlotsFormDTO) model.get("availableMedicalSlotsForm");
         assertThat(form.getAvailableMedicalSlots()).hasSize(1);
         assertThat(form.getAvailableMedicalSlots().getFirst().getBasicHealthUnit()).isSameAs(ubs);
 
         model = model();
-        assertThat(controller.removeRowtByIndex(0, model))
+        assertThat(controller.removeRowtByIndex(0, form, model))
                 .isEqualTo("medicalSlotManagement/medicalSlotFragments/available_slots_form_table");
         form = (AvailableMedicalSlotsFormDTO) model.get("availableMedicalSlotsForm");
         assertThat(form.getAvailableMedicalSlots()).isEmpty();

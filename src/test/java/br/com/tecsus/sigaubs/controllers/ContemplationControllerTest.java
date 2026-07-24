@@ -28,6 +28,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -55,8 +56,8 @@ class ContemplationControllerTest {
         var appointment = TestDataFactory.appointment(5L, patient, procedure);
         contemplation = TestDataFactory.contemplation(6L, appointment,
                 TestDataFactory.slot(7L, ubs, procedure, 10, 5));
-        when(basicHealthUnitService.findAllUBS()).thenReturn(List.of(ubs));
-        when(specialtyService.findSpecialties()).thenReturn(List.of(specialty));
+        lenient().when(basicHealthUnitService.findAllUBS()).thenReturn(List.of(ubs));
+        lenient().when(specialtyService.findSpecialties()).thenReturn(List.of(specialty));
         controller = new ContemplationController(basicHealthUnitService, specialtyService, contemplationService);
     }
 

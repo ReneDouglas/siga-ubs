@@ -22,7 +22,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.context.annotation.SessionScope;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.util.UriComponentsBuilder;
 
@@ -31,20 +30,19 @@ import java.util.List;
 
 
 @Controller
-@SessionScope
 public class ContemplationController {
 
     private static final Logger log = LoggerFactory.getLogger(ContemplationController.class);
 
     private final ContemplationService contemplationService;
-    private final List<BasicHealthUnit> basicHealthUnits;
-    private final List<Specialty> specialties;
+    private final BasicHealthUnitService basicHealthUnitService;
+    private final SpecialtyService specialtyService;
 
     @Autowired
     public ContemplationController(BasicHealthUnitService basicHealthUnitService, SpecialtyService specialtyService, ContemplationService contemplationService) {
         this.contemplationService = contemplationService;
-        this.basicHealthUnits = basicHealthUnitService.findAllUBS();
-        this.specialties = specialtyService.findSpecialties();
+        this.basicHealthUnitService = basicHealthUnitService;
+        this.specialtyService = specialtyService;
     }
 
     @PreAuthorize("hasAnyRole('ADMIN', 'SMS')")
@@ -76,8 +74,7 @@ public class ContemplationController {
                         "",
                         PageRequest.of(0, DefaultValues.PAGE_SIZE));
 
-        model.addAttribute("basicHealthUnits", this.basicHealthUnits);
-        model.addAttribute("specialties", this.specialties);
+        addFilterOptions(model);
         model.addAttribute("consultasPage", consultas);
         model.addAttribute("examesPage", exames);
         model.addAttribute("cirurgiasPage", cirurgias);
@@ -120,11 +117,11 @@ public class ContemplationController {
                         PageRequest.of(0, DefaultValues.PAGE_SIZE));
 
         model.addAttribute("selectedUBS", basicHealthUnit);
-        model.addAttribute("basicHealthUnits", this.basicHealthUnits);
+        model.addAttribute("basicHealthUnits", basicHealthUnitService.findAllUBS());
         model.addAttribute("selectedSpecialty", specialty);
         model.addAttribute("selectedMonth", referenceMonth);
         model.addAttribute("selectedStatus", status);
-        model.addAttribute("specialties", this.specialties);
+        model.addAttribute("specialties", specialtyService.findSpecialties());
         model.addAttribute("consultasPage", consultas);
         model.addAttribute("examesPage", exames);
         model.addAttribute("cirurgiasPage", cirurgias);
@@ -272,5 +269,9 @@ public class ContemplationController {
         return "redirect:" + redirectURL.toUriString();
     }
 
+    private void addFilterOptions(Model model) {
+        model.addAttribute("basicHealthUnits", basicHealthUnitService.findAllUBS());
+        model.addAttribute("specialties", specialtyService.findSpecialties());
+    }
 
 }

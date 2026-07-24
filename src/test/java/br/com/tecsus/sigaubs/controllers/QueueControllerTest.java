@@ -36,6 +36,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -62,8 +63,8 @@ class QueueControllerTest {
     void setUp() {
         ubs = TestDataFactory.ubs(1L, "UBS Afogados");
         specialty = TestDataFactory.specialty(2L, "Cardiologia");
-        when(basicHealthUnitService.findAllUBS()).thenReturn(List.of(ubs));
-        when(specialtyService.findSpecialties()).thenReturn(List.of(specialty));
+        lenient().when(basicHealthUnitService.findAllUBS()).thenReturn(List.of(ubs));
+        lenient().when(specialtyService.findSpecialties()).thenReturn(List.of(specialty));
         controller = new QueueController(basicHealthUnitService, specialtyService, appointmentService,
                 medicalSlotService, contemplationService);
     }

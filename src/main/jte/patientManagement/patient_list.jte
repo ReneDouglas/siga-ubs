@@ -136,7 +136,7 @@
                 </label>
                 <div class="peer-checked:max-h-screen max-h-0 overflow-hidden transition-max-height duration-500 ease-in-out">
                     <div class="p-4 rounded-lg">
-                        @template.patientManagement.patientFragments.patient_history(patientHistoryPage = patientHistoryPage)
+                        @template.patientManagement.patientFragments.patient_history(patientHistoryPage = patientHistoryPage, patientHistoryId = null)
 
                         <%-- Modal de Observações --%>
                         <div id="default-modal" tabindex="-1" aria-hidden="true"

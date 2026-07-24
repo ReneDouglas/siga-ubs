@@ -46,6 +46,7 @@
                 <div class="relative group">
                     <a hx-get="/medicalSlot-management/slots/${rowIdx}/remove"
                        hx-target="#availableMedicalSlotsFormTable"
+                       hx-include="#availableMedicalSlotsFormTable"
                        hx-swap="outerHTML"
                        href=""
                        class="inline-flex p-2 rounded-lg hover:bg-slate-200 cursor-pointer transition duration-300">

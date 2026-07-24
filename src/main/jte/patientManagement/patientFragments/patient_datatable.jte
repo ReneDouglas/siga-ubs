@@ -78,6 +78,7 @@
                     class="rounded-lg text-sm text-slate-500 border border-stroke py-1 outline-none focus:ring-2 hover:ring-gray-400 hover:ring-2 hover:border-white focus:border-white focus:ring-blue-500"
                     hx-get="/patient-list?page=${patientsPage.getNumber()}&pagination=true"
                     hx-target="#patientsDatatable"
+                    hx-include="#searchPatientForm"
                     hx-swap="outerHTML">
                 <option value="10" selected="${patientsPage.getSize() == 10}">10</option>
                 <option value="15" selected="${patientsPage.getSize() == 15}">15</option>
@@ -91,7 +92,7 @@
                         disabled="${!patientsPage.hasPrevious()}"
                         hx-get="/patient-list?page=${patientsPage.getNumber() - 1}&pagination=true"
                         hx-target="#patientsDatatable"
-                        hx-include="[name='pageSize']"
+                        hx-include="#searchPatientForm, [name='pageSize']"
                         hx-swap="outerHTML"
                         hx-trigger="click">
                     <span class="material-symbols-outlined">keyboard_double_arrow_left</span>
@@ -102,7 +103,7 @@
                         disabled="${!patientsPage.hasNext()}"
                         hx-get="/patient-list?page=${patientsPage.getNumber() + 1}&pagination=true"
                         hx-target="#patientsDatatable"
-                        hx-include="[name='pageSize']"
+                        hx-include="#searchPatientForm, [name='pageSize']"
                         hx-swap="outerHTML"
                         hx-trigger="click">
                     <span class="material-symbols-outlined">keyboard_double_arrow_right</span>

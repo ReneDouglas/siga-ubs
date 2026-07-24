@@ -49,13 +49,13 @@ class PatientControllerTest {
         when(basicHealthUnitService.findSystemUserUBS(1L)).thenReturn(ubs);
         var model = model();
 
-        assertThat(controller.getPatientInsertPage(model, ubsUser(1L)))
+        assertThat(controller.getPatientInsertPage(model, null, ubsUser(1L)))
                 .isEqualTo("patientManagement/patient_management");
         assertThat(model.get("systemUserUBS")).isEqualTo(ubs);
 
         when(basicHealthUnitService.findAllUBS()).thenReturn(List.of(ubs));
         model = model();
-        controller.getPatientInsertPage(model, sms());
+        controller.getPatientInsertPage(model, null, sms());
         assertThat(model.get("basicHealthUnits")).isEqualTo(List.of(ubs));
     }
 
@@ -113,7 +113,7 @@ class PatientControllerTest {
     }
 
     @Test
-    void deveListarPacientesComBuscaArmazenadaNaSessao() {
+    void deveListarPacientesComFiltroRecebidoNaPaginacao() {
         Patient filter = new Patient();
         filter.setName("Maria");
         var loggedUser = ubsUser(1L);
@@ -127,12 +127,12 @@ class PatientControllerTest {
         assertThat(model.get("patient")).isSameAs(filter);
 
         model = model();
-        assertThat(controller.getPatientsPage(model, new Patient(), loggedUser, 1, 10, true))
+        assertThat(controller.getPatientsPage(model, filter, loggedUser, 1, 10, true))
                 .isEqualTo("patientManagement/patientFragments/patient_datatable");
     }
 
     @Test
-    void deveListarHistoricoUsandoIdArmazenadoNaSessao() {
+    void deveListarHistoricoUsandoIdExplicitoNaPaginacao() {
         var page = new PageImpl<PatientAppointmentsHistoryDTO>(List.of());
         var loggedUser = ubsUser(1L);
         when(patientService.findPatientAppointmentsHistoryPage(eq(10L), any(PageRequest.class), eq(loggedUser)))
@@ -142,9 +142,10 @@ class PatientControllerTest {
         assertThat(controller.getPatientAppointmentsHistory(model, loggedUser, 10L, 0, 10, false))
                 .isEqualTo("patientManagement/patientFragments/patient_history");
         assertThat(model.get("patientHistoryPage")).isSameAs(page);
+        assertThat(model.get("patientHistoryId")).isEqualTo(10L);
 
         model = model();
-        assertThat(controller.getPatientAppointmentsHistory(model, loggedUser, null, 1, 10, true))
+        assertThat(controller.getPatientAppointmentsHistory(model, loggedUser, 10L, 1, 10, true))
                 .isEqualTo("patientManagement/patientFragments/patient_history");
     }
 
@@ -177,11 +178,11 @@ class PatientControllerTest {
 
         assertThat(controller.cancelPatientEdit()).isEqualTo("redirect:/patient-management");
         assertThat(controller.clearPatientsPage()).isEqualTo("redirect:/patient-list");
-        assertThat(controller.editSelectedPatient(10L)).isEqualTo("redirect:/patient-management");
+        assertThat(controller.editSelectedPatient(10L)).isEqualTo("redirect:/patient-management?id=10");
 
         when(basicHealthUnitService.findSystemUserUBS(1L)).thenReturn(ubs);
         var model = model();
-        controller.getPatientInsertPage(model, ubsUser(1L));
+        controller.getPatientInsertPage(model, 10L, ubsUser(1L));
         assertThat(model.get("patient")).isSameAs(patient);
     }
 }

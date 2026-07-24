@@ -23,46 +23,33 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.context.annotation.SessionScope;
 
 import java.util.List;
 
 @Controller
-@SessionScope
 public class PatientController {
 
     private static final Logger log = LoggerFactory.getLogger(PatientController.class);
 
     private final PatientService patientService;
     private final BasicHealthUnitService basicHealthUnitService;
-    private Patient patientToSearch;
-    private Patient patientToEdit;
-    private Long patientHistoryId;
 
     @Autowired
     public PatientController(PatientService patientService, BasicHealthUnitService basicHealthUnitService) {
         this.patientService = patientService;
         this.basicHealthUnitService = basicHealthUnitService;
-        this.patientToSearch = new Patient();
-        this.patientToEdit = new Patient();
     }
 
     @GetMapping("/patient-management")
-    public String getPatientInsertPage(Model model, @AuthenticationPrincipal SystemUserDetails loggedUser) {
+    public String getPatientInsertPage(Model model,
+            @RequestParam(value = "id", required = false) Long patientId,
+            @AuthenticationPrincipal SystemUserDetails loggedUser) {
 
-        if (patientToEdit.getId() != null) {
-            model.addAttribute("patient", patientToEdit);
-        } else {
-            model.addAttribute("patient", new Patient());
-        }
+        Patient patient = patientId != null ? patientService.findPatientToEdit(patientId) : new Patient();
+        model.addAttribute("patient", patient);
         model.addAttribute("socialSituations", SocialSituationRating.getDescriptionSortedByRating());
 
-        boolean isAdmin = loggedUser.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals(Roles.ROLE_SMS.toString()));
-        if (isAdmin) {
-            model.addAttribute("basicHealthUnits", basicHealthUnitService.findAllUBS());
-        } else {
-            model.addAttribute("systemUserUBS", basicHealthUnitService.findSystemUserUBS(loggedUser.getBasicHealthUnitId()));
-        }
+        addPatientFormOptions(model, loggedUser);
 
         return "patientManagement/patient_management";
     }
@@ -73,8 +60,7 @@ public class PatientController {
                                   Model model) {
         try {
             patientService.registerPatient(patient, loggedUser);
-            patientToEdit = new Patient();
-            model.addAttribute("patient", patientToEdit);
+            model.addAttribute("patient", new Patient());
             model.addAttribute("message", "Paciente cadastrado com sucesso.");
             model.addAttribute("error", false);
         } catch (DataIntegrityViolationException e) {
@@ -88,12 +74,7 @@ public class PatientController {
             model.addAttribute("message", "Erro ao cadastrar paciente.");
             model.addAttribute("error", true);
         }
-        boolean isAdmin = loggedUser.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals(Roles.ROLE_SMS.toString()));
-        if (isAdmin) {
-            model.addAttribute("basicHealthUnits", basicHealthUnitService.findAllUBS());
-        } else {
-            model.addAttribute("systemUserUBS", basicHealthUnitService.findSystemUserUBS(loggedUser.getBasicHealthUnitId()));
-        }
+        addPatientFormOptions(model, loggedUser);
         return "patientManagement/patientFragments/patient_form";
     }
 
@@ -112,7 +93,6 @@ public class PatientController {
 
         try {
             Patient updatedPatient = patientService.updatePatient(patient, loggedUser);
-            patientToEdit = new Patient();
             model.addAttribute("patient", updatedPatient);
             model.addAttribute("message", "Paciente atualizado com sucesso.");
             model.addAttribute("error", false);
@@ -133,14 +113,10 @@ public class PatientController {
                                   @RequestParam(value = "pageSize", defaultValue = "" + DefaultValues.PAGE_SIZE, required = false) int pageSize,
                                   @RequestParam(value = "pagination", defaultValue = "false", required = false) boolean isPagination){
 
-        if (!isPagination) {
-            patientToSearch = patient;
-        }
-
-        Page<Patient> patientsPage = patientService.findPatientsPage(patientToSearch, PageRequest.of(currentPage, pageSize), loggedUser);
+        Page<Patient> patientsPage = patientService.findPatientsPage(patient, PageRequest.of(currentPage, pageSize), loggedUser);
         model.addAttribute("patientsPage", patientsPage);
         model.addAttribute("patientHistoryPage", new PageImpl<>(List.of(), PageRequest.of(0, DefaultValues.PAGE_SIZE), 0));
-        model.addAttribute("patient", patientToSearch);
+        model.addAttribute("patient", patient);
 
         if (!isPagination) {
             return "patientManagement/patient_list";
@@ -157,14 +133,13 @@ public class PatientController {
                                                 @RequestParam(value = "pageSizeHistory", defaultValue = "" + DefaultValues.PAGE_SIZE, required = false) int pageSizeHistory,
                                                 @RequestParam(value = "pagination", defaultValue = "false", required = false) boolean isPagination) {
 
-        if (!isPagination) {
-            this.patientHistoryId = patientId;
-        }
-
-        Page<PatientAppointmentsHistoryDTO> patientHistoryPage = patientService
-                .findPatientAppointmentsHistoryPage(this.patientHistoryId, PageRequest.of(currentPage, pageSizeHistory), loggedUser);
+        Page<PatientAppointmentsHistoryDTO> patientHistoryPage = patientId != null
+                ? patientService.findPatientAppointmentsHistoryPage(patientId, PageRequest.of(currentPage, pageSizeHistory),
+                        loggedUser)
+                : new PageImpl<>(List.of(), PageRequest.of(currentPage, pageSizeHistory), 0);
 
         model.addAttribute("patientHistoryPage", patientHistoryPage);
+        model.addAttribute("patientHistoryId", patientId);
         return "patientManagement/patientFragments/patient_history";
     }
 
@@ -202,19 +177,26 @@ public class PatientController {
 
     @GetMapping("/patient-management/cancel")
     public String cancelPatientEdit() {
-        patientToEdit = new Patient();
         return "redirect:/patient-management";
     }
 
     @GetMapping("/patient-list/clear")
     public String clearPatientsPage() {
-        patientToSearch = new Patient();
         return "redirect:/patient-list";
     }
 
     @GetMapping("/patient-list/edit")
     public String editSelectedPatient(@RequestParam(value = "id") Long patientId) throws RuntimeException{
-        patientToEdit = patientService.findPatientToEdit(patientId);
-        return "redirect:/patient-management";
+        return "redirect:/patient-management?id=" + patientId;
+    }
+
+    private void addPatientFormOptions(Model model, SystemUserDetails loggedUser) {
+        boolean isAdmin = loggedUser.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals(Roles.ROLE_SMS.toString()));
+        if (isAdmin) {
+            model.addAttribute("basicHealthUnits", basicHealthUnitService.findAllUBS());
+        } else {
+            model.addAttribute("systemUserUBS", basicHealthUnitService.findSystemUserUBS(loggedUser.getBasicHealthUnitId()));
+        }
     }
 }

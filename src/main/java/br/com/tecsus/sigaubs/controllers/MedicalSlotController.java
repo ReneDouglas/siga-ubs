@@ -21,13 +21,12 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.context.annotation.SessionScope;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Controller
-@SessionScope
 public class MedicalSlotController {
 
     private static final Logger log = LoggerFactory.getLogger(MedicalSlotController.class);
@@ -36,7 +35,6 @@ public class MedicalSlotController {
     private final SpecialtyService specialtyService;
     private final MedicalSlotService medicalSlotService;
     private final AppointmentService appointmentService;
-    private AvailableMedicalSlotsFormDTO availableMedicalSlotsFormDTO;
 
     public MedicalSlotController(BasicHealthUnitService basicHealthUnitService, SpecialtyService specialtyService,
             MedicalSlotService medicalSlotService, AppointmentService appointmentService) {
@@ -50,8 +48,6 @@ public class MedicalSlotController {
     @GetMapping("/medicalSlot-management")
     public String getMedicalSlotPage(Model model) {
 
-        this.availableMedicalSlotsFormDTO = null;
-
         model.addAttribute("basicHealthUnits", basicHealthUnitService.findAllUBS());
         model.addAttribute("specialties", specialtyService.findSpecialties());
         model.addAttribute("medicalSlotsPage",
@@ -63,19 +59,11 @@ public class MedicalSlotController {
     @PreAuthorize("hasAnyRole('ADMIN', 'SMS')")
     @PostMapping("/medicalSlot-management/slots/add")
     public String addAvailableMedicalSlotsRow(@ModelAttribute MedicalSlot availableMedicalSlot,
+            @ModelAttribute AvailableMedicalSlotsFormDTO availableMedicalSlotsFormDTO,
             Model model) {
 
-        if (availableMedicalSlotsFormDTO == null) {
-            this.availableMedicalSlotsFormDTO = new AvailableMedicalSlotsFormDTO();
-        }
-
-        BasicHealthUnit bhu = basicHealthUnitService
-                .findSystemUserUBS(availableMedicalSlot.getBasicHealthUnit().getId());
-        availableMedicalSlot.setBasicHealthUnit(bhu);
-
-        availableMedicalSlot = basicHealthUnitService.getFetchedAssociations(availableMedicalSlot);
-
-        this.availableMedicalSlotsFormDTO.addRow(availableMedicalSlot);
+        availableMedicalSlotsFormDTO = hydrateForm(availableMedicalSlotsFormDTO);
+        availableMedicalSlotsFormDTO.addRow(hydrateSlot(availableMedicalSlot));
         model.addAttribute("availableMedicalSlotsForm", availableMedicalSlotsFormDTO);
 
         return "medicalSlotManagement/medicalSlotFragments/available_slots_form_table";
@@ -100,16 +88,19 @@ public class MedicalSlotController {
             redirectAttributes.addFlashAttribute("error", true);
         }
 
-        this.availableMedicalSlotsFormDTO = null;
         return "redirect:/medicalSlot-management";
     }
 
     @PreAuthorize("hasAnyRole('ADMIN', 'SMS')")
     @GetMapping("/medicalSlot-management/slots/{index}/remove")
     public String removeRowtByIndex(@PathVariable int index,
+            @ModelAttribute AvailableMedicalSlotsFormDTO availableMedicalSlotsFormDTO,
             Model model) {
-        this.availableMedicalSlotsFormDTO.removeRow(index);
-        model.addAttribute("availableMedicalSlotsForm", this.availableMedicalSlotsFormDTO);
+        availableMedicalSlotsFormDTO = hydrateForm(availableMedicalSlotsFormDTO);
+        if (index >= 0 && index < availableMedicalSlotsFormDTO.getAvailableMedicalSlots().size()) {
+            availableMedicalSlotsFormDTO.removeRow(index);
+        }
+        model.addAttribute("availableMedicalSlotsForm", availableMedicalSlotsFormDTO);
         return "medicalSlotManagement/medicalSlotFragments/available_slots_form_table";
     }
 
@@ -145,5 +136,31 @@ public class MedicalSlotController {
         model.addAttribute("procedures", procedures);
 
         return "medicalSlotManagement/medicalSlotFragments/medicalProcedures";
+    }
+
+    private AvailableMedicalSlotsFormDTO hydrateForm(AvailableMedicalSlotsFormDTO form) {
+        AvailableMedicalSlotsFormDTO hydratedForm = form != null ? form : new AvailableMedicalSlotsFormDTO();
+        List<MedicalSlot> hydratedSlots = new ArrayList<>();
+        if (hydratedForm.getAvailableMedicalSlots() != null) {
+            for (MedicalSlot slot : hydratedForm.getAvailableMedicalSlots()) {
+                hydratedSlots.add(hydrateSlot(slot));
+            }
+        }
+        hydratedForm.setAvailableMedicalSlots(hydratedSlots);
+        return hydratedForm;
+    }
+
+    private MedicalSlot hydrateSlot(MedicalSlot slot) {
+        if (slot == null) {
+            return new MedicalSlot();
+        }
+        if (slot.getBasicHealthUnit() != null && slot.getBasicHealthUnit().getId() != null) {
+            BasicHealthUnit bhu = basicHealthUnitService.findSystemUserUBS(slot.getBasicHealthUnit().getId());
+            slot.setBasicHealthUnit(bhu);
+        }
+        if (slot.getMedicalProcedure() != null && slot.getMedicalProcedure().getId() != null) {
+            slot = basicHealthUnitService.getFetchedAssociations(slot);
+        }
+        return slot;
     }
 }
