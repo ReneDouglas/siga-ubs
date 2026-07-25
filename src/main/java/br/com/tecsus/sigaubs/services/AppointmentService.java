@@ -121,7 +121,7 @@ public class AppointmentService {
 
     @Transactional
     public Appointment updateAppointment(Appointment appointment) {
-        return appointmentRepository.saveAndFlush(appointment);
+        return appointmentRepository.save(appointment);
     }
 
 

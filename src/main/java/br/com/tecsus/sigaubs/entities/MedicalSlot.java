@@ -9,7 +9,8 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Column;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.OneToMany;
-import jakarta.persistence.OneToOne;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.Convert;
 import org.hibernate.annotations.DynamicUpdate;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -42,11 +43,11 @@ public class MedicalSlot extends TenantScopedEntity {
     @OneToMany(mappedBy = "medicalSlot")
     private Set<Contemplation> contemplations = new HashSet<>();
 
-    @OneToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "id_medical_procedure", updatable = false)
     private MedicalProcedure medicalProcedure;
 
-    @OneToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "id_basic_health_unit", updatable = false)
     private BasicHealthUnit basicHealthUnit;
 

@@ -13,6 +13,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaContext;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 import static br.com.tecsus.sigaubs.utils.DefaultValues.QUATRO_MESES;
 
@@ -123,17 +124,16 @@ public class AppointmentRepositoryCustomImpl implements AppointmentRepositoryCus
     @Override
     public Page<PatientOpenAppointmentDTO> findOpenAppointmentsQueuePaginatedV2(Long ubsId, Long specialtyId, Long medicalProcedureId, Pageable pageable) {
 
+        LocalDateTime dateLimit = LocalDateTime.now().minusMonths(QUATRO_MESES);
+        String filters = buildQueueV2Filters(ubsId, specialtyId, medicalProcedureId);
+
         TypedQuery<Long> idsQuery = entityManager.createQuery("""
             SELECT a.id FROM Appointment a
             LEFT JOIN a.medicalProcedure mp
             LEFT JOIN mp.specialty s
             LEFT JOIN a.patient p
             LEFT JOIN p.basicHealthUnit ubs
-            WHERE a.contemplation IS NULL
-                AND (:ubsId IS NULL OR ubs.id = :ubsId)
-                AND (:specialtyId IS NULL OR s.id = :specialtyId)
-                AND (:medicalProcedureId IS NULL OR mp.id = :medicalProcedureId)
-                AND a.status = br.com.tecsus.sigaubs.enums.AppointmentStatus.AGUARDANDO_CONTEMPLACAO
+            """ + filters + """
             ORDER BY
                 ubs.name ASC,
                 s.title ASC,
@@ -145,15 +145,17 @@ public class AppointmentRepositoryCustomImpl implements AppointmentRepositoryCus
                 a.requestDate ASC
         """, Long.class);
 
-        idsQuery.setParameter("ubsId", ubsId);
-        idsQuery.setParameter("specialtyId", specialtyId);
-        idsQuery.setParameter("medicalProcedureId", medicalProcedureId);
-        idsQuery.setParameter("dateLimit", LocalDateTime.now().minusMonths(QUATRO_MESES));
+        setQueueV2FilterParameters(idsQuery, ubsId, specialtyId, medicalProcedureId);
+        idsQuery.setParameter("dateLimit", dateLimit);
         idsQuery.setFirstResult(pageable.getPageNumber() * pageable.getPageSize());
         idsQuery.setMaxResults(pageable.getPageSize());
 
         var ids = idsQuery.getResultList();
         long totalCount = ids.size();
+
+        if (ids.isEmpty()) {
+            return new PageImpl<>(List.of(), pageable, totalCount);
+        }
 
         if (ids.size() >= pageable.getPageSize()) {
             TypedQuery<Long> countQuery = entityManager.createQuery("""
@@ -162,16 +164,10 @@ public class AppointmentRepositoryCustomImpl implements AppointmentRepositoryCus
                 LEFT JOIN mp.specialty s
                 LEFT JOIN a.patient p
                 LEFT JOIN p.basicHealthUnit ubs
-                WHERE a.contemplation IS NULL
-                    AND (:ubsId IS NULL OR ubs.id = :ubsId)
-                    AND (:specialtyId IS NULL OR s.id = :specialtyId)
-                    AND (:medicalProcedureId IS NULL OR mp.id = :medicalProcedureId)
-                    AND a.status = br.com.tecsus.sigaubs.enums.AppointmentStatus.AGUARDANDO_CONTEMPLACAO
+                """ + filters + """
             """, Long.class);
 
-            countQuery.setParameter("ubsId", ubsId);
-            countQuery.setParameter("specialtyId", specialtyId);
-            countQuery.setParameter("medicalProcedureId", medicalProcedureId);
+            setQueueV2FilterParameters(countQuery, ubsId, specialtyId, medicalProcedureId);
             totalCount = countQuery.getSingleResult();
         }
 
@@ -198,9 +194,40 @@ public class AppointmentRepositoryCustomImpl implements AppointmentRepositoryCus
         """, PatientOpenAppointmentDTO.class);
 
         queueQuery.setParameter("ids", ids);
-        queueQuery.setParameter("dateLimit", LocalDateTime.now().minusMonths(QUATRO_MESES));
+        queueQuery.setParameter("dateLimit", dateLimit);
         var openAppointmentsQueue = queueQuery.getResultList();
 
         return new PageImpl<>(openAppointmentsQueue, pageable, totalCount);
+    }
+
+    private String buildQueueV2Filters(Long ubsId, Long specialtyId, Long medicalProcedureId) {
+        StringBuilder filters = new StringBuilder("""
+            WHERE a.contemplation IS NULL
+                AND a.status = br.com.tecsus.sigaubs.enums.AppointmentStatus.AGUARDANDO_CONTEMPLACAO
+            """);
+
+        if (ubsId != null) {
+            filters.append("AND ubs.id = :ubsId\n");
+        }
+        if (specialtyId != null) {
+            filters.append("AND s.id = :specialtyId\n");
+        }
+        if (medicalProcedureId != null) {
+            filters.append("AND mp.id = :medicalProcedureId\n");
+        }
+
+        return filters.toString();
+    }
+
+    private void setQueueV2FilterParameters(TypedQuery<?> query, Long ubsId, Long specialtyId, Long medicalProcedureId) {
+        if (ubsId != null) {
+            query.setParameter("ubsId", ubsId);
+        }
+        if (specialtyId != null) {
+            query.setParameter("specialtyId", specialtyId);
+        }
+        if (medicalProcedureId != null) {
+            query.setParameter("medicalProcedureId", medicalProcedureId);
+        }
     }
 }

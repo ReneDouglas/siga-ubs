@@ -1,6 +1,5 @@
 package br.com.tecsus.sigaubs.tenancy;
 
-import br.com.tecsus.sigaubs.entities.Tenant;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -37,15 +36,15 @@ public class TenantResolutionFilter extends OncePerRequestFilter {
                 return;
             }
 
-            Tenant tenant = tenantResolverService.findActiveBySlug(slug.get()).orElse(null);
+            TenantContext tenant = tenantResolverService.findActiveContextBySlug(slug.get()).orElse(null);
             if (tenant == null) {
                 response.sendError(HttpStatus.NOT_FOUND.value());
                 return;
             }
 
-            TenantContextHolder.setTenant(tenant.getId(), tenant.getSlug());
-            MDC.put("tenant_id", String.valueOf(tenant.getId()));
-            MDC.put("tenant_slug", tenant.getSlug());
+            TenantContextHolder.setTenant(tenant.id(), tenant.slug());
+            MDC.put("tenant_id", String.valueOf(tenant.id()));
+            MDC.put("tenant_slug", tenant.slug());
             filterChain.doFilter(request, response);
         } catch (TenantResolverService.TenantSlugMismatchException e) {
             response.sendError(HttpStatus.FORBIDDEN.value());

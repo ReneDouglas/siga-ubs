@@ -34,33 +34,53 @@ public class DashboardRepository {
                                     bhu.id,
                                     bhu.name,
                                     bhu.neighborhood,
-                                    (SELECT COUNT(a.id) FROM appointments a
-                                     JOIN patients p ON a.id_patient = p.id AND p.tenant_id = a.tenant_id
-                                     WHERE p.id_basic_health_unit = bhu.id
-                                     AND a.tenant_id = :tenantId
-                                     AND a.status = 'Aguardando Contemplação') AS total_open_appointments,
-                                    (SELECT COUNT(c.id) FROM contemplations c
-                                     JOIN medical_slots ms ON c.id_available_medical_slot = ms.id AND ms.tenant_id = c.tenant_id
-                                     WHERE ms.id_basic_health_unit = bhu.id
-                                     AND c.tenant_id = :tenantId
-                                     AND ms.reference_month >= :startOfMonth
-                                     AND ms.reference_month < :startOfNextMonth) AS total_contemplated,
-                                    (SELECT COUNT(p.id) FROM patients p
-                                     WHERE p.id_basic_health_unit = bhu.id
-                                     AND p.tenant_id = :tenantId) AS total_patients,
-                                    (SELECT COALESCE(SUM(ms.current_slots), 0) FROM medical_slots ms
-                                     WHERE ms.id_basic_health_unit = bhu.id
-                                     AND ms.tenant_id = :tenantId
-                                     AND ms.reference_month >= :startOfMonth
-                                     AND ms.reference_month < :startOfNextMonth) AS total_available_slots,
-                                    (SELECT COALESCE(ROUND(AVG(DATEDIFF(c.contemplation_date, a.request_date))), 0)
-                                     FROM contemplations c
-                                     JOIN appointments a ON a.id_contemplation = c.id AND a.tenant_id = c.tenant_id
-                                     JOIN patients p ON a.id_patient = p.id AND p.tenant_id = a.tenant_id
-                                     WHERE p.id_basic_health_unit = bhu.id
-                                     AND c.tenant_id = :tenantId
-                                     AND c.contemplation_date >= DATE_SUB(NOW(), INTERVAL 6 MONTH)) AS average_wait_days
+                                    COALESCE(open_appts.total_open_appointments, 0) AS total_open_appointments,
+                                    COALESCE(contemplated.total_contemplated, 0) AS total_contemplated,
+                                    COALESCE(patients_total.total_patients, 0) AS total_patients,
+                                    COALESCE(available_slots.total_available_slots, 0) AS total_available_slots,
+                                    COALESCE(wait_times.average_wait_days, 0) AS average_wait_days
                                 FROM basic_health_units bhu
+                                LEFT JOIN (
+                                    SELECT p.id_basic_health_unit AS ubs_id, COUNT(a.id) AS total_open_appointments
+                                    FROM appointments a
+                                    JOIN patients p ON a.id_patient = p.id AND p.tenant_id = a.tenant_id
+                                    WHERE a.tenant_id = :tenantId
+                                      AND a.status = 'Aguardando Contemplação'
+                                    GROUP BY p.id_basic_health_unit
+                                ) open_appts ON open_appts.ubs_id = bhu.id
+                                LEFT JOIN (
+                                    SELECT ms.id_basic_health_unit AS ubs_id, COUNT(c.id) AS total_contemplated
+                                    FROM contemplations c
+                                    JOIN medical_slots ms ON c.id_available_medical_slot = ms.id AND ms.tenant_id = c.tenant_id
+                                    WHERE c.tenant_id = :tenantId
+                                      AND ms.reference_month >= :startOfMonth
+                                      AND ms.reference_month < :startOfNextMonth
+                                    GROUP BY ms.id_basic_health_unit
+                                ) contemplated ON contemplated.ubs_id = bhu.id
+                                LEFT JOIN (
+                                    SELECT p.id_basic_health_unit AS ubs_id, COUNT(p.id) AS total_patients
+                                    FROM patients p
+                                    WHERE p.tenant_id = :tenantId
+                                    GROUP BY p.id_basic_health_unit
+                                ) patients_total ON patients_total.ubs_id = bhu.id
+                                LEFT JOIN (
+                                    SELECT ms.id_basic_health_unit AS ubs_id, SUM(ms.current_slots) AS total_available_slots
+                                    FROM medical_slots ms
+                                    WHERE ms.tenant_id = :tenantId
+                                      AND ms.reference_month >= :startOfMonth
+                                      AND ms.reference_month < :startOfNextMonth
+                                    GROUP BY ms.id_basic_health_unit
+                                ) available_slots ON available_slots.ubs_id = bhu.id
+                                LEFT JOIN (
+                                    SELECT p.id_basic_health_unit AS ubs_id,
+                                           ROUND(AVG(DATEDIFF(c.contemplation_date, a.request_date))) AS average_wait_days
+                                    FROM contemplations c
+                                    JOIN appointments a ON a.id_contemplation = c.id AND a.tenant_id = c.tenant_id
+                                    JOIN patients p ON a.id_patient = p.id AND p.tenant_id = a.tenant_id
+                                    WHERE c.tenant_id = :tenantId
+                                      AND c.contemplation_date >= DATE_SUB(NOW(), INTERVAL 6 MONTH)
+                                    GROUP BY p.id_basic_health_unit
+                                ) wait_times ON wait_times.ubs_id = bhu.id
                                 WHERE bhu.tenant_id = :tenantId
                                 ORDER BY bhu.name
                                 """;
@@ -240,7 +260,8 @@ public class DashboardRepository {
                                 SELECT COUNT(c.id)
                                 FROM contemplations c
                                 WHERE c.tenant_id = :tenantId
-                                AND DATE(c.contemplation_date) = CURDATE()
+                                AND c.contemplation_date >= CURDATE()
+                                AND c.contemplation_date < DATE_ADD(CURDATE(), INTERVAL 1 DAY)
                                 """;
 
                 Object result = em.createNativeQuery(sql)

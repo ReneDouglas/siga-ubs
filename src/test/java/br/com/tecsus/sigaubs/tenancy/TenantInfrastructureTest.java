@@ -64,6 +64,7 @@ class TenantInfrastructureTest {
         when(repository.findBySlugAndStatus("afogados", "ACTIVE")).thenReturn(Optional.of(afogados));
 
         assertThat(resolver.findActiveBySlug(" Afogados ")).contains(afogados);
+        assertThat(resolver.findActiveContextBySlug(" Afogados ")).contains(new TenantContext(1L, "afogados"));
         assertThat(resolver.findActiveBySlug("slug inválido")).isEmpty();
         assertThat(resolver.findActiveTenants()).isEmpty();
     }
@@ -71,9 +72,8 @@ class TenantInfrastructureTest {
     @Test
     void filtroDeResolucaoDevePopularELimparContexto() throws Exception {
         TenantResolverService resolver = mock(TenantResolverService.class);
-        Tenant tenant = tenant(1L, "afogados");
         when(resolver.resolveSlug(null, "afogados.localhost")).thenReturn(Optional.of("afogados"));
-        when(resolver.findActiveBySlug("afogados")).thenReturn(Optional.of(tenant));
+        when(resolver.findActiveContextBySlug("afogados")).thenReturn(Optional.of(new TenantContext(1L, "afogados")));
 
         TenantResolutionFilter filter = new TenantResolutionFilter(resolver);
         MockHttpServletRequest request = new MockHttpServletRequest("GET", "/");
@@ -91,7 +91,7 @@ class TenantInfrastructureTest {
     void filtroDeResolucaoDeveBloquearTenantInexistenteERootSemTenant() throws Exception {
         TenantResolverService resolver = mock(TenantResolverService.class);
         when(resolver.resolveSlug(null, "inexistente.localhost")).thenReturn(Optional.of("inexistente"));
-        when(resolver.findActiveBySlug("inexistente")).thenReturn(Optional.empty());
+        when(resolver.findActiveContextBySlug("inexistente")).thenReturn(Optional.empty());
 
         TenantResolutionFilter filter = new TenantResolutionFilter(resolver);
         MockHttpServletRequest request = new MockHttpServletRequest("GET", "/");

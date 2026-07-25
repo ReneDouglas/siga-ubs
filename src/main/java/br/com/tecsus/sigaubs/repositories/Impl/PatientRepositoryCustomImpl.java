@@ -120,7 +120,10 @@ public class PatientRepositoryCustomImpl implements PatientRepositoryCustom {
         }
 
         TypedQuery<Patient> patientsQuery = em.createQuery("""
-            SELECT p FROM Patient p WHERE p.id IN :ids ORDER BY p.name
+            SELECT p FROM Patient p
+            LEFT JOIN FETCH p.basicHealthUnit
+            WHERE p.id IN :ids
+            ORDER BY p.name
         """, Patient.class);
 
         patientsQuery.setParameter("ids", ids);

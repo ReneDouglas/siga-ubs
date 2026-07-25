@@ -2,6 +2,7 @@ package br.com.tecsus.sigaubs.tenancy;
 
 import br.com.tecsus.sigaubs.entities.Tenant;
 import br.com.tecsus.sigaubs.repositories.TenantRepository;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,6 +32,16 @@ public class TenantResolverService {
             return Optional.empty();
         }
         return tenantRepository.findBySlugAndStatus(normalizedSlug, ACTIVE);
+    }
+
+    @Cacheable(
+            value = "tenants",
+            key = "#slug == null ? '' : #slug.trim().toLowerCase(T(java.util.Locale).ROOT)",
+            unless = "#result == null")
+    @Transactional(readOnly = true)
+    public Optional<TenantContext> findActiveContextBySlug(String slug) {
+        return findActiveBySlug(slug)
+                .map(tenant -> new TenantContext(tenant.getId(), tenant.getSlug()));
     }
 
     @Transactional(readOnly = true)

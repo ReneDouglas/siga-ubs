@@ -14,6 +14,7 @@ import org.springframework.data.jpa.repository.JpaContext;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.YearMonth;
+import java.util.List;
 
 public class ContemplationRepositoryCustomImpl implements ContemplationRepositoryCustom {
 
@@ -43,9 +44,7 @@ public class ContemplationRepositoryCustomImpl implements ContemplationRepositor
         queryBuilder.append("JOIN c.appointment a ");
         queryBuilder.append("JOIN a.patient p ");
         queryBuilder.append("JOIN mp.specialty s ");
-        if (referenceMonth == null) queryBuilder.append("WHERE 1=1 ");
-        if (referenceMonth != null) queryBuilder.append("WHERE MONTH(ms.referenceMonth) = :month ");
-        if (referenceMonth != null) queryBuilder.append("AND YEAR(ms.referenceMonth) = :year ");
+        appendReferenceMonthFilter(queryBuilder, referenceMonth);
         if (ubsId != null) queryBuilder.append("AND ubs.id = :ubsId ");
         if (specialtyId != null) queryBuilder.append("AND s.id = :specialtyId ");
         queryBuilder.append("AND mp.procedureType = :type ");
@@ -68,36 +67,21 @@ public class ContemplationRepositoryCustomImpl implements ContemplationRepositor
 
         TypedQuery<Long> contemplationIdsQueryPaginated = em.createQuery(queryBuilder.toString(), Long.class);
 
-        /*TypedQuery<Long> contemplationIdsQueryPaginated = em.createQuery("""
-            SELECT c.id
-            FROM Contemplation c
-            JOIN c.medicalSlot ms
-            JOIN ms.basicHealthUnit ubs
-            JOIN ms.medicalProcedure mp
-            JOIN c.appointment a
-            JOIN a.patient p
-            JOIN mp.specialty s
-            WHERE ubs.id = :ubsId
-            AND s.id = :specialtyId
-            AND mp.procedureType = :type
-            AND (:status IS NULL OR c.status = :status)
-            AND MONTH(ms.referenceMonth) = :month
-            AND YEAR(ms.referenceMonth) = :year
-            ORDER BY mp.description, p.name
-        """, Long.class);*/
-
         if (ubsId != null) contemplationIdsQueryPaginated.setParameter("ubsId", ubsId);
         if (specialtyId != null) contemplationIdsQueryPaginated.setParameter("specialtyId", specialtyId);
         contemplationIdsQueryPaginated.setParameter("type", type);
         if (status != null) contemplationIdsQueryPaginated.setParameter("status", status);
-        if (referenceMonth != null) contemplationIdsQueryPaginated.setParameter("month", referenceMonth.getMonthValue());
-        if (referenceMonth != null) contemplationIdsQueryPaginated.setParameter("year", referenceMonth.getYear());
+        setReferenceMonthParameters(contemplationIdsQueryPaginated, referenceMonth);
 
         contemplationIdsQueryPaginated.setFirstResult(pageable.getPageNumber() * pageable.getPageSize());
         contemplationIdsQueryPaginated.setMaxResults(pageable.getPageSize());
 
         var contemplationIdsPaginated = contemplationIdsQueryPaginated.getResultList();
         long totalCountContemplations = contemplationIdsPaginated.size();
+
+        if (contemplationIdsPaginated.isEmpty()) {
+            return new PageImpl<>(List.of(), pageable, totalCountContemplations);
+        }
 
         if (contemplationIdsPaginated.size() >= pageable.getPageSize()) {
 
@@ -111,9 +95,7 @@ public class ContemplationRepositoryCustomImpl implements ContemplationRepositor
             countBuilder.append("JOIN c.appointment a ");
             countBuilder.append("JOIN a.patient p ");
             countBuilder.append("JOIN mp.specialty s ");
-            if (referenceMonth == null) countBuilder.append("WHERE 1=1 ");
-            if (referenceMonth != null) countBuilder.append("WHERE MONTH(ms.referenceMonth) = :month ");
-            if (referenceMonth != null) countBuilder.append("AND YEAR(ms.referenceMonth) = :year ");
+            appendReferenceMonthFilter(countBuilder, referenceMonth);
             if (ubsId != null) countBuilder.append("AND ubs.id = :ubsId ");
             if (specialtyId != null) countBuilder.append("AND s.id = :specialtyId ");
             countBuilder.append("AND mp.procedureType = :type ");
@@ -128,29 +110,11 @@ public class ContemplationRepositoryCustomImpl implements ContemplationRepositor
 
             TypedQuery<Long> count = em.createQuery(countBuilder.toString(), Long.class);
 
-            /*TypedQuery<Long> count = em.createQuery("""
-                SELECT COUNT(c.id)
-                FROM Contemplation c
-                JOIN c.medicalSlot ms
-                JOIN ms.basicHealthUnit ubs
-                JOIN ms.medicalProcedure mp
-                JOIN c.appointment a
-                JOIN a.patient p
-                JOIN mp.specialty s
-                WHERE ubs.id = :ubsId
-                AND s.id = :specialtyId
-                AND mp.procedureType = :type
-                AND (:status IS NULL OR c.status = :status)
-                AND MONTH(ms.referenceMonth) = :month
-                AND YEAR(ms.referenceMonth) = :year
-            """, Long.class);*/
-
             if (ubsId != null) count.setParameter("ubsId", ubsId);
             if (specialtyId != null) count.setParameter("specialtyId", specialtyId);
             count.setParameter("type", type);
             if (status != null) count.setParameter("status", status);
-            if (referenceMonth != null) count.setParameter("month", referenceMonth.getMonthValue());
-            if (referenceMonth != null) count.setParameter("year", referenceMonth.getYear());
+            setReferenceMonthParameters(count, referenceMonth);
 
             totalCountContemplations = count.getSingleResult();
         }
@@ -192,5 +156,24 @@ public class ContemplationRepositoryCustomImpl implements ContemplationRepositor
 
         return new PageImpl<>(contemplations, pageable, totalCountContemplations);
 
+    }
+
+    private void appendReferenceMonthFilter(StringBuilder builder, YearMonth referenceMonth) {
+        if (referenceMonth == null) {
+            builder.append("WHERE 1=1 ");
+            return;
+        }
+
+        builder.append("WHERE ms.referenceMonth >= :startMonth ");
+        builder.append("AND ms.referenceMonth < :startOfNextMonth ");
+    }
+
+    private void setReferenceMonthParameters(TypedQuery<?> query, YearMonth referenceMonth) {
+        if (referenceMonth == null) {
+            return;
+        }
+
+        query.setParameter("startMonth", referenceMonth);
+        query.setParameter("startOfNextMonth", referenceMonth.plusMonths(1));
     }
 }

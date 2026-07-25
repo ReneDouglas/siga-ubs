@@ -76,7 +76,7 @@ class MedicalSlotServiceTest {
     void deveAdicionarRemoverVagaERespeitarLimites() {
         var stored = slot(1L, ubs(1L, "UBS"), null, 5, 4);
         when(medicalSlotRepository.getReferenceById(1L)).thenReturn(stored);
-        when(medicalSlotRepository.saveAndFlush(stored)).thenReturn(stored);
+        when(medicalSlotRepository.save(stored)).thenReturn(stored);
 
         assertThat(medicalSlotService.addSlot(stored).getCurrentSlots()).isEqualTo(5);
         assertThatThrownBy(() -> medicalSlotService.addSlot(stored))

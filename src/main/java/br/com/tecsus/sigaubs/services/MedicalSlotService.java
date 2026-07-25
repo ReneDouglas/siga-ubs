@@ -84,7 +84,7 @@ public class MedicalSlotService {
         }
 
         ms.setCurrentSlots(ms.getCurrentSlots() + 1);
-        return medicalSlotRepository.saveAndFlush(ms);
+        return medicalSlotRepository.save(ms);
     }
 
     @Transactional
@@ -97,6 +97,6 @@ public class MedicalSlotService {
         }
 
         ms.setCurrentSlots(ms.getCurrentSlots() - 1);
-        return medicalSlotRepository.saveAndFlush(ms);
+        return medicalSlotRepository.save(ms);
     }
 }

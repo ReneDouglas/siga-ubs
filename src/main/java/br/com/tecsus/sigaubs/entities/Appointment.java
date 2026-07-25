@@ -44,11 +44,11 @@ public class Appointment extends TenantScopedEntity {
     @Column(name = "update_user")
     private String updateUser;
 
-    @OneToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "id_medical_procedure", updatable = false)
     private MedicalProcedure medicalProcedure;
 
-    @OneToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "id_patient", updatable = false)
     private Patient patient;
 

@@ -225,10 +225,16 @@ CREATE TABLE patient_history (
 -- =============================================================================
 CREATE INDEX idx_appt_status     ON appointments(status);
 CREATE INDEX idx_appt_tenant_status ON appointments(tenant_id, status);
+CREATE INDEX idx_appt_tenant_request ON appointments(tenant_id, request_date);
+CREATE INDEX idx_appt_tenant_status_request ON appointments(tenant_id, status, request_date);
 CREATE INDEX idx_appt_patient    ON appointments(tenant_id, id_patient);
-CREATE INDEX idx_ms_ref_month    ON medical_slots(tenant_id, reference_month);
+CREATE INDEX idx_appt_tenant_status_cont_proc_request ON appointments(tenant_id, status, id_contemplation, id_medical_procedure, request_date);
+CREATE INDEX idx_appt_tenant_contemplation_status ON appointments(tenant_id, id_contemplation, status);
+CREATE INDEX idx_pat_tenant_ubs_name ON patients(tenant_id, id_basic_health_unit, name);
+CREATE INDEX idx_ms_tenant_month_ubs_proc ON medical_slots(tenant_id, reference_month, id_basic_health_unit, id_medical_procedure);
 CREATE INDEX idx_ms_tenant_ubs_proc_month ON medical_slots(tenant_id, id_basic_health_unit, id_medical_procedure, reference_month);
 CREATE INDEX idx_cont_date       ON contemplations(tenant_id, contemplation_date);
+CREATE INDEX idx_cont_tenant_slot_date ON contemplations(tenant_id, id_available_medical_slot, contemplation_date);
 CREATE INDEX idx_bhu_tenant_name ON basic_health_units(tenant_id, name);
 CREATE INDEX idx_su_tenant_bhu ON system_users(tenant_id, id_basic_health_unit);
 CREATE INDEX idx_specialty_title ON specialties(title);
