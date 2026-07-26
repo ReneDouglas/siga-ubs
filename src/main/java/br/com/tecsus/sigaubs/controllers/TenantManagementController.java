@@ -71,7 +71,7 @@ public class TenantManagementController {
             return "tenantManagement/tenantFragments/tenant_datatable";
         }
 
-        model.addAttribute("tenant", tenantId != null ? tenantManagementService.findById(tenantId) : new Tenant());
+        model.addAttribute("tenant", loadTenantForForm(tenantId, model));
         model.addAttribute("systemMaintenance", systemMaintenanceService.getCurrent());
         return "tenantManagement/tenant_management";
     }
@@ -200,5 +200,21 @@ public class TenantManagementController {
         if (resultado.falhou()) {
             log.error("Erro ao {}: {}", action, resultado.mensagem());
         }
+    }
+
+    private Tenant loadTenantForForm(Long tenantId, Model model) {
+        if (tenantId == null) {
+            return new Tenant();
+        }
+
+        var resultado = tenantManagementService.findById(tenantId);
+        if (resultado.sucesso()) {
+            return resultado.valor();
+        }
+
+        model.addAttribute("message", resultado.mensagem());
+        model.addAttribute("error", true);
+        log.error("Erro ao carregar tenant [id={}]: {}", tenantId, resultado.mensagem());
+        return new Tenant();
     }
 }

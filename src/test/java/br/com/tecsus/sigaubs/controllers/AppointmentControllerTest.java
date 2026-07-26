@@ -66,7 +66,7 @@ class AppointmentControllerTest {
         var openAppointment = TestDataFactory.openAppointment(20L, Priorities.ELETIVO,
                 java.time.LocalDateTime.now(), java.time.LocalDate.of(1980, 1, 1),
                 br.com.tecsus.sigaubs.enums.SocialSituationRating.UM_SALARIO_MINIMO, "Feminino");
-        when(patientService.findByIdAndUBS(10L, 1L)).thenReturn(patient);
+        when(patientService.findByIdAndUBS(10L, 1L)).thenReturn(ResultadoOperacao.sucesso(patient));
         when(specialtyService.findSpecialties()).thenReturn(List.of(specialty));
         when(appointmentService.findPatientOpenAppointments(10L)).thenReturn(List.of(openAppointment));
         var model = model();
@@ -77,6 +77,20 @@ class AppointmentControllerTest {
         assertThat(appointment.getPatient()).isSameAs(patient);
         assertThat(model.get("patientOpenAppointments")).isEqualTo(List.of(openAppointment));
         assertThat(model.get("loaded")).isEqualTo(true);
+    }
+
+    @Test
+    void deveExibirErroAoNaoEncontrarPacienteParaMarcacao() {
+        when(patientService.findByIdAndUBS(10L, 1L))
+                .thenReturn(ResultadoOperacao.falha("Paciente não encontrado."));
+        when(specialtyService.findSpecialties()).thenReturn(List.of(specialty));
+        var model = model();
+
+        assertThat(controller.loadPatient(10L, model, ubsUser(1L)))
+                .isEqualTo("appointmentManagement/appointment_management");
+        assertThat(model.get("error")).isEqualTo(true);
+        assertThat(model.get("message")).isEqualTo("Paciente não encontrado.");
+        assertThat(model.get("loaded")).isEqualTo(false);
     }
 
     @Test

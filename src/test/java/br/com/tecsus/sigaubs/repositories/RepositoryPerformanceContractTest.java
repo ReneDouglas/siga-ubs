@@ -34,6 +34,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Supplier;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 
 @SpringBootTest(properties = "spring.jpa.properties.hibernate.generate_statistics=true")
 @ActiveProfiles("test")
@@ -118,6 +119,35 @@ class RepositoryPerformanceContractTest {
                     .extracting(PatientOpenAppointmentDTO::appointmentId)
                     .containsExactly(antigoEletivo.getId(), urgente.getId(), eletivo.getId());
             assertThat(preparedStatementCount()).isLessThanOrEqualTo(3);
+            return null;
+        });
+    }
+
+    @Test
+    void detalheDaFilaDeveCarregarAssociacoesUsadasNoModalSemSessaoAberta() {
+        Tenant tenant = tenant("detalhe-fila");
+
+        withTenant(tenant, () -> {
+            BasicHealthUnit ubs = ubs("UBS Detalhe");
+            Specialty specialty = specialty("Cardiologia");
+            MedicalProcedure procedure = procedure("Consulta", ProcedureType.CONSULTA, specialty);
+            Appointment appointment = appointment(patient("Maria", ubs, LocalDate.of(1980, 1, 1),
+                            SocialSituationRating.UM_SALARIO_MINIMO),
+                    procedure,
+                    Priorities.ELETIVO,
+                    LocalDateTime.now().minusDays(2));
+
+            clearPersistenceContextAndStatistics();
+
+            Appointment details = appointmentRepository.findByIdWithQueueDetails(appointment.getId()).orElseThrow();
+            entityManager.clear();
+
+            assertThatCode(() -> {
+                assertThat(details.getPatient().getBasicHealthUnit().getName()).isEqualTo("UBS Detalhe");
+                assertThat(details.getMedicalProcedure().getProcedureType()).isEqualTo(ProcedureType.CONSULTA);
+                assertThat(details.getMedicalProcedure().getSpecialty().getTitle()).isEqualTo("Cardiologia");
+            }).doesNotThrowAnyException();
+            assertThat(preparedStatementCount()).isEqualTo(1);
             return null;
         });
     }

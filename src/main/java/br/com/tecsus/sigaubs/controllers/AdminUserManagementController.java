@@ -62,9 +62,7 @@ public class AdminUserManagementController {
             return "adminUserManagement/adminUserFragments/admin_user_datatable";
         }
 
-        model.addAttribute("systemAdmin", adminId != null
-                ? adminUserManagementService.findById(adminId)
-                : new SystemAdmin());
+        model.addAttribute("systemAdmin", loadAdminForForm(adminId, model));
         return "adminUserManagement/admin_user_management";
     }
 
@@ -134,5 +132,21 @@ public class AdminUserManagementController {
         if (resultado.falhou()) {
             log.error("Erro ao {}: {}", action, resultado.mensagem());
         }
+    }
+
+    private SystemAdmin loadAdminForForm(Long adminId, Model model) {
+        if (adminId == null) {
+            return new SystemAdmin();
+        }
+
+        var resultado = adminUserManagementService.findById(adminId);
+        if (resultado.sucesso()) {
+            return resultado.valor();
+        }
+
+        model.addAttribute("message", resultado.mensagem());
+        model.addAttribute("error", true);
+        log.error("Erro ao carregar administrador [id={}]: {}", adminId, resultado.mensagem());
+        return new SystemAdmin();
     }
 }

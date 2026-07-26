@@ -188,7 +188,7 @@ class PatientControllerTest {
     void deveLimparEditarEAbrirPacienteSelecionado() {
         Patient patient = TestDataFactory.patient(10L, "Maria", ubs);
         var loggedUser = ubsUser(1L);
-        when(patientService.findPatientToEdit(10L, loggedUser)).thenReturn(patient);
+        when(patientService.findPatientToEdit(10L, loggedUser)).thenReturn(ResultadoOperacao.sucesso(patient));
 
         assertThat(controller.cancelPatientEdit()).isEqualTo("redirect:/patient-management");
         assertThat(controller.clearPatientsPage()).isEqualTo("redirect:/patient-list");
@@ -198,5 +198,20 @@ class PatientControllerTest {
         var model = model();
         controller.getPatientInsertPage(model, 10L, loggedUser);
         assertThat(model.get("patient")).isSameAs(patient);
+    }
+
+    @Test
+    void deveExibirErroAoNaoEncontrarPacienteParaEdicao() {
+        var loggedUser = ubsUser(1L);
+        when(patientService.findPatientToEdit(10L, loggedUser))
+                .thenReturn(ResultadoOperacao.falha("Paciente não encontrado. Contate o TI."));
+        when(basicHealthUnitService.findSystemUserUBS(1L)).thenReturn(ubs);
+        var model = model();
+
+        assertThat(controller.getPatientInsertPage(model, 10L, loggedUser))
+                .isEqualTo("patientManagement/patient_management");
+        assertThat(model.get("patient")).isInstanceOf(Patient.class);
+        assertThat(model.get("error")).isEqualTo(true);
+        assertThat(model.get("message")).isEqualTo("Paciente não encontrado. Contate o TI.");
     }
 }

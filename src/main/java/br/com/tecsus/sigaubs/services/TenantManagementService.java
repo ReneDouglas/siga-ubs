@@ -44,9 +44,10 @@ public class TenantManagementService {
     }
 
     @Transactional(readOnly = true)
-    public Tenant findById(Long id) {
+    public ResultadoOperacao<Tenant> findById(Long id) {
         return tenantRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Tenant não encontrado."));
+                .map(ResultadoOperacao::sucesso)
+                .orElseGet(() -> ResultadoOperacao.falha("Tenant não encontrado."));
     }
 
     @CacheEvict(value = "tenants", allEntries = true)

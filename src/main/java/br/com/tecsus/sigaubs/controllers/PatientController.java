@@ -1,6 +1,7 @@
 package br.com.tecsus.sigaubs.controllers;
 
 import br.com.tecsus.sigaubs.dtos.PatientAppointmentsHistoryDTO;
+import br.com.tecsus.sigaubs.dtos.ResultadoOperacao;
 import br.com.tecsus.sigaubs.entities.Patient;
 import br.com.tecsus.sigaubs.enums.Roles;
 import br.com.tecsus.sigaubs.enums.SocialSituationRating;
@@ -45,7 +46,7 @@ public class PatientController {
             @RequestParam(value = "id", required = false) Long patientId,
             @AuthenticationPrincipal SystemUserDetails loggedUser) {
 
-        Patient patient = patientId != null ? patientService.findPatientToEdit(patientId, loggedUser) : new Patient();
+        Patient patient = loadPatientForForm(patientId, loggedUser, model);
         model.addAttribute("patient", patient);
         model.addAttribute("socialSituations", SocialSituationRating.getDescriptionSortedByRating());
 
@@ -217,5 +218,21 @@ public class PatientController {
         } else if (loggedUser.getBasicHealthUnitId() != null) {
             model.addAttribute("systemUserUBS", basicHealthUnitService.findSystemUserUBS(loggedUser.getBasicHealthUnitId()));
         }
+    }
+
+    private Patient loadPatientForForm(Long patientId, SystemUserDetails loggedUser, Model model) {
+        if (patientId == null) {
+            return new Patient();
+        }
+
+        ResultadoOperacao<Patient> resultado = patientService.findPatientToEdit(patientId, loggedUser);
+        if (resultado.sucesso()) {
+            return resultado.valor();
+        }
+
+        model.addAttribute("message", resultado.mensagem());
+        model.addAttribute("error", true);
+        log.error("Erro ao carregar paciente [id={}]: {}", patientId, resultado.mensagem());
+        return new Patient();
     }
 }

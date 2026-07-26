@@ -112,10 +112,19 @@ class AppointmentServiceTest {
 
     @Test
     void deveDelegarConsultasParaRepository() {
+        var appointment = appointment(1L, patient(1L, "Paciente", ubs(1L, "UBS")),
+                procedure(1L, "Consulta", ProcedureType.CONSULTA, specialty(1L, "Cardiologia")));
+        when(appointmentRepository.findByIdWithQueueDetails(1L)).thenReturn(Optional.of(appointment));
+
+        var resultado = appointmentService.findByIdWithQueueDetails(1L);
+        assertThat(resultado.sucesso()).isTrue();
+        assertThat(resultado.valor()).isSameAs(appointment);
+
         appointmentService.findBySpecialtyIdAndProcedureType(1L, ProcedureType.CONSULTA);
         appointmentService.findPatientOpenAppointments(1L);
         appointmentService.findReferenceById(1L);
 
+        verify(appointmentRepository).findByIdWithQueueDetails(1L);
         verify(medicalProcedureRepository).findAllBySpecialtyAndProcedureType(any(), any());
         verify(appointmentRepository).findPatientOpenAppointments(1L);
         verify(appointmentRepository).getReferenceById(1L);

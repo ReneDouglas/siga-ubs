@@ -265,7 +265,13 @@ public class QueueController {
             @RequestParam Long specialty,
             Model model) {
 
-        Appointment appointment = appointmentService.findById(id);
+        var appointmentResult = appointmentService.findByIdWithQueueDetails(id);
+        if (appointmentResult.falhou()) {
+            model.addAttribute("message", appointmentResult.mensagem());
+            return "queueManagement/queueFragments/patientAppointment_error";
+        }
+
+        Appointment appointment = appointmentResult.valor();
         MedicalSlot medicalSlot = new MedicalSlot();
         medicalSlot.setMedicalProcedure(appointment.getMedicalProcedure());
         medicalSlot.setBasicHealthUnit(appointment.getPatient().getBasicHealthUnit());
@@ -297,7 +303,13 @@ public class QueueController {
             @RequestParam(required = false) String procedureType,
             Model model) {
 
-        Appointment appointment = appointmentService.findById(id);
+        var appointmentResult = appointmentService.findByIdWithQueueDetails(id);
+        if (appointmentResult.falhou()) {
+            model.addAttribute("message", appointmentResult.mensagem());
+            return "queueManagement/queueFragments/patientAppointment_error";
+        }
+
+        Appointment appointment = appointmentResult.valor();
         MedicalSlot medicalSlot = new MedicalSlot();
         medicalSlot.setMedicalProcedure(appointment.getMedicalProcedure());
         medicalSlot.setBasicHealthUnit(appointment.getPatient().getBasicHealthUnit());

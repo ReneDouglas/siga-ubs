@@ -9,8 +9,21 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
+import java.util.Optional;
 
 public interface AppointmentRepository extends JpaRepository<Appointment, Long>, AppointmentRepositoryCustom {
+
+    @Transactional(readOnly = true)
+    @Query("""
+        SELECT a
+        FROM Appointment a
+        JOIN FETCH a.patient p
+        LEFT JOIN FETCH p.basicHealthUnit
+        JOIN FETCH a.medicalProcedure mp
+        LEFT JOIN FETCH mp.specialty
+        WHERE a.id = :id
+    """)
+    Optional<Appointment> findByIdWithQueueDetails(@Param("id") Long id);
 
     @Transactional(readOnly = true)
     @Query("""

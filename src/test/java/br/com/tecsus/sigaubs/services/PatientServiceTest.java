@@ -17,7 +17,6 @@ import static br.com.tecsus.sigaubs.support.TestDataFactory.patient;
 import static br.com.tecsus.sigaubs.support.TestDataFactory.ubs;
 import static br.com.tecsus.sigaubs.support.TestDataFactory.userDetails;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -74,9 +73,14 @@ class PatientServiceTest {
         when(basicHealthUnitService.findReferenceById(1L)).thenReturn(patient.getBasicHealthUnit());
         when(patientRepository.findByIdAndBasicHealthUnit(1L, patient.getBasicHealthUnit())).thenReturn(patient);
 
-        assertThat(patientService.findByIdAndUBS(1L, null)).isEqualTo(patient);
-        assertThat(patientService.findByIdAndUBS(1L, 1L)).isEqualTo(patient);
-        assertThatThrownBy(() -> patientService.findByIdAndUBS(2L, null)).isInstanceOf(RuntimeException.class);
+        var semFiltroUbs = patientService.findByIdAndUBS(1L, null);
+        var comFiltroUbs = patientService.findByIdAndUBS(1L, 1L);
+        var naoEncontrado = patientService.findByIdAndUBS(2L, null);
+
+        assertThat(semFiltroUbs.valor()).isEqualTo(patient);
+        assertThat(comFiltroUbs.valor()).isEqualTo(patient);
+        assertThat(naoEncontrado.falhou()).isTrue();
+        assertThat(naoEncontrado.mensagem()).isEqualTo("Paciente não encontrado.");
     }
 
     @Test

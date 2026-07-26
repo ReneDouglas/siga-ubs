@@ -40,9 +40,10 @@ public class AdminUserManagementService {
     }
 
     @Transactional(readOnly = true)
-    public SystemAdmin findById(Long id) {
+    public ResultadoOperacao<SystemAdmin> findById(Long id) {
         return systemAdminRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Administrador não encontrado."));
+                .map(ResultadoOperacao::sucesso)
+                .orElseGet(() -> ResultadoOperacao.falha("Administrador não encontrado."));
     }
 
     @Transactional

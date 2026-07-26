@@ -105,8 +105,17 @@ public class AppointmentService {
     }
 
     @Transactional(readOnly = true)
-    public Appointment findById(Long id) {
-        return appointmentRepository.findById(id).orElseThrow(() -> new RuntimeException("Marcação não encontrada."));
+    public ResultadoOperacao<Appointment> findById(Long id) {
+        return appointmentRepository.findById(id)
+                .map(ResultadoOperacao::sucesso)
+                .orElseGet(() -> ResultadoOperacao.falha("Marcação não encontrada."));
+    }
+
+    @Transactional(readOnly = true)
+    public ResultadoOperacao<Appointment> findByIdWithQueueDetails(Long id) {
+        return appointmentRepository.findByIdWithQueueDetails(id)
+                .map(ResultadoOperacao::sucesso)
+                .orElseGet(() -> ResultadoOperacao.falha("Marcação não encontrada."));
     }
 
     @Transactional(readOnly = true)

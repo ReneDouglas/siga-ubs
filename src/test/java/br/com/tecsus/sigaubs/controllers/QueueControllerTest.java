@@ -138,7 +138,7 @@ class QueueControllerTest {
                 java.time.LocalDateTime.now(), java.time.LocalDate.of(1980, 1, 1),
                 br.com.tecsus.sigaubs.enums.SocialSituationRating.UM_SALARIO_MINIMO, "Feminino");
 
-        when(appointmentService.findById(5L)).thenReturn(appointment);
+        when(appointmentService.findByIdWithQueueDetails(5L)).thenReturn(ResultadoOperacao.sucesso(appointment));
         when(appointmentService.findPatientOpenAppointments(4L))
                 .thenReturn(new ArrayList<>(List.of(currentAppointment, otherAppointment)));
         when(medicalSlotService.findAvailableSlotsV2(any(MedicalSlot.class))).thenReturn(Optional.of(slot));
@@ -151,6 +151,18 @@ class QueueControllerTest {
         assertThat(model.get("availableSlots")).isEqualTo(4);
         assertThat(model.get("medicalSlotId")).isEqualTo(6L);
         assertThat(model.get("patientOpenAppointments")).isEqualTo(List.of(otherAppointment));
+    }
+
+    @Test
+    void deveRetornarErroAoNaoEncontrarDetalheDaMarcacaoV2() {
+        when(appointmentService.findByIdWithQueueDetails(5L))
+                .thenReturn(ResultadoOperacao.falha("Marcação não encontrada."));
+        var model = model();
+
+        String view = controller.loadOpenAppointmentV2(5L, 1L, 2L, 3L, "CONSULTA", model);
+
+        assertThat(view).isEqualTo("queueManagement/queueFragments/patientAppointment_error");
+        assertThat(model.get("message")).isEqualTo("Marcação não encontrada.");
     }
 
     @Test

@@ -58,7 +58,20 @@ public class AppointmentController {
                               @AuthenticationPrincipal SystemUserDetails loggedUser) {
 
         Appointment appointment = new Appointment();
-        appointment.setPatient(patientService.findByIdAndUBS(idPatient, loggedUser.getBasicHealthUnitId()));
+        var patientResult = patientService.findByIdAndUBS(idPatient, loggedUser.getBasicHealthUnitId());
+        if (patientResult.falhou()) {
+            appointment.setPatient(new Patient());
+            model.addAttribute("message", patientResult.mensagem());
+            model.addAttribute("error", true);
+            model.addAttribute("patients", List.of());
+            model.addAttribute("appointment", appointment);
+            model.addAttribute("specialties", specialtyService.findSpecialties());
+            model.addAttribute("patientOpenAppointments", List.of());
+            model.addAttribute("loaded", false);
+            log.error("Erro ao carregar paciente [id={}]: {}", idPatient, patientResult.mensagem());
+            return "appointmentManagement/appointment_management";
+        }
+        appointment.setPatient(patientResult.valor());
 
         model.addAttribute("patients", List.of());
         model.addAttribute("appointment", appointment);

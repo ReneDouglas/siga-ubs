@@ -66,14 +66,20 @@ public class PatientService {
     }
 
     @Transactional(readOnly = true)
-    public Patient findByIdAndUBS(Long idPatient, Long idUBS) {
+    public ResultadoOperacao<Patient> findByIdAndUBS(Long idPatient, Long idUBS) {
 
         if (idUBS == null) {
-            return patientRepository.findById(idPatient).orElseThrow(() -> new RuntimeException("Paciente não encontrado."));
+            return patientRepository.findById(idPatient)
+                    .map(ResultadoOperacao::sucesso)
+                    .orElseGet(() -> ResultadoOperacao.falha("Paciente não encontrado."));
         }
 
         BasicHealthUnit ubs = basicHealthUnitService.findReferenceById(idUBS);
-        return patientRepository.findByIdAndBasicHealthUnit(idPatient, ubs);
+        Patient patient = patientRepository.findByIdAndBasicHealthUnit(idPatient, ubs);
+        if (patient == null) {
+            return ResultadoOperacao.falha("Paciente não encontrado.");
+        }
+        return ResultadoOperacao.sucesso(patient);
     }
 
     @Transactional(readOnly = true)
@@ -102,24 +108,28 @@ public class PatientService {
         return patientRepository.findPatientAppointmentsHistoryPaginated(patient, pageRequest);
     }
 
-    public Patient findPatientToEdit(Long id) throws RuntimeException {
-        return patientRepository.findById(id).orElseThrow(() -> {
+    @Transactional(readOnly = true)
+    public ResultadoOperacao<Patient> findPatientToEdit(Long id) {
+        return patientRepository.findById(id)
+                .map(ResultadoOperacao::sucesso)
+                .orElseGet(() -> {
             log.error("Paciente [id = {}] não encontrado.", id);
-            return new RuntimeException("Paciente não encontrado. Contate o TI.");
-        } );
+            return ResultadoOperacao.falha("Paciente não encontrado. Contate o TI.");
+        });
     }
 
-    public Patient findPatientToEdit(Long id, SystemUserDetails loggedUser) throws RuntimeException {
+    @Transactional(readOnly = true)
+    public ResultadoOperacao<Patient> findPatientToEdit(Long id, SystemUserDetails loggedUser) {
         if (canAccessAllBasicHealthUnits(loggedUser)) {
             return findPatientToEdit(id);
         }
 
-        Patient patient = findByIdAndUBS(id, requireLoggedUserBasicHealthUnitId(loggedUser));
-        if (patient == null) {
+        var patientResult = findByIdAndUBS(id, requireLoggedUserBasicHealthUnitId(loggedUser));
+        if (patientResult.falhou()) {
             log.error("Paciente [id = {}] não encontrado para a UBS do usuário logado.", id);
-            throw new RuntimeException("Paciente não encontrado. Contate o TI.");
+            return ResultadoOperacao.falha("Paciente não encontrado. Contate o TI.");
         }
-        return patient;
+        return patientResult;
     }
 
     private ResultadoOperacao<BasicHealthUnit> resolvePatientBasicHealthUnit(Patient patient,
