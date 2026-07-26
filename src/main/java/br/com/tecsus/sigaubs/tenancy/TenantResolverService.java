@@ -79,21 +79,21 @@ public class TenantResolverService {
         return tenantRepository.findAllByStatusOrderBySlugAsc(TenantStatus.ACTIVE);
     }
 
-    public Optional<String> resolveSlug(String headerSlug, String hostHeader) {
+    public SlugResolution resolveSlug(String headerSlug, String hostHeader) {
         if (isAdminHost(hostHeader)) {
-            return Optional.empty();
+            return SlugResolution.notFound();
         }
 
         String explicitSlug = normalizeSlug(headerSlug);
         String hostSlug = resolveSlugFromHost(hostHeader).orElse(null);
 
         if (explicitSlug != null && hostSlug != null && !explicitSlug.equals(hostSlug)) {
-            throw new TenantSlugMismatchException();
+            return SlugResolution.mismatchFound();
         }
         if (explicitSlug != null) {
-            return Optional.of(explicitSlug);
+            return SlugResolution.found(explicitSlug);
         }
-        return Optional.ofNullable(hostSlug);
+        return hostSlug != null ? SlugResolution.found(hostSlug) : SlugResolution.notFound();
     }
 
     public boolean isRootHost(String hostHeader) {
@@ -140,6 +140,22 @@ public class TenantResolverService {
         return slug.matches("[a-z0-9]([a-z0-9-]*[a-z0-9])?") ? slug : null;
     }
 
-    public static class TenantSlugMismatchException extends RuntimeException {
+    public record SlugResolution(Optional<String> slug, boolean slugMismatch) {
+
+        static SlugResolution found(String slug) {
+            return new SlugResolution(Optional.of(slug), false);
+        }
+
+        static SlugResolution notFound() {
+            return new SlugResolution(Optional.empty(), false);
+        }
+
+        static SlugResolution mismatchFound() {
+            return new SlugResolution(Optional.empty(), true);
+        }
+
+        public boolean mismatch() {
+            return slugMismatch;
+        }
     }
 }

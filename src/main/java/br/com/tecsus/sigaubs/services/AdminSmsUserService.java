@@ -1,6 +1,7 @@
 package br.com.tecsus.sigaubs.services;
 
 import br.com.tecsus.sigaubs.dtos.SmsUserSearchDTO;
+import br.com.tecsus.sigaubs.dtos.ResultadoOperacao;
 import br.com.tecsus.sigaubs.entities.SystemRole;
 import br.com.tecsus.sigaubs.entities.SystemUser;
 import br.com.tecsus.sigaubs.entities.Tenant;
@@ -84,21 +85,47 @@ public class AdminSmsUserService {
         return withTenantContext(tenant, () -> transactionTemplate.execute(status -> {
             SystemUser user = systemUserRepository.findById(userId)
                     .orElseThrow(() -> new IllegalArgumentException("Usuário SMS não encontrado."));
-            requireSmsRole(user);
+            var roleResult = validateSmsRole(user);
+            if (roleResult.falhou()) {
+                throw new IllegalArgumentException(roleResult.mensagem());
+            }
             return user;
         }));
     }
 
-    public void createSmsUser(Long tenantId, SystemUser systemUser, SystemUserDetails loggedUser) {
-        Tenant tenant = findTenant(tenantId);
-        withTenantContext(tenant, () -> transactionTemplate.execute(status -> {
-            validatePassword(systemUser.getPassword(), systemUser.getConfirmPassword(), true);
-            SystemRole smsRole = findSmsRole();
+    public ResultadoOperacao<Void> createSmsUser(Long tenantId, SystemUser systemUser,
+            SystemUserDetails loggedUser) {
+        Tenant tenant = tenantRepository.findById(tenantId).orElse(null);
+        if (tenant == null) {
+            return ResultadoOperacao.falha("Tenant não encontrado.");
+        }
+        return withTenantContext(tenant, () -> transactionTemplate.execute(status -> {
+            var passwordResult = validatePassword(systemUser.getPassword(), systemUser.getConfirmPassword(), true);
+            if (passwordResult.falhou()) {
+                return passwordResult;
+            }
+            var roleResult = findSmsRole();
+            if (roleResult.falhou()) {
+                return ResultadoOperacao.<Void>falha(roleResult.mensagem());
+            }
+            String username = requireText(systemUser.getUsername(), "Login obrigatório.");
+            if (username == null) {
+                return ResultadoOperacao.falha("Login obrigatório.");
+            }
+            String name = requireText(systemUser.getName(), "Nome obrigatório.");
+            if (name == null) {
+                return ResultadoOperacao.falha("Nome obrigatório.");
+            }
+            String email = requireText(systemUser.getEmail(), "E-mail obrigatório.");
+            if (email == null) {
+                return ResultadoOperacao.falha("E-mail obrigatório.");
+            }
+            SystemRole smsRole = roleResult.valor();
             systemUser.setId(null);
-            systemUser.setUsername(requireText(systemUser.getUsername(), "Login obrigatório."));
+            systemUser.setUsername(username);
             systemUser.setPassword(passwordEncoder.encode(systemUser.getPassword()));
-            systemUser.setName(requireText(systemUser.getName(), "Nome obrigatório."));
-            systemUser.setEmail(requireText(systemUser.getEmail(), "E-mail obrigatório."));
+            systemUser.setName(name);
+            systemUser.setEmail(email);
             systemUser.setActive(true);
             systemUser.setBasicHealthUnit(null);
             systemUser.setRoles(Set.of(smsRole));
@@ -106,21 +133,46 @@ public class AdminSmsUserService {
             systemUser.setCreationDate(LocalDateTime.now());
             systemUser.setCreationUser(loggedUser.getUsername());
             systemUserRepository.save(systemUser);
-            return null;
+            return ResultadoOperacao.sucessoSemValor();
         }));
     }
 
-    public void updateSmsUser(Long tenantId, SystemUser systemUser, SystemUserDetails loggedUser) {
-        Tenant tenant = findTenant(tenantId);
-        withTenantContext(tenant, () -> transactionTemplate.execute(status -> {
+    public ResultadoOperacao<Void> updateSmsUser(Long tenantId, SystemUser systemUser,
+            SystemUserDetails loggedUser) {
+        Tenant tenant = tenantRepository.findById(tenantId).orElse(null);
+        if (tenant == null) {
+            return ResultadoOperacao.falha("Tenant não encontrado.");
+        }
+        return withTenantContext(tenant, () -> transactionTemplate.execute(status -> {
             SystemUser persisted = systemUserRepository.findById(systemUser.getId())
-                    .orElseThrow(() -> new IllegalArgumentException("Usuário SMS não encontrado."));
-            requireSmsRole(persisted);
-            persisted.setName(requireText(systemUser.getName(), "Nome obrigatório."));
-            persisted.setEmail(requireText(systemUser.getEmail(), "E-mail obrigatório."));
+                    .orElse(null);
+            if (persisted == null) {
+                return ResultadoOperacao.falha("Usuário SMS não encontrado.");
+            }
+            var roleResult = validateSmsRole(persisted);
+            if (roleResult.falhou()) {
+                return roleResult;
+            }
+            String name = requireText(systemUser.getName(), "Nome obrigatório.");
+            if (name == null) {
+                return ResultadoOperacao.falha("Nome obrigatório.");
+            }
+            String email = requireText(systemUser.getEmail(), "E-mail obrigatório.");
+            if (email == null) {
+                return ResultadoOperacao.falha("E-mail obrigatório.");
+            }
+            boolean passwordChanged = hasText(systemUser.getPassword());
+            if (passwordChanged) {
+                var passwordResult = validatePassword(systemUser.getPassword(), systemUser.getConfirmPassword(), false);
+                if (passwordResult.falhou()) {
+                    return passwordResult;
+                }
+            }
+
+            persisted.setName(name);
+            persisted.setEmail(email);
             persisted.setActive(Boolean.TRUE.equals(systemUser.getActive()));
-            if (hasText(systemUser.getPassword())) {
-                validatePassword(systemUser.getPassword(), systemUser.getConfirmPassword(), false);
+            if (passwordChanged) {
                 persisted.setPassword(passwordEncoder.encode(systemUser.getPassword()));
             }
             persisted.setUpdateDate(LocalDateTime.now());
@@ -129,27 +181,36 @@ public class AdminSmsUserService {
             if (!Boolean.TRUE.equals(persisted.getActive())) {
                 tenantSessionService.expireTenantUserSessions(tenant.getId(), persisted.getUsername());
             }
-            return null;
+            return ResultadoOperacao.sucessoSemValor();
         }));
     }
 
-    public void activateSmsUser(Long tenantId, Long userId, SystemUserDetails loggedUser) {
-        updateSmsUserActive(tenantId, userId, true, loggedUser);
+    public ResultadoOperacao<Void> activateSmsUser(Long tenantId, Long userId, SystemUserDetails loggedUser) {
+        return updateSmsUserActive(tenantId, userId, true, loggedUser);
     }
 
-    public void deactivateSmsUser(Long tenantId, Long userId, SystemUserDetails loggedUser) {
-        updateSmsUserActive(tenantId, userId, false, loggedUser);
+    public ResultadoOperacao<Void> deactivateSmsUser(Long tenantId, Long userId, SystemUserDetails loggedUser) {
+        return updateSmsUserActive(tenantId, userId, false, loggedUser);
     }
 
-    private void updateSmsUserActive(Long tenantId,
+    private ResultadoOperacao<Void> updateSmsUserActive(Long tenantId,
             Long userId,
             boolean active,
             SystemUserDetails loggedUser) {
-        Tenant tenant = findTenant(tenantId);
-        withTenantContext(tenant, () -> transactionTemplate.execute(status -> {
+        Tenant tenant = tenantRepository.findById(tenantId).orElse(null);
+        if (tenant == null) {
+            return ResultadoOperacao.falha("Tenant não encontrado.");
+        }
+        return withTenantContext(tenant, () -> transactionTemplate.execute(status -> {
             SystemUser user = systemUserRepository.findById(userId)
-                    .orElseThrow(() -> new IllegalArgumentException("Usuário SMS não encontrado."));
-            requireSmsRole(user);
+                    .orElse(null);
+            if (user == null) {
+                return ResultadoOperacao.falha("Usuário SMS não encontrado.");
+            }
+            var roleResult = validateSmsRole(user);
+            if (roleResult.falhou()) {
+                return roleResult;
+            }
             user.setActive(active);
             user.setUpdateDate(LocalDateTime.now());
             user.setUpdateUser(loggedUser.getUsername());
@@ -157,7 +218,7 @@ public class AdminSmsUserService {
             if (!active) {
                 tenantSessionService.expireTenantUserSessions(tenant.getId(), user.getUsername());
             }
-            return null;
+            return ResultadoOperacao.sucessoSemValor();
         }));
     }
 
@@ -170,31 +231,34 @@ public class AdminSmsUserService {
         }
     }
 
-    private SystemRole findSmsRole() {
+    private ResultadoOperacao<SystemRole> findSmsRole() {
         return systemRoleRepository.findByRole(Roles.ROLE_SMS.toString())
-                .orElseThrow(() -> new IllegalArgumentException("Perfil SMS não cadastrado."));
+                .map(ResultadoOperacao::sucesso)
+                .orElseGet(() -> ResultadoOperacao.falha("Perfil SMS não cadastrado."));
     }
 
-    private void requireSmsRole(SystemUser user) {
+    private ResultadoOperacao<Void> validateSmsRole(SystemUser user) {
         boolean sms = user.getRoles().stream()
                 .anyMatch(role -> Objects.equals(Roles.ROLE_SMS.toString(), role.getRole()));
         if (!sms) {
-            throw new IllegalArgumentException("Usuário não possui perfil SMS.");
+            return ResultadoOperacao.falha("Usuário não possui perfil SMS.");
         }
+        return ResultadoOperacao.sucessoSemValor();
     }
 
-    private void validatePassword(String password, String confirmation, boolean required) {
+    private ResultadoOperacao<Void> validatePassword(String password, String confirmation, boolean required) {
         if (!required && !hasText(password)) {
-            return;
+            return ResultadoOperacao.sucessoSemValor();
         }
         if (!hasText(password) || !Objects.equals(password, confirmation)) {
-            throw new IllegalArgumentException("As senhas não conferem.");
+            return ResultadoOperacao.falha("As senhas não conferem.");
         }
+        return ResultadoOperacao.sucessoSemValor();
     }
 
     private String requireText(String value, String message) {
         if (!hasText(value)) {
-            throw new IllegalArgumentException(message);
+            return null;
         }
         return value.trim();
     }

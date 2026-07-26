@@ -62,10 +62,16 @@ public class BasicHealthUnitController {
                                           RedirectAttributes redirectAttributes) {
 
         try {
-            basicHealthUnitService.registerBasicHealthUnit(basicHealthUnit, loggedUser);
-            redirectAttributes.addFlashAttribute("message", "UBS cadastrada com sucesso.");
-            redirectAttributes.addFlashAttribute("error", false);
-            log.info("UBS cadastrada com sucesso.");
+            var resultado = basicHealthUnitService.registerBasicHealthUnit(basicHealthUnit, loggedUser);
+            if (resultado.sucesso()) {
+                redirectAttributes.addFlashAttribute("message", "UBS cadastrada com sucesso.");
+                redirectAttributes.addFlashAttribute("error", false);
+                log.info("UBS cadastrada com sucesso.");
+            } else {
+                redirectAttributes.addFlashAttribute("message", resultado.mensagem());
+                redirectAttributes.addFlashAttribute("error", true);
+                log.error("Erro ao cadastrar UBS: {}", resultado.mensagem());
+            }
         } catch (Exception e) {
             redirectAttributes.addFlashAttribute("message", "Erro ao cadastrar UBS.");
             redirectAttributes.addFlashAttribute("error", true);
@@ -99,10 +105,16 @@ public class BasicHealthUnitController {
                                    @AuthenticationPrincipal SystemUserDetails loggedUser) {
 
         try {
-            basicHealthUnitService.updateBasicHealthUnit(basicHealthUnit, loggedUser);
-            redirectAttributes.addFlashAttribute("message", "UBS atualizada com sucesso.");
-            redirectAttributes.addFlashAttribute("error", false);
-            log.info("UBS atualizada com sucesso.");
+            var resultado = basicHealthUnitService.updateBasicHealthUnit(basicHealthUnit, loggedUser);
+            if (resultado.sucesso()) {
+                redirectAttributes.addFlashAttribute("message", "UBS atualizada com sucesso.");
+                redirectAttributes.addFlashAttribute("error", false);
+                log.info("UBS atualizada com sucesso.");
+            } else {
+                redirectAttributes.addFlashAttribute("message", resultado.mensagem());
+                redirectAttributes.addFlashAttribute("error", true);
+                log.error("Erro ao atualizar UBS: {}", resultado.mensagem());
+            }
         } catch (Exception e) {
             redirectAttributes.addFlashAttribute("message", "Erro ao atualizar UBS.");
             redirectAttributes.addFlashAttribute("error", true);
@@ -166,10 +178,16 @@ public class BasicHealthUnitController {
         }
 
         try {
-            basicHealthUnitService.deleteBasicHealtUnit(basicHealthUnit, loggedUser);
-            redirectAttributes.addFlashAttribute("message", "UBS deletada com sucesso. Todos os profissionais foram desvinculados.");
-            redirectAttributes.addFlashAttribute("error", false);
-            log.info("UBS deletada com sucesso.");
+            var resultado = basicHealthUnitService.deleteBasicHealtUnit(basicHealthUnit, loggedUser);
+            if (resultado.sucesso()) {
+                redirectAttributes.addFlashAttribute("message", "UBS deletada com sucesso. Todos os profissionais foram desvinculados.");
+                redirectAttributes.addFlashAttribute("error", false);
+                log.info("UBS deletada com sucesso.");
+            } else {
+                redirectAttributes.addFlashAttribute("message", resultado.mensagem());
+                redirectAttributes.addFlashAttribute("error", true);
+                log.error("Erro ao deletar UBS: {}", resultado.mensagem());
+            }
         } catch(Exception e) {
             redirectAttributes.addFlashAttribute("message", "Erro ao deletar UBS.");
             redirectAttributes.addFlashAttribute("error", true);
@@ -187,11 +205,20 @@ public class BasicHealthUnitController {
                                                   Model model) {
 
         try {
-            basicHealthUnitService.unlinkBasicHealthUnitSystemUser(idSystemUser, loggedUser);
+            var resultado = basicHealthUnitService.unlinkBasicHealthUnitSystemUser(idSystemUser, loggedUser);
             model.addAttribute("basicHealthUnit", basicHealthUnit);
-            model.addAttribute("attach_message", "Usuário desvinculado com sucesso.");
-            model.addAttribute("attach_error", false);
-            log.info("SystemUser [id = {}] desvinculado da UBS [id = {}] com sucesso.", idSystemUser, basicHealthUnit);
+            model.addAttribute("attach_message", resultado.sucesso()
+                    ? "Usuário desvinculado com sucesso."
+                    : resultado.mensagem());
+            model.addAttribute("attach_error", resultado.falhou());
+            if (resultado.sucesso()) {
+                log.info("SystemUser [id = {}] desvinculado da UBS [id = {}] com sucesso.", idSystemUser, basicHealthUnit);
+            } else {
+                log.error("Erro ao desvincular SystemUser [id = {}] da UBS [id = {}]: {}",
+                        idSystemUser,
+                        basicHealthUnit,
+                        resultado.mensagem());
+            }
         } catch(Exception e) {
             model.addAttribute("attach_message", "Erro ao desvincular usuário.");
             model.addAttribute("attach_error", true);
@@ -215,11 +242,20 @@ public class BasicHealthUnitController {
                                                     Model model) {
 
         try {
-            basicHealthUnitService.attachSystemUserToUBS(idSystemUser, basicHealthUnit);
+            var resultado = basicHealthUnitService.attachSystemUserToUBS(idSystemUser, basicHealthUnit);
             model.addAttribute("basicHealthUnit", basicHealthUnit);
-            model.addAttribute("attach_message", "Usuário vinculado com sucesso.");
-            model.addAttribute("attach_error", false);
-            log.info("SystemUser [{}] vinculado da UBS [id = {}] com sucesso.", systemUserName, basicHealthUnit);
+            model.addAttribute("attach_message", resultado.sucesso()
+                    ? "Usuário vinculado com sucesso."
+                    : resultado.mensagem());
+            model.addAttribute("attach_error", resultado.falhou());
+            if (resultado.sucesso()) {
+                log.info("SystemUser [{}] vinculado da UBS [id = {}] com sucesso.", systemUserName, basicHealthUnit);
+            } else {
+                log.error("Erro ao vincular SystemUser [{}] da UBS [id = {}]: {}",
+                        systemUserName,
+                        basicHealthUnit,
+                        resultado.mensagem());
+            }
         } catch(Exception e) {
             model.addAttribute("attach_message", "Erro ao vincular usuário.");
             model.addAttribute("attach_error", true);

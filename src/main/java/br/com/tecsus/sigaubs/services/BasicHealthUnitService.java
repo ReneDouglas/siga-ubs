@@ -1,6 +1,7 @@
 package br.com.tecsus.sigaubs.services;
 
 import br.com.tecsus.sigaubs.dtos.UBSsystemUserDTO;
+import br.com.tecsus.sigaubs.dtos.ResultadoOperacao;
 import br.com.tecsus.sigaubs.entities.MedicalSlot;
 import br.com.tecsus.sigaubs.entities.BasicHealthUnit;
 import br.com.tecsus.sigaubs.entities.MedicalProcedure;
@@ -19,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @Transactional(readOnly = true)
@@ -47,6 +49,10 @@ public class BasicHealthUnitService {
         );
     }
 
+    public Optional<BasicHealthUnit> findSystemUserUBSOptional(Long id) {
+        return basicHealthUnitRepository.findById(id);
+    }
+
     public BasicHealthUnit findReferenceById(Long id) {
         return basicHealthUnitRepository.getReferenceById(id);
     }
@@ -68,30 +74,35 @@ public class BasicHealthUnitService {
 
     @CacheEvict(value = "ubs", allEntries = true)
     @Transactional
-    public void registerBasicHealthUnit(BasicHealthUnit basicHealthUnit, SystemUserDetails loggedUser) throws Exception{
+    public ResultadoOperacao<Void> registerBasicHealthUnit(BasicHealthUnit basicHealthUnit,
+            SystemUserDetails loggedUser) {
 
         basicHealthUnit.setCreationDate(LocalDateTime.now());
         basicHealthUnit.setCreationUser(loggedUser.getUsername());
         basicHealthUnitRepository.save(basicHealthUnit);
+        return ResultadoOperacao.sucessoSemValor();
     }
 
     @CacheEvict(value = "ubs", allEntries = true)
     @Transactional
-    public void updateBasicHealthUnit(BasicHealthUnit basicHealthUnit, SystemUserDetails loggedUser) throws Exception{
+    public ResultadoOperacao<Void> updateBasicHealthUnit(BasicHealthUnit basicHealthUnit,
+            SystemUserDetails loggedUser) {
 
         basicHealthUnit.setUpdateUser(loggedUser.getUsername());
         basicHealthUnit.setUpdateDate(LocalDateTime.now());
         basicHealthUnitRepository.save(basicHealthUnit);
+        return ResultadoOperacao.sucessoSemValor();
     }
 
     @CacheEvict(value = "ubs", allEntries = true)
     @Transactional
-    public void deleteBasicHealtUnit(Long id, SystemUserDetails loggedUser) throws Exception{
+    public ResultadoOperacao<Void> deleteBasicHealtUnit(Long id, SystemUserDetails loggedUser) {
 
-        BasicHealthUnit basicHealthUnit = basicHealthUnitRepository.findById(id).orElseThrow(() -> {
+        BasicHealthUnit basicHealthUnit = basicHealthUnitRepository.findById(id).orElse(null);
+        if (basicHealthUnit == null) {
             log.error("UBS [id = {}] não encontrada.", id);
-            return new Exception("Erro ao deletar UBS.");
-        });
+            return ResultadoOperacao.falha("Erro ao deletar UBS.");
+        }
 
         List<SystemUser> systemUsers = new ArrayList<>();
 
@@ -103,6 +114,7 @@ public class BasicHealthUnitService {
         }
         systemUserService.updateBasicHealthUnitSystemUsers(systemUsers);
         basicHealthUnitRepository.delete(basicHealthUnit);
+        return ResultadoOperacao.sucessoSemValor();
     }
 
     //@Transactional(readOnly = true)
@@ -130,21 +142,32 @@ public class BasicHealthUnitService {
 
 
     @Transactional
-    public void unlinkBasicHealthUnitSystemUser(Long id, SystemUserDetails loggedUser) {
+    public ResultadoOperacao<Void> unlinkBasicHealthUnitSystemUser(Long id, SystemUserDetails loggedUser) {
         SystemUser systemUser = systemUserService.findSystemUserById(id);
+        if (systemUser == null) {
+            return ResultadoOperacao.falha("Usuário não encontrado.");
+        }
         systemUser.setBasicHealthUnit(null);
         systemUser.setUpdateUser(loggedUser.getUsername());
         systemUser.setUpdateDate(LocalDateTime.now());
         systemUserService.updateBasicHealthUnitSystemUsers(List.of(systemUser));
+        return ResultadoOperacao.sucessoSemValor();
     }
 
     @Transactional
-    public void attachSystemUserToUBS(Long idSystemUser, Long idUBS) throws Exception{
+    public ResultadoOperacao<Void> attachSystemUserToUBS(Long idSystemUser, Long idUBS) {
 
         SystemUser systemUser = systemUserService.findSystemUserById(idSystemUser);
+        if (systemUser == null) {
+            return ResultadoOperacao.falha("Usuário não encontrado.");
+        }
         BasicHealthUnit basicHealthUnit = basicHealthUnitRepository.findById(idUBS).orElse(null);
+        if (basicHealthUnit == null) {
+            return ResultadoOperacao.falha("UBS não encontrada.");
+        }
         systemUser.setBasicHealthUnit(basicHealthUnit);
         systemUserService.updateBasicHealthUnitSystemUsers(List.of(systemUser));
+        return ResultadoOperacao.sucessoSemValor();
     }
 
     //@Transactional(readOnly = true)

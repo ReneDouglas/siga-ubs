@@ -1,6 +1,7 @@
 package br.com.tecsus.sigaubs.controllers;
 
 import br.com.tecsus.sigaubs.dtos.SmsUserSearchDTO;
+import br.com.tecsus.sigaubs.dtos.ResultadoOperacao;
 import br.com.tecsus.sigaubs.entities.SystemUser;
 import br.com.tecsus.sigaubs.security.SystemUserDetails;
 import br.com.tecsus.sigaubs.services.AdminSmsUserService;
@@ -21,6 +22,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import java.util.Locale;
 import java.util.Set;
 
 @Controller
@@ -73,15 +75,9 @@ public class AdminSmsUserController {
             @ModelAttribute SystemUser systemUser,
             @AuthenticationPrincipal SystemUserDetails loggedUser,
             RedirectAttributes redirectAttributes) {
-        try {
-            adminSmsUserService.createSmsUser(tenantId, systemUser, loggedUser);
-            redirectAttributes.addFlashAttribute("message", "Usuário SMS cadastrado com sucesso.");
-            redirectAttributes.addFlashAttribute("error", false);
-        } catch (Exception e) {
-            redirectAttributes.addFlashAttribute("message", e.getMessage());
-            redirectAttributes.addFlashAttribute("error", true);
-            log.error("Erro ao cadastrar usuário SMS: {}", e.getMessage());
-        }
+        var resultado = adminSmsUserService.createSmsUser(tenantId, systemUser, loggedUser);
+        addFlashResult(redirectAttributes, resultado, "Usuário SMS cadastrado com sucesso.");
+        logResult("cadastrar usuário SMS", resultado);
         return "redirect:/admin/tenant-management/" + tenantId + "/sms-users";
     }
 
@@ -90,15 +86,9 @@ public class AdminSmsUserController {
             @ModelAttribute SystemUser systemUser,
             @AuthenticationPrincipal SystemUserDetails loggedUser,
             RedirectAttributes redirectAttributes) {
-        try {
-            adminSmsUserService.updateSmsUser(tenantId, systemUser, loggedUser);
-            redirectAttributes.addFlashAttribute("message", "Usuário SMS atualizado com sucesso.");
-            redirectAttributes.addFlashAttribute("error", false);
-        } catch (Exception e) {
-            redirectAttributes.addFlashAttribute("message", e.getMessage());
-            redirectAttributes.addFlashAttribute("error", true);
-            log.error("Erro ao atualizar usuário SMS: {}", e.getMessage());
-        }
+        var resultado = adminSmsUserService.updateSmsUser(tenantId, systemUser, loggedUser);
+        addFlashResult(redirectAttributes, resultado, "Usuário SMS atualizado com sucesso.");
+        logResult("atualizar usuário SMS", resultado);
         return "redirect:/admin/tenant-management/" + tenantId + "/sms-users";
     }
 
@@ -107,15 +97,9 @@ public class AdminSmsUserController {
             @RequestParam("id") Long id,
             @AuthenticationPrincipal SystemUserDetails loggedUser,
             RedirectAttributes redirectAttributes) {
-        try {
-            adminSmsUserService.activateSmsUser(tenantId, id, loggedUser);
-            redirectAttributes.addFlashAttribute("message", "Usuário SMS ativado com sucesso.");
-            redirectAttributes.addFlashAttribute("error", false);
-        } catch (Exception e) {
-            redirectAttributes.addFlashAttribute("message", e.getMessage());
-            redirectAttributes.addFlashAttribute("error", true);
-            log.error("Erro ao ativar usuário SMS: {}", e.getMessage());
-        }
+        var resultado = adminSmsUserService.activateSmsUser(tenantId, id, loggedUser);
+        addFlashResult(redirectAttributes, resultado, "Usuário SMS ativado com sucesso.");
+        logResult("ativar usuário SMS", resultado);
         return "redirect:/admin/tenant-management/" + tenantId + "/sms-users";
     }
 
@@ -124,15 +108,9 @@ public class AdminSmsUserController {
             @RequestParam("id") Long id,
             @AuthenticationPrincipal SystemUserDetails loggedUser,
             RedirectAttributes redirectAttributes) {
-        try {
-            adminSmsUserService.deactivateSmsUser(tenantId, id, loggedUser);
-            redirectAttributes.addFlashAttribute("message", "Usuário SMS desativado com sucesso.");
-            redirectAttributes.addFlashAttribute("error", false);
-        } catch (Exception e) {
-            redirectAttributes.addFlashAttribute("message", e.getMessage());
-            redirectAttributes.addFlashAttribute("error", true);
-            log.error("Erro ao desativar usuário SMS: {}", e.getMessage());
-        }
+        var resultado = adminSmsUserService.deactivateSmsUser(tenantId, id, loggedUser);
+        addFlashResult(redirectAttributes, resultado, "Usuário SMS desativado com sucesso.");
+        logResult("desativar usuário SMS", resultado);
         return "redirect:/admin/tenant-management/" + tenantId + "/sms-users";
     }
 
@@ -141,10 +119,26 @@ public class AdminSmsUserController {
     }
 
     private Sort.Direction normalizeDirection(String direction) {
-        try {
-            return Sort.Direction.valueOf(direction);
-        } catch (Exception e) {
+        if (direction == null) {
             return Sort.Direction.DESC;
+        }
+        return switch (direction.trim().toUpperCase(Locale.ROOT)) {
+            case "ASC" -> Sort.Direction.ASC;
+            case "DESC" -> Sort.Direction.DESC;
+            default -> Sort.Direction.DESC;
+        };
+    }
+
+    private void addFlashResult(RedirectAttributes redirectAttributes,
+            ResultadoOperacao<?> resultado,
+            String successMessage) {
+        redirectAttributes.addFlashAttribute("message", resultado.sucesso() ? successMessage : resultado.mensagem());
+        redirectAttributes.addFlashAttribute("error", resultado.falhou());
+    }
+
+    private void logResult(String action, ResultadoOperacao<?> resultado) {
+        if (resultado.falhou()) {
+            log.error("Erro ao {}: {}", action, resultado.mensagem());
         }
     }
 }

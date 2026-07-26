@@ -1,6 +1,7 @@
 package br.com.tecsus.sigaubs.controllers;
 
 import br.com.tecsus.sigaubs.dtos.PatientOpenAppointmentDTO;
+import br.com.tecsus.sigaubs.dtos.ResultadoOperacao;
 import br.com.tecsus.sigaubs.entities.Appointment;
 import br.com.tecsus.sigaubs.entities.BasicHealthUnit;
 import br.com.tecsus.sigaubs.entities.MedicalProcedure;
@@ -13,7 +14,6 @@ import br.com.tecsus.sigaubs.services.BasicHealthUnitService;
 import br.com.tecsus.sigaubs.services.ContemplationService;
 import br.com.tecsus.sigaubs.services.MedicalSlotService;
 import br.com.tecsus.sigaubs.services.SpecialtyService;
-import br.com.tecsus.sigaubs.services.exceptions.CancelContemplationException;
 import br.com.tecsus.sigaubs.support.TestDataFactory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -35,7 +35,6 @@ import static br.com.tecsus.sigaubs.controllers.ControllerTestSupport.ubsUser;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -158,6 +157,8 @@ class QueueControllerTest {
     void deveContemplarPorAdminV2MontandoRedirectComFiltros() {
         var loggedUser = admin();
         var redirectAttributes = redirect();
+        when(contemplationService.contemplateAppointmentByAdmin(4L, "prioridade", 5L, loggedUser))
+                .thenReturn(ResultadoOperacao.sucessoSemValor());
 
         String view = controller.contemplateByAdminV2("prioridade", 1L, 2L, 3L, "CONSULTA",
                 4L, 5L, loggedUser, redirectAttributes);
@@ -170,8 +171,8 @@ class QueueControllerTest {
     @Test
     void deveRegistrarErroAoContemplarPorAdminV2() {
         var loggedUser = admin();
-        doThrow(new CancelContemplationException("falha")).when(contemplationService)
-                .contemplateAppointmentByAdmin(4L, "prioridade", 5L, loggedUser);
+        when(contemplationService.contemplateAppointmentByAdmin(4L, "prioridade", 5L, loggedUser))
+                .thenReturn(ResultadoOperacao.falha("falha"));
         var redirectAttributes = redirect();
 
         String view = controller.contemplateByAdminV2("prioridade", null, null, null, "",

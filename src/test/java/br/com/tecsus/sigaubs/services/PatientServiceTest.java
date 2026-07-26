@@ -39,11 +39,13 @@ class PatientServiceTest {
         BasicHealthUnit ubs = ubs(1L, "UBS");
         Patient patient = patient(1L, "Paciente", null);
         var loggedUser = userDetails("atendente", "Atendente", 1L, 1L, "afogados", Roles.ROLE_ATENDENTE);
-        when(basicHealthUnitService.findSystemUserUBS(1L)).thenReturn(ubs);
+        when(basicHealthUnitService.findSystemUserUBSOptional(1L)).thenReturn(Optional.of(ubs));
         when(patientRepository.save(patient)).thenReturn(patient);
 
-        Patient saved = patientService.registerPatient(patient, loggedUser);
+        var resultado = patientService.registerPatient(patient, loggedUser);
 
+        assertThat(resultado.sucesso()).isTrue();
+        Patient saved = resultado.valor();
         assertThat(saved.getBasicHealthUnit()).isEqualTo(ubs);
         assertThat(saved.getCreationUser()).isEqualTo("Atendente");
         assertThat(saved.getCreationDate()).isNotNull();
@@ -52,11 +54,15 @@ class PatientServiceTest {
     @Test
     void deveAtualizarPacienteComAuditoria() throws Exception {
         Patient patient = patient(1L, "Paciente", ubs(1L, "UBS"));
+        BasicHealthUnit ubs = ubs(1L, "UBS");
         var loggedUser = userDetails("atendente", "Atendente", 1L, 1L, "afogados", Roles.ROLE_ATENDENTE);
+        when(basicHealthUnitService.findSystemUserUBSOptional(1L)).thenReturn(Optional.of(ubs));
         when(patientRepository.save(patient)).thenReturn(patient);
 
-        Patient updated = patientService.updatePatient(patient, loggedUser);
+        var resultado = patientService.updatePatient(patient, loggedUser);
 
+        assertThat(resultado.sucesso()).isTrue();
+        Patient updated = resultado.valor();
         assertThat(updated.getUpdateUser()).isEqualTo("Atendente");
         assertThat(updated.getUpdateDate()).isNotNull();
     }

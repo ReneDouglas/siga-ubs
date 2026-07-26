@@ -1,5 +1,6 @@
 package br.com.tecsus.sigaubs.controllers;
 
+import br.com.tecsus.sigaubs.dtos.ResultadoOperacao;
 import br.com.tecsus.sigaubs.entities.Appointment;
 import br.com.tecsus.sigaubs.entities.BasicHealthUnit;
 import br.com.tecsus.sigaubs.entities.MedicalProcedure;
@@ -10,9 +11,6 @@ import br.com.tecsus.sigaubs.enums.ProcedureType;
 import br.com.tecsus.sigaubs.services.AppointmentService;
 import br.com.tecsus.sigaubs.services.PatientService;
 import br.com.tecsus.sigaubs.services.SpecialtyService;
-import br.com.tecsus.sigaubs.services.exceptions.AppointmentRegistrationFailureException;
-import br.com.tecsus.sigaubs.services.exceptions.CancelAppointmentException;
-import br.com.tecsus.sigaubs.services.exceptions.DuplicateAppointmentRegistrationException;
 import br.com.tecsus.sigaubs.support.TestDataFactory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -26,7 +24,6 @@ import static br.com.tecsus.sigaubs.controllers.ControllerTestSupport.model;
 import static br.com.tecsus.sigaubs.controllers.ControllerTestSupport.redirect;
 import static br.com.tecsus.sigaubs.controllers.ControllerTestSupport.ubsUser;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -109,23 +106,25 @@ class AppointmentControllerTest {
                 TestDataFactory.procedure(3L, "Consulta", ProcedureType.CONSULTA, specialty));
         var loggedUser = ubsUser(1L);
         var redirectAttributes = redirect();
+        when(appointmentService.registerAppointment(appointment, loggedUser))
+                .thenReturn(ResultadoOperacao.sucessoSemValor());
 
         assertThat(controller.registerAppointmentSolicitation(appointment, loggedUser, redirectAttributes))
                 .isEqualTo("redirect:/appointment-management/load?id=10");
         assertThat(redirectAttributes.getFlashAttributes().get("error")).isEqualTo(false);
         verify(appointmentService).registerAppointment(appointment, loggedUser);
 
-        doThrow(new AppointmentRegistrationFailureException("falha")).when(appointmentService)
-                .registerAppointment(appointment, loggedUser);
+        when(appointmentService.registerAppointment(appointment, loggedUser))
+                .thenReturn(ResultadoOperacao.falha("falha"));
         redirectAttributes = redirect();
         controller.registerAppointmentSolicitation(appointment, loggedUser, redirectAttributes);
         assertThat(redirectAttributes.getFlashAttributes().get("error")).isEqualTo(true);
         assertThat(redirectAttributes.getFlashAttributes().get("message"))
-                .isEqualTo("Erro ao agendar marcação. Tente novamente ou contate o TI.");
+                .isEqualTo("Existe uma marcação em aberto para este procedimento.");
 
         var smsUser = ControllerTestSupport.sms();
-        doThrow(new DuplicateAppointmentRegistrationException("duplicada")).when(appointmentService)
-                .registerAppointment(appointment, smsUser);
+        when(appointmentService.registerAppointment(appointment, smsUser))
+                .thenReturn(ResultadoOperacao.falha("duplicada"));
         redirectAttributes = redirect();
         controller.registerAppointmentSolicitation(appointment, smsUser, redirectAttributes);
         assertThat(redirectAttributes.getFlashAttributes().get("message"))
@@ -136,14 +135,16 @@ class AppointmentControllerTest {
     void deveCancelarMarcacaoETratarFalha() throws Exception {
         var loggedUser = ubsUser(1L);
         var redirectAttributes = redirect();
+        when(appointmentService.cancelSolicitation(20L, loggedUser))
+                .thenReturn(ResultadoOperacao.sucessoSemValor());
 
         assertThat(controller.cancelAppointmentSolicitation(20L, 10L, loggedUser, redirectAttributes))
                 .isEqualTo("redirect:/appointment-management/load?id=10");
         assertThat(redirectAttributes.getFlashAttributes().get("error")).isEqualTo(false);
         verify(appointmentService).cancelSolicitation(20L, loggedUser);
 
-        doThrow(new CancelAppointmentException("falha")).when(appointmentService)
-                .cancelSolicitation(21L, loggedUser);
+        when(appointmentService.cancelSolicitation(21L, loggedUser))
+                .thenReturn(ResultadoOperacao.falha("falha"));
         redirectAttributes = redirect();
         controller.cancelAppointmentSolicitation(21L, 10L, loggedUser, redirectAttributes);
         assertThat(redirectAttributes.getFlashAttributes().get("error")).isEqualTo(true);

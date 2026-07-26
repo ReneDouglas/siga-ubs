@@ -2,6 +2,7 @@ package br.com.tecsus.sigaubs.controllers;
 
 import br.com.tecsus.sigaubs.dtos.TenantSearchDTO;
 import br.com.tecsus.sigaubs.entities.Tenant;
+import br.com.tecsus.sigaubs.dtos.ResultadoOperacao;
 import br.com.tecsus.sigaubs.security.SystemUserDetails;
 import br.com.tecsus.sigaubs.services.SystemMaintenanceService;
 import br.com.tecsus.sigaubs.services.TenantManagementService;
@@ -24,6 +25,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.time.LocalDateTime;
+import java.util.Locale;
 import java.util.Set;
 
 @Controller
@@ -78,15 +80,9 @@ public class TenantManagementController {
     public String createTenant(@ModelAttribute Tenant tenant,
             @AuthenticationPrincipal SystemUserDetails loggedUser,
             RedirectAttributes redirectAttributes) {
-        try {
-            tenantManagementService.create(tenant, loggedUser);
-            redirectAttributes.addFlashAttribute("message", "Tenant cadastrado com sucesso.");
-            redirectAttributes.addFlashAttribute("error", false);
-        } catch (Exception e) {
-            redirectAttributes.addFlashAttribute("message", e.getMessage());
-            redirectAttributes.addFlashAttribute("error", true);
-            log.error("Erro ao cadastrar tenant: {}", e.getMessage());
-        }
+        var resultado = tenantManagementService.create(tenant, loggedUser);
+        addFlashResult(redirectAttributes, resultado, "Tenant cadastrado com sucesso.");
+        logResult("cadastrar tenant", resultado);
         return "redirect:/admin/tenant-management";
     }
 
@@ -94,15 +90,9 @@ public class TenantManagementController {
     public String updateTenant(@ModelAttribute Tenant tenant,
             @AuthenticationPrincipal SystemUserDetails loggedUser,
             RedirectAttributes redirectAttributes) {
-        try {
-            tenantManagementService.update(tenant, loggedUser);
-            redirectAttributes.addFlashAttribute("message", "Tenant atualizado com sucesso.");
-            redirectAttributes.addFlashAttribute("error", false);
-        } catch (Exception e) {
-            redirectAttributes.addFlashAttribute("message", e.getMessage());
-            redirectAttributes.addFlashAttribute("error", true);
-            log.error("Erro ao atualizar tenant: {}", e.getMessage());
-        }
+        var resultado = tenantManagementService.update(tenant, loggedUser);
+        addFlashResult(redirectAttributes, resultado, "Tenant atualizado com sucesso.");
+        logResult("atualizar tenant", resultado);
         return "redirect:/admin/tenant-management";
     }
 
@@ -111,15 +101,9 @@ public class TenantManagementController {
             @RequestParam(value = "disabledReason", required = false) String disabledReason,
             @AuthenticationPrincipal SystemUserDetails loggedUser,
             RedirectAttributes redirectAttributes) {
-        try {
-            tenantManagementService.disable(id, disabledReason, loggedUser);
-            redirectAttributes.addFlashAttribute("message", "Tenant desabilitado com sucesso.");
-            redirectAttributes.addFlashAttribute("error", false);
-        } catch (Exception e) {
-            redirectAttributes.addFlashAttribute("message", e.getMessage());
-            redirectAttributes.addFlashAttribute("error", true);
-            log.error("Erro ao desabilitar tenant: {}", e.getMessage());
-        }
+        var resultado = tenantManagementService.disable(id, disabledReason, loggedUser);
+        addFlashResult(redirectAttributes, resultado, "Tenant desabilitado com sucesso.");
+        logResult("desabilitar tenant", resultado);
         return "redirect:/admin/tenant-management";
     }
 
@@ -127,15 +111,9 @@ public class TenantManagementController {
     public String reactivateTenant(@RequestParam("id") Long id,
             @AuthenticationPrincipal SystemUserDetails loggedUser,
             RedirectAttributes redirectAttributes) {
-        try {
-            tenantManagementService.reactivate(id, loggedUser);
-            redirectAttributes.addFlashAttribute("message", "Tenant reativado com sucesso.");
-            redirectAttributes.addFlashAttribute("error", false);
-        } catch (Exception e) {
-            redirectAttributes.addFlashAttribute("message", e.getMessage());
-            redirectAttributes.addFlashAttribute("error", true);
-            log.error("Erro ao reativar tenant: {}", e.getMessage());
-        }
+        var resultado = tenantManagementService.reactivate(id, loggedUser);
+        addFlashResult(redirectAttributes, resultado, "Tenant reativado com sucesso.");
+        logResult("reativar tenant", resultado);
         return "redirect:/admin/tenant-management";
     }
 
@@ -144,15 +122,9 @@ public class TenantManagementController {
             @RequestParam(value = "maintenanceMessage", required = false) String maintenanceMessage,
             @AuthenticationPrincipal SystemUserDetails loggedUser,
             RedirectAttributes redirectAttributes) {
-        try {
-            tenantManagementService.startMaintenance(id, maintenanceMessage, loggedUser);
-            redirectAttributes.addFlashAttribute("message", "Tenant colocado em manutenção.");
-            redirectAttributes.addFlashAttribute("error", false);
-        } catch (Exception e) {
-            redirectAttributes.addFlashAttribute("message", e.getMessage());
-            redirectAttributes.addFlashAttribute("error", true);
-            log.error("Erro ao colocar tenant em manutenção: {}", e.getMessage());
-        }
+        var resultado = tenantManagementService.startMaintenance(id, maintenanceMessage, loggedUser);
+        addFlashResult(redirectAttributes, resultado, "Tenant colocado em manutenção.");
+        logResult("colocar tenant em manutenção", resultado);
         return "redirect:/admin/tenant-management";
     }
 
@@ -160,15 +132,9 @@ public class TenantManagementController {
     public String endTenantMaintenance(@RequestParam("id") Long id,
             @AuthenticationPrincipal SystemUserDetails loggedUser,
             RedirectAttributes redirectAttributes) {
-        try {
-            tenantManagementService.endMaintenance(id, loggedUser);
-            redirectAttributes.addFlashAttribute("message", "Manutenção do tenant encerrada.");
-            redirectAttributes.addFlashAttribute("error", false);
-        } catch (Exception e) {
-            redirectAttributes.addFlashAttribute("message", e.getMessage());
-            redirectAttributes.addFlashAttribute("error", true);
-            log.error("Erro ao encerrar manutenção do tenant: {}", e.getMessage());
-        }
+        var resultado = tenantManagementService.endMaintenance(id, loggedUser);
+        addFlashResult(redirectAttributes, resultado, "Manutenção do tenant encerrada.");
+        logResult("encerrar manutenção do tenant", resultado);
         return "redirect:/admin/tenant-management";
     }
 
@@ -178,15 +144,9 @@ public class TenantManagementController {
             @RequestParam("confirmation") String confirmation,
             @AuthenticationPrincipal SystemUserDetails loggedUser,
             RedirectAttributes redirectAttributes) {
-        try {
-            tenantManagementService.updateSlug(id, newSlug, confirmation, loggedUser);
-            redirectAttributes.addFlashAttribute("message", "Slug alterado com sucesso. Sessões do tenant foram encerradas.");
-            redirectAttributes.addFlashAttribute("error", false);
-        } catch (Exception e) {
-            redirectAttributes.addFlashAttribute("message", e.getMessage());
-            redirectAttributes.addFlashAttribute("error", true);
-            log.error("Erro ao alterar slug do tenant: {}", e.getMessage());
-        }
+        var resultado = tenantManagementService.updateSlug(id, newSlug, confirmation, loggedUser);
+        addFlashResult(redirectAttributes, resultado, "Slug alterado com sucesso. Sessões do tenant foram encerradas.");
+        logResult("alterar slug do tenant", resultado);
         return "redirect:/admin/tenant-management";
     }
 
@@ -219,10 +179,26 @@ public class TenantManagementController {
     }
 
     private Sort.Direction normalizeDirection(String direction) {
-        try {
-            return Sort.Direction.valueOf(direction);
-        } catch (Exception e) {
+        if (direction == null) {
             return Sort.Direction.DESC;
+        }
+        return switch (direction.trim().toUpperCase(Locale.ROOT)) {
+            case "ASC" -> Sort.Direction.ASC;
+            case "DESC" -> Sort.Direction.DESC;
+            default -> Sort.Direction.DESC;
+        };
+    }
+
+    private void addFlashResult(RedirectAttributes redirectAttributes,
+            ResultadoOperacao<?> resultado,
+            String successMessage) {
+        redirectAttributes.addFlashAttribute("message", resultado.sucesso() ? successMessage : resultado.mensagem());
+        redirectAttributes.addFlashAttribute("error", resultado.falhou());
+    }
+
+    private void logResult(String action, ResultadoOperacao<?> resultado) {
+        if (resultado.falhou()) {
+            log.error("Erro ao {}: {}", action, resultado.mensagem());
         }
     }
 }

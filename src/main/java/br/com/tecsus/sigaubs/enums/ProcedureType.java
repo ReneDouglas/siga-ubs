@@ -2,6 +2,7 @@ package br.com.tecsus.sigaubs.enums;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 
 public enum ProcedureType {
     CONSULTA("Consulta"),
@@ -19,11 +20,15 @@ public enum ProcedureType {
     }
 
     public static ProcedureType getProcedureTypeByDescription(String d) {
+        return findByDescription(d)
+                .orElseThrow(() -> new IllegalArgumentException("Erro ao encontrar procedimento."));
+    }
+
+    public static Optional<ProcedureType> findByDescription(String d) {
         return Arrays
                 .stream(values())
                 .filter(type -> type.description.equals(d))
-                .findAny()
-                .orElseThrow(() -> new IllegalArgumentException("Erro ao encontrar procedimento."));
+                .findAny();
     }
 
     public static List<String> getMedicalProceduresDescription() {

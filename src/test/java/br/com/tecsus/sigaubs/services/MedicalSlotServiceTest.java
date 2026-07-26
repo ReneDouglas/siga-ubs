@@ -5,7 +5,6 @@ import br.com.tecsus.sigaubs.entities.MedicalSlot;
 import br.com.tecsus.sigaubs.enums.ProcedureType;
 import br.com.tecsus.sigaubs.enums.Roles;
 import br.com.tecsus.sigaubs.repositories.MedicalSlotRepository;
-import br.com.tecsus.sigaubs.services.exceptions.DistinctAvailableMedicalSlotException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -21,7 +20,6 @@ import static br.com.tecsus.sigaubs.support.TestDataFactory.specialty;
 import static br.com.tecsus.sigaubs.support.TestDataFactory.ubs;
 import static br.com.tecsus.sigaubs.support.TestDataFactory.userDetails;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -45,10 +43,11 @@ class MedicalSlotServiceTest {
                 slot(1L, ubs, procedure, 5, 0),
                 slot(2L, ubs, procedure, 3, 0)));
 
-        medicalSlotService.registerAvailableMedicalSlotsBatch(
+        var resultado = medicalSlotService.registerAvailableMedicalSlotsBatch(
                 form,
                 userDetails("admin", "Admin", null, 1L, "afogados", Roles.ROLE_SMS));
 
+        assertThat(resultado.sucesso()).isTrue();
         ArgumentCaptor<List<MedicalSlot>> captor = ArgumentCaptor.forClass(List.class);
         verify(medicalSlotRepository).saveAll(captor.capture());
         assertThat(captor.getValue()).extracting(MedicalSlot::getCurrentSlots).containsExactly(5, 3);
@@ -64,10 +63,12 @@ class MedicalSlotServiceTest {
                 slot(1L, ubs(1L, "UBS 1"), procedure, 5, 0),
                 slot(2L, ubs(2L, "UBS 2"), procedure, 3, 0)));
 
-        assertThatThrownBy(() -> medicalSlotService.registerAvailableMedicalSlotsBatch(
+        var resultado = medicalSlotService.registerAvailableMedicalSlotsBatch(
                 form,
-                userDetails("admin", "Admin", null, 1L, "afogados", Roles.ROLE_SMS)))
-                .isInstanceOf(DistinctAvailableMedicalSlotException.class);
+                userDetails("admin", "Admin", null, 1L, "afogados", Roles.ROLE_SMS));
+
+        assertThat(resultado.falhou()).isTrue();
+        assertThat(resultado.mensagem()).contains("UBS");
 
         verify(medicalSlotRepository, never()).saveAll(any());
     }
@@ -78,16 +79,22 @@ class MedicalSlotServiceTest {
         when(medicalSlotRepository.getReferenceById(1L)).thenReturn(stored);
         when(medicalSlotRepository.save(stored)).thenReturn(stored);
 
-        assertThat(medicalSlotService.addSlot(stored).getCurrentSlots()).isEqualTo(5);
-        assertThatThrownBy(() -> medicalSlotService.addSlot(stored))
-                .isInstanceOf(RuntimeException.class)
-                .hasMessageContaining("limite máximo");
+        var addResult = medicalSlotService.addSlot(stored);
+        assertThat(addResult.sucesso()).isTrue();
+        assertThat(addResult.valor().getCurrentSlots()).isEqualTo(5);
+
+        var addFailure = medicalSlotService.addSlot(stored);
+        assertThat(addFailure.falhou()).isTrue();
+        assertThat(addFailure.mensagem()).contains("limite máximo");
 
         stored.setCurrentSlots(1);
-        assertThat(medicalSlotService.removeSlot(stored).getCurrentSlots()).isZero();
-        assertThatThrownBy(() -> medicalSlotService.removeSlot(stored))
-                .isInstanceOf(RuntimeException.class)
-                .hasMessageContaining("Não há mais slots");
+        var removeResult = medicalSlotService.removeSlot(stored);
+        assertThat(removeResult.sucesso()).isTrue();
+        assertThat(removeResult.valor().getCurrentSlots()).isZero();
+
+        var removeFailure = medicalSlotService.removeSlot(stored);
+        assertThat(removeFailure.falhou()).isTrue();
+        assertThat(removeFailure.mensagem()).contains("Não há mais slots");
     }
 
     @Test

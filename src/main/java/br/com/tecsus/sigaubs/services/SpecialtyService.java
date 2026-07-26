@@ -1,6 +1,7 @@
 package br.com.tecsus.sigaubs.services;
 
 import br.com.tecsus.sigaubs.dtos.ProcedureDTO;
+import br.com.tecsus.sigaubs.dtos.ResultadoOperacao;
 import br.com.tecsus.sigaubs.dtos.SpecialtyDTO;
 import br.com.tecsus.sigaubs.entities.MedicalProcedure;
 import br.com.tecsus.sigaubs.entities.Specialty;
@@ -56,7 +57,12 @@ public class SpecialtyService {
 
     @CacheEvict(value = "especialidades", allEntries = true)
     @Transactional
-    public void registerSpecialty(SpecialtyDTO specialtyDTO, SystemUserDetails loggedUser) throws Exception {
+    public ResultadoOperacao<Void> registerSpecialty(SpecialtyDTO specialtyDTO, SystemUserDetails loggedUser) {
+
+        var validationResult = validateProcedureTypes(specialtyDTO);
+        if (validationResult.falhou()) {
+            return validationResult;
+        }
 
         Specialty specialty = new Specialty();
         Set<MedicalProcedure> procedures = new HashSet<>();
@@ -71,7 +77,7 @@ public class SpecialtyService {
             MedicalProcedure medicalProcedure = new MedicalProcedure();
             medicalProcedure.setId(null);
             medicalProcedure.setDescription(procedureDTO.getDescription());
-            medicalProcedure.setProcedureType(ProcedureType.getProcedureTypeByDescription(procedureDTO.getProcedureType()));
+            medicalProcedure.setProcedureType(ProcedureType.findByDescription(procedureDTO.getProcedureType()).orElse(null));
             medicalProcedure.setCreationUser(loggedUser.getUsername());
             medicalProcedure.setCreationDate(LocalDateTime.now());
             medicalProcedure.setSpecialty(specialty);
@@ -80,11 +86,17 @@ public class SpecialtyService {
 
         specialty.setMedicalProcedures(procedures);
         specialtyRepository.save(specialty);
+        return ResultadoOperacao.sucessoSemValor();
     }
 
     @CacheEvict(value = "especialidades", allEntries = true)
     @Transactional
-    public void updateSpecialty(SpecialtyDTO specialtyDTO, SystemUserDetails loggedUser) throws Exception {
+    public ResultadoOperacao<Void> updateSpecialty(SpecialtyDTO specialtyDTO, SystemUserDetails loggedUser) {
+
+        var validationResult = validateProcedureTypes(specialtyDTO);
+        if (validationResult.falhou()) {
+            return validationResult;
+        }
 
         Specialty specialty = new Specialty();
         specialty.setId(specialtyDTO.getId());
@@ -98,11 +110,24 @@ public class SpecialtyService {
             var medicalProcedure = new MedicalProcedure();
             medicalProcedure.setId(null);
             medicalProcedure.setDescription(procedureDTO.getDescription());
-            medicalProcedure.setProcedureType(ProcedureType.getProcedureTypeByDescription(procedureDTO.getProcedureType()));
+            medicalProcedure.setProcedureType(ProcedureType.findByDescription(procedureDTO.getProcedureType()).orElse(null));
             medicalProcedure.setCreationUser(loggedUser.getUsername());
             medicalProcedure.setCreationDate(LocalDateTime.now());
             medicalProcedure.setSpecialty(specialty);
             medicalProcedureRepository.save(medicalProcedure);
         }
+        return ResultadoOperacao.sucessoSemValor();
+    }
+
+    private ResultadoOperacao<Void> validateProcedureTypes(SpecialtyDTO specialtyDTO) {
+        if (specialtyDTO.getProcedures() == null) {
+            return ResultadoOperacao.falha("Procedimentos obrigatórios.");
+        }
+        for (ProcedureDTO procedureDTO : specialtyDTO.getProcedures()) {
+            if (ProcedureType.findByDescription(procedureDTO.getProcedureType()).isEmpty()) {
+                return ResultadoOperacao.falha("Erro ao encontrar procedimento.");
+            }
+        }
+        return ResultadoOperacao.sucessoSemValor();
     }
 }

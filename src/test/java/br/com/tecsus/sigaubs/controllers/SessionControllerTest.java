@@ -1,6 +1,7 @@
 package br.com.tecsus.sigaubs.controllers;
 
 import br.com.tecsus.sigaubs.dtos.DashboardDTO;
+import br.com.tecsus.sigaubs.dtos.ResultadoOperacao;
 import br.com.tecsus.sigaubs.dtos.UBSDashboardDTO;
 import br.com.tecsus.sigaubs.entities.BasicHealthUnit;
 import br.com.tecsus.sigaubs.entities.SystemRole;
@@ -9,7 +10,6 @@ import br.com.tecsus.sigaubs.enums.Roles;
 import br.com.tecsus.sigaubs.services.BasicHealthUnitService;
 import br.com.tecsus.sigaubs.services.DashboardService;
 import br.com.tecsus.sigaubs.services.SystemUserService;
-import br.com.tecsus.sigaubs.services.exceptions.InvalidConfirmPasswordException;
 import br.com.tecsus.sigaubs.support.TestDataFactory;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -34,7 +34,6 @@ import static br.com.tecsus.sigaubs.controllers.ControllerTestSupport.sms;
 import static br.com.tecsus.sigaubs.controllers.ControllerTestSupport.ubsUser;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -138,28 +137,31 @@ class SessionControllerTest {
     void deveCadastrarUsuarioETratarErros() throws Exception {
         var loggedUser = sms();
         var redirectAttributes = redirect();
+        when(systemUserService.registerNotAdminSystemUser(user, loggedUser))
+                .thenReturn(ResultadoOperacao.sucessoSemValor());
 
         controller.registerSystemUser(user, loggedUser, redirectAttributes);
         assertThat(redirectAttributes.getFlashAttributes().get("error")).isEqualTo(false);
         verify(systemUserService).registerNotAdminSystemUser(user, loggedUser);
 
-        doThrow(new DataIntegrityViolationException("duplicado")).when(systemUserService)
-                .registerNotAdminSystemUser(user, admin());
+        var adminUser = admin();
+        when(systemUserService.registerNotAdminSystemUser(user, adminUser))
+                .thenThrow(new DataIntegrityViolationException("duplicado"));
         redirectAttributes = redirect();
-        controller.registerSystemUser(user, admin(), redirectAttributes);
+        controller.registerSystemUser(user, adminUser, redirectAttributes);
         assertThat(redirectAttributes.getFlashAttributes().get("message"))
                 .isEqualTo("Usuário já cadastrado no sistema.");
 
         var invalidUser = ubsUser(1L);
-        doThrow(new InvalidConfirmPasswordException("senha")).when(systemUserService)
-                .registerNotAdminSystemUser(user, invalidUser);
+        when(systemUserService.registerNotAdminSystemUser(user, invalidUser))
+                .thenReturn(ResultadoOperacao.falha("As senhas não conferem."));
         redirectAttributes = redirect();
         controller.registerSystemUser(user, invalidUser, redirectAttributes);
         assertThat(redirectAttributes.getFlashAttributes().get("message")).isEqualTo("As senhas não conferem.");
 
         var genericUser = TestDataFactory.userDetails("generic", "Generic", null, 1L, "afogados", Roles.ROLE_SMS);
-        doThrow(new RuntimeException("falha")).when(systemUserService)
-                .registerNotAdminSystemUser(user, genericUser);
+        when(systemUserService.registerNotAdminSystemUser(user, genericUser))
+                .thenThrow(new RuntimeException("falha"));
         redirectAttributes = redirect();
         controller.registerSystemUser(user, genericUser, redirectAttributes);
         assertThat(redirectAttributes.getFlashAttributes().get("message")).isEqualTo("Erro ao cadastrar usuário.");
@@ -168,23 +170,26 @@ class SessionControllerTest {
     @Test
     void deveAtualizarEDeletarUsuarioComTratamentoDeErro() throws Exception {
         var redirectAttributes = redirect();
+        when(systemUserService.updateNotAdminSystemUser(user)).thenReturn(ResultadoOperacao.sucessoSemValor());
 
         controller.updateSystemUser(user, redirectAttributes);
         assertThat(redirectAttributes.getFlashAttributes().get("error")).isEqualTo(false);
         verify(systemUserService).updateNotAdminSystemUser(user);
 
-        doThrow(new RuntimeException("falha")).when(systemUserService)
-                .updateNotAdminSystemUser(TestDataFactory.systemUser(4L, "joao", role));
+        var otherUser = TestDataFactory.systemUser(4L, "joao", role);
+        when(systemUserService.updateNotAdminSystemUser(otherUser))
+                .thenThrow(new RuntimeException("falha"));
         redirectAttributes = redirect();
-        controller.updateSystemUser(TestDataFactory.systemUser(4L, "joao", role), redirectAttributes);
+        controller.updateSystemUser(otherUser, redirectAttributes);
         assertThat(redirectAttributes.getFlashAttributes().get("error")).isEqualTo(true);
 
         redirectAttributes = redirect();
+        when(systemUserService.deleteNotAdminSystemUser(3L)).thenReturn(ResultadoOperacao.sucessoSemValor());
         controller.deleteSystemUser(3L, redirectAttributes);
         assertThat(redirectAttributes.getFlashAttributes().get("error")).isEqualTo(false);
         verify(systemUserService).deleteNotAdminSystemUser(3L);
 
-        doThrow(new RuntimeException("falha")).when(systemUserService).deleteNotAdminSystemUser(4L);
+        when(systemUserService.deleteNotAdminSystemUser(4L)).thenThrow(new RuntimeException("falha"));
         redirectAttributes = redirect();
         controller.deleteSystemUser(4L, redirectAttributes);
         assertThat(redirectAttributes.getFlashAttributes().get("error")).isEqualTo(true);

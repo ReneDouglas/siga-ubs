@@ -5,7 +5,6 @@ import br.com.tecsus.sigaubs.security.SystemUserDetails;
 import br.com.tecsus.sigaubs.services.BasicHealthUnitService;
 import br.com.tecsus.sigaubs.services.DashboardService;
 import br.com.tecsus.sigaubs.services.SystemUserService;
-import br.com.tecsus.sigaubs.services.exceptions.InvalidConfirmPasswordException;
 import br.com.tecsus.sigaubs.utils.DefaultValues;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -133,18 +132,20 @@ public class SessionController {
             RedirectAttributes redirectAttributes) {
 
         try {
-            systemUserService.registerNotAdminSystemUser(systemUser, loggedUser);
-            redirectAttributes.addFlashAttribute("message", "Usuário cadastrado com sucesso.");
-            redirectAttributes.addFlashAttribute("error", false);
-            log.info("Cadastro de usuário realizado com sucesso.");
+            var resultado = systemUserService.registerNotAdminSystemUser(systemUser, loggedUser);
+            if (resultado.sucesso()) {
+                redirectAttributes.addFlashAttribute("message", "Usuário cadastrado com sucesso.");
+                redirectAttributes.addFlashAttribute("error", false);
+                log.info("Cadastro de usuário realizado com sucesso.");
+            } else {
+                redirectAttributes.addFlashAttribute("message", resultado.mensagem());
+                redirectAttributes.addFlashAttribute("error", true);
+                log.error("Erro ao cadastrar usuário: {}", resultado.mensagem());
+            }
         } catch (DataIntegrityViolationException e) {
             redirectAttributes.addFlashAttribute("message", "Usuário já cadastrado no sistema.");
             redirectAttributes.addFlashAttribute("error", true);
             log.error("Usuário já cadastrado: {}", e.getMessage());
-        } catch (InvalidConfirmPasswordException e) {
-            redirectAttributes.addFlashAttribute("message", "As senhas não conferem.");
-            redirectAttributes.addFlashAttribute("error", true);
-            log.error(e.getMessage());
         } catch (Exception e) {
             redirectAttributes.addFlashAttribute("message", "Erro ao cadastrar usuário.");
             redirectAttributes.addFlashAttribute("error", true);
@@ -181,10 +182,16 @@ public class SessionController {
             RedirectAttributes redirectAttributes) {
 
         try {
-            systemUserService.updateNotAdminSystemUser(systemUser);
-            redirectAttributes.addFlashAttribute("message", "Usuário atualizado com sucesso.");
-            redirectAttributes.addFlashAttribute("error", false);
-            log.info("Usuário atualizado com sucesso.");
+            var resultado = systemUserService.updateNotAdminSystemUser(systemUser);
+            if (resultado.sucesso()) {
+                redirectAttributes.addFlashAttribute("message", "Usuário atualizado com sucesso.");
+                redirectAttributes.addFlashAttribute("error", false);
+                log.info("Usuário atualizado com sucesso.");
+            } else {
+                redirectAttributes.addFlashAttribute("message", resultado.mensagem());
+                redirectAttributes.addFlashAttribute("error", true);
+                log.error("Erro ao atualizar usuário: {}", resultado.mensagem());
+            }
         } catch (Exception e) {
             redirectAttributes.addFlashAttribute("message", "Erro ao atualizar usuário.");
             redirectAttributes.addFlashAttribute("error", true);
@@ -199,10 +206,16 @@ public class SessionController {
     public String deleteSystemUser(@RequestParam("id") Long id, RedirectAttributes redirectAttributes) {
 
         try {
-            systemUserService.deleteNotAdminSystemUser(id);
-            redirectAttributes.addFlashAttribute("message", "Usuário deletado com sucesso.");
-            redirectAttributes.addFlashAttribute("error", false);
-            log.info("Usuário deletado com sucesso.");
+            var resultado = systemUserService.deleteNotAdminSystemUser(id);
+            if (resultado.sucesso()) {
+                redirectAttributes.addFlashAttribute("message", "Usuário deletado com sucesso.");
+                redirectAttributes.addFlashAttribute("error", false);
+                log.info("Usuário deletado com sucesso.");
+            } else {
+                redirectAttributes.addFlashAttribute("message", resultado.mensagem());
+                redirectAttributes.addFlashAttribute("error", true);
+                log.error("Erro ao deletar usuário: {}", resultado.mensagem());
+            }
         } catch (Exception e) {
             redirectAttributes.addFlashAttribute("message", "Erro ao deletar usuário.");
             redirectAttributes.addFlashAttribute("error", true);

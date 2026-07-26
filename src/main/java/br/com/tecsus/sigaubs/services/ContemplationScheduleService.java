@@ -182,8 +182,15 @@ public class ContemplationScheduleService {
         contemplated.setCreationDate(LocalDateTime.now());
         contemplated.setCreationUser(USERNAME_JOB);
 
+        var slotResult = medicalSlotService.removeSlot(slotsByProcedure);
+        if (slotResult.falhou()) {
+            log.warn("> Paciente [{}] não contemplado: {}",
+                    currentPatient.patientName(),
+                    slotResult.mensagem());
+            return;
+        }
+
         contemplated = contemplationService.registerContemplation(contemplated);
-        medicalSlotService.removeSlot(slotsByProcedure);
 
         var appt = appointmentService.findReferenceById(currentPatient.appointmentId());
         appt.setContemplation(contemplated);

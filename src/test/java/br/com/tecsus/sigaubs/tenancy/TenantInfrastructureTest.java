@@ -72,7 +72,8 @@ class TenantInfrastructureTest {
     @Test
     void filtroDeResolucaoDevePopularELimparContexto() throws Exception {
         TenantResolverService resolver = mock(TenantResolverService.class);
-        when(resolver.resolveSlug(null, "afogados.localhost")).thenReturn(Optional.of("afogados"));
+        when(resolver.resolveSlug(null, "afogados.localhost"))
+                .thenReturn(new TenantResolverService.SlugResolution(Optional.of("afogados"), false));
         when(resolver.findActiveContextBySlug("afogados")).thenReturn(Optional.of(new TenantContext(1L, "afogados")));
 
         TenantResolutionFilter filter = new TenantResolutionFilter(resolver);
@@ -90,7 +91,8 @@ class TenantInfrastructureTest {
     @Test
     void filtroDeResolucaoDeveBloquearTenantInexistenteERootSemTenant() throws Exception {
         TenantResolverService resolver = mock(TenantResolverService.class);
-        when(resolver.resolveSlug(null, "inexistente.localhost")).thenReturn(Optional.of("inexistente"));
+        when(resolver.resolveSlug(null, "inexistente.localhost"))
+                .thenReturn(new TenantResolverService.SlugResolution(Optional.of("inexistente"), false));
         when(resolver.findActiveContextBySlug("inexistente")).thenReturn(Optional.empty());
 
         TenantResolutionFilter filter = new TenantResolutionFilter(resolver);
@@ -104,7 +106,8 @@ class TenantInfrastructureTest {
         assertThat(response.getStatus()).isEqualTo(404);
         verify(chain, never()).doFilter(request, response);
 
-        when(resolver.resolveSlug(null, "localhost")).thenReturn(Optional.empty());
+        when(resolver.resolveSlug(null, "localhost"))
+                .thenReturn(new TenantResolverService.SlugResolution(Optional.empty(), false));
         request = new MockHttpServletRequest("GET", "/");
         request.addHeader("Host", "localhost");
         response = new MockHttpServletResponse();
@@ -115,9 +118,10 @@ class TenantInfrastructureTest {
     @Test
     void filtroDeResolucaoDevePermitirAssetsSemTenantEBloquearMismatch() throws Exception {
         TenantResolverService resolver = mock(TenantResolverService.class);
-        when(resolver.resolveSlug(null, "localhost")).thenReturn(Optional.empty());
+        when(resolver.resolveSlug(null, "localhost"))
+                .thenReturn(new TenantResolverService.SlugResolution(Optional.empty(), false));
         when(resolver.resolveSlug("caruaru", "afogados.localhost"))
-                .thenThrow(new TenantResolverService.TenantSlugMismatchException());
+                .thenReturn(new TenantResolverService.SlugResolution(Optional.empty(), true));
 
         TenantResolutionFilter filter = new TenantResolutionFilter(resolver);
         MockHttpServletRequest request = new MockHttpServletRequest("GET", "/css/app.css");

@@ -1,5 +1,6 @@
 package br.com.tecsus.sigaubs.services;
 
+import br.com.tecsus.sigaubs.dtos.ResultadoOperacao;
 import br.com.tecsus.sigaubs.entities.Appointment;
 import br.com.tecsus.sigaubs.entities.Contemplation;
 import br.com.tecsus.sigaubs.entities.MedicalSlot;
@@ -69,9 +70,11 @@ class ContemplationServiceTest {
         MedicalSlot slot = slot(1L, ubs(1L, "UBS"), null, 5, 3);
         Contemplation contemplation = contemplation(1L, appointment, slot);
         when(contemplationRepository.findFetchedForCancelById(1L)).thenReturn(contemplation);
+        when(medicalSlotService.addSlot(slot)).thenReturn(ResultadoOperacao.sucesso(slot));
 
-        service.cancelContemplationByAdmin(1L, "Paciente avisou", loggedUser);
+        var resultado = service.cancelContemplationByAdmin(1L, "Paciente avisou", loggedUser);
 
+        assertThat(resultado.sucesso()).isTrue();
         assertThat(appointment.getStatus()).isEqualTo(AppointmentStatus.CONTEMPLACAO_CANCELADA);
         assertThat(contemplation.getUpdateUser()).isEqualTo("Admin");
         assertThat(contemplation.getObservation()).contains("Cancelado por Admin").contains("Paciente avisou");
@@ -86,9 +89,12 @@ class ContemplationServiceTest {
         Contemplation contemplation = contemplation(1L, appointment(1L, null, null), slot(1L, null, null, 5, 3));
         contemplation.setObservation("Observação anterior");
         when(contemplationRepository.findFetchedForCancelById(1L)).thenReturn(contemplation);
+        when(medicalSlotService.addSlot(contemplation.getMedicalSlot()))
+                .thenReturn(ResultadoOperacao.sucesso(contemplation.getMedicalSlot()));
 
-        service.cancelContemplationByAdmin(1L, "Motivo", loggedUser);
+        var resultado = service.cancelContemplationByAdmin(1L, "Motivo", loggedUser);
 
+        assertThat(resultado.sucesso()).isTrue();
         assertThat(contemplation.getObservation()).startsWith("Observação anterior -- Cancelado por Admin");
     }
 
@@ -99,8 +105,9 @@ class ContemplationServiceTest {
         Contemplation contemplation = contemplation(1L, appointment, null);
         when(contemplationRepository.findFetchedForCancelById(1L)).thenReturn(contemplation);
 
-        service.confirmContemplationByAdmin(1L, loggedUser);
+        var resultado = service.confirmContemplationByAdmin(1L, loggedUser);
 
+        assertThat(resultado.sucesso()).isTrue();
         assertThat(appointment.getStatus()).isEqualTo(AppointmentStatus.PRESENCA_CONFIRMADA);
         assertThat(contemplation.getObservation()).contains("Confirmado por Admin");
         verify(contemplationRepository).save(contemplation);
@@ -114,11 +121,12 @@ class ContemplationServiceTest {
         Appointment appointment = appointment(1L, patient(1L, "Paciente", ubs(1L, "UBS")), proc);
         MedicalSlot slot = slot(1L, appointment.getPatient().getBasicHealthUnit(), proc, 5, 3);
         when(appointmentService.findReferenceById(1L)).thenReturn(appointment);
-        when(medicalSlotService.removeSlot(any(MedicalSlot.class))).thenReturn(slot);
+        when(medicalSlotService.removeSlot(any(MedicalSlot.class))).thenReturn(ResultadoOperacao.sucesso(slot));
         when(appointmentService.updateAppointment(appointment)).thenReturn(appointment);
 
-        service.contemplateAppointmentByAdmin(1L, "Critério administrativo", 1L, loggedUser);
+        var resultado = service.contemplateAppointmentByAdmin(1L, "Critério administrativo", 1L, loggedUser);
 
+        assertThat(resultado.sucesso()).isTrue();
         assertThat(appointment.getStatus()).isEqualTo(AppointmentStatus.PRESENCA_CONFIRMADA);
         ArgumentCaptor<Contemplation> captor = ArgumentCaptor.forClass(Contemplation.class);
         verify(contemplationRepository).save(captor.capture());

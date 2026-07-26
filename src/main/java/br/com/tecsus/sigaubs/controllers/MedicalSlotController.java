@@ -10,7 +10,6 @@ import br.com.tecsus.sigaubs.services.AppointmentService;
 import br.com.tecsus.sigaubs.services.BasicHealthUnitService;
 import br.com.tecsus.sigaubs.services.MedicalSlotService;
 import br.com.tecsus.sigaubs.services.SpecialtyService;
-import br.com.tecsus.sigaubs.services.exceptions.DistinctAvailableMedicalSlotException;
 import br.com.tecsus.sigaubs.utils.DefaultValues;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -77,14 +76,14 @@ public class MedicalSlotController {
             @AuthenticationPrincipal SystemUserDetails loggedUser,
             RedirectAttributes redirectAttributes) {
 
-        try {
-            medicalSlotService.registerAvailableMedicalSlotsBatch(availableMedicalSlotsFormDTO, loggedUser);
+        var resultado = medicalSlotService.registerAvailableMedicalSlotsBatch(availableMedicalSlotsFormDTO, loggedUser);
+        if (resultado.sucesso()) {
             redirectAttributes.addFlashAttribute("message", "Vagas registradas com sucesso.");
             redirectAttributes.addFlashAttribute("error", false);
             log.info("Vagas registradas com sucesso.");
-        } catch (DistinctAvailableMedicalSlotException e) {
-            log.error("Erro ao registrar vagas: {}", e.getMessage());
-            redirectAttributes.addFlashAttribute("message", "Erro ao registrar vagas: " + e.getMessage());
+        } else {
+            log.error("Erro ao registrar vagas: {}", resultado.mensagem());
+            redirectAttributes.addFlashAttribute("message", "Erro ao registrar vagas: " + resultado.mensagem());
             redirectAttributes.addFlashAttribute("error", true);
         }
 

@@ -1,6 +1,7 @@
 package br.com.tecsus.sigaubs.services;
 
 import br.com.tecsus.sigaubs.dtos.PatientOpenAppointmentDTO;
+import br.com.tecsus.sigaubs.dtos.ResultadoOperacao;
 import br.com.tecsus.sigaubs.entities.Appointment;
 import br.com.tecsus.sigaubs.entities.Contemplation;
 import br.com.tecsus.sigaubs.entities.MedicalSlot;
@@ -171,7 +172,7 @@ class ContemplationScheduleServiceTest {
                 .thenReturn(new PageImpl<>(List.of(current, next)));
         when(contemplationService.registerContemplation(any(Contemplation.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
-        when(medicalSlotService.removeSlot(slot)).thenReturn(slot);
+        when(medicalSlotService.removeSlot(slot)).thenReturn(ResultadoOperacao.sucesso(slot));
         when(appointmentService.findReferenceById(current.appointmentId())).thenReturn(appointment);
         when(appointmentService.updateAppointment(appointment)).thenReturn(appointment);
 

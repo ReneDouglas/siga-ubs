@@ -1,5 +1,6 @@
 package br.com.tecsus.sigaubs.controllers;
 
+import br.com.tecsus.sigaubs.dtos.ResultadoOperacao;
 import br.com.tecsus.sigaubs.entities.BasicHealthUnit;
 import br.com.tecsus.sigaubs.entities.Contemplation;
 import br.com.tecsus.sigaubs.entities.Specialty;
@@ -8,8 +9,6 @@ import br.com.tecsus.sigaubs.enums.ProcedureType;
 import br.com.tecsus.sigaubs.services.BasicHealthUnitService;
 import br.com.tecsus.sigaubs.services.ContemplationService;
 import br.com.tecsus.sigaubs.services.SpecialtyService;
-import br.com.tecsus.sigaubs.services.exceptions.CancelContemplationException;
-import br.com.tecsus.sigaubs.services.exceptions.ConfirmContemplationException;
 import br.com.tecsus.sigaubs.support.TestDataFactory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -27,7 +26,6 @@ import static br.com.tecsus.sigaubs.controllers.ControllerTestSupport.redirect;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -132,6 +130,8 @@ class ContemplationControllerTest {
     void deveCancelarContemplacaoComRedirectPreservandoFiltros() {
         var loggedUser = admin();
         var redirectAttributes = redirect();
+        when(contemplationService.cancelContemplationByAdmin(6L, "motivo", loggedUser))
+                .thenReturn(ResultadoOperacao.sucessoSemValor());
 
         String view = controller.cancelContemplation("motivo", 1L, 2L, "2026-07",
                 6L, loggedUser, redirectAttributes);
@@ -144,8 +144,8 @@ class ContemplationControllerTest {
     @Test
     void deveRegistrarErroAoCancelarContemplacao() {
         var loggedUser = admin();
-        doThrow(new CancelContemplationException("falha")).when(contemplationService)
-                .cancelContemplationByAdmin(6L, "motivo", loggedUser);
+        when(contemplationService.cancelContemplationByAdmin(6L, "motivo", loggedUser))
+                .thenReturn(ResultadoOperacao.falha("falha"));
         var redirectAttributes = redirect();
 
         String view = controller.cancelContemplation("motivo", null, null, "",
@@ -159,6 +159,8 @@ class ContemplationControllerTest {
     void deveConfirmarContemplacaoComSucessoEErro() {
         var loggedUser = admin();
         var redirectAttributes = redirect();
+        when(contemplationService.confirmContemplationByAdmin(6L, loggedUser))
+                .thenReturn(ResultadoOperacao.sucessoSemValor());
 
         String view = controller.confirmContemplation(1L, 2L, "2026-07", 6L, loggedUser, redirectAttributes);
 
@@ -166,8 +168,8 @@ class ContemplationControllerTest {
         assertThat(redirectAttributes.getFlashAttributes().get("error")).isEqualTo(false);
         verify(contemplationService).confirmContemplationByAdmin(6L, loggedUser);
 
-        doThrow(new ConfirmContemplationException("falha")).when(contemplationService)
-                .confirmContemplationByAdmin(7L, loggedUser);
+        when(contemplationService.confirmContemplationByAdmin(7L, loggedUser))
+                .thenReturn(ResultadoOperacao.falha("falha"));
         redirectAttributes = redirect();
         view = controller.confirmContemplation(null, null, "", 7L, loggedUser, redirectAttributes);
 

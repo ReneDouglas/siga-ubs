@@ -3,7 +3,6 @@ package br.com.tecsus.sigaubs.tenancy;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class TenantResolverServiceTest {
 
@@ -15,32 +14,37 @@ class TenantResolverServiceTest {
     void deveResolverTenantPeloSubdominioDeProducao() {
         var slug = tenantResolverService.resolveSlug(null, "afogados.sigaubs.com.br");
 
-        assertThat(slug).contains("afogados");
+        assertThat(slug.slug()).contains("afogados");
+        assertThat(slug.mismatch()).isFalse();
     }
 
     @Test
     void deveResolverTenantPeloSubdominioLocalhost() {
         var slug = tenantResolverService.resolveSlug(null, "caruaru.localhost:8080");
 
-        assertThat(slug).contains("caruaru");
+        assertThat(slug.slug()).contains("caruaru");
+        assertThat(slug.mismatch()).isFalse();
     }
 
     @Test
     void deveRetornarVazioParaDominioRaiz() {
-        assertThat(tenantResolverService.resolveSlug(null, "sigaubs.com.br")).isEmpty();
-        assertThat(tenantResolverService.resolveSlug(null, "localhost:8080")).isEmpty();
+        assertThat(tenantResolverService.resolveSlug(null, "sigaubs.com.br").slug()).isEmpty();
+        assertThat(tenantResolverService.resolveSlug(null, "localhost:8080").slug()).isEmpty();
     }
 
     @Test
     void deveAceitarHeaderQuandoHostNaoTemTenant() {
         var slug = tenantResolverService.resolveSlug("afogados", "localhost:8080");
 
-        assertThat(slug).contains("afogados");
+        assertThat(slug.slug()).contains("afogados");
+        assertThat(slug.mismatch()).isFalse();
     }
 
     @Test
     void deveBloquearQuandoHeaderDivergeDoSubdominio() {
-        assertThatThrownBy(() -> tenantResolverService.resolveSlug("caruaru", "afogados.localhost"))
-                .isInstanceOf(TenantResolverService.TenantSlugMismatchException.class);
+        var slug = tenantResolverService.resolveSlug("caruaru", "afogados.localhost");
+
+        assertThat(slug.slug()).isEmpty();
+        assertThat(slug.mismatch()).isTrue();
     }
 }

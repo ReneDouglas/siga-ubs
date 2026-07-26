@@ -1,6 +1,7 @@
 package br.com.tecsus.sigaubs.controllers;
 
 import br.com.tecsus.sigaubs.dtos.ProcedureDTO;
+import br.com.tecsus.sigaubs.dtos.ResultadoOperacao;
 import br.com.tecsus.sigaubs.dtos.SpecialtyDTO;
 import br.com.tecsus.sigaubs.entities.Specialty;
 import br.com.tecsus.sigaubs.services.SpecialtyService;
@@ -18,7 +19,6 @@ import static br.com.tecsus.sigaubs.controllers.ControllerTestSupport.redirect;
 import static br.com.tecsus.sigaubs.controllers.ControllerTestSupport.sms;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -67,6 +67,7 @@ class SpecialtyControllerTest {
         dto.setTitle("Cardiologia");
         var loggedUser = sms();
         var redirectAttributes = redirect();
+        when(specialtyService.registerSpecialty(dto, loggedUser)).thenReturn(ResultadoOperacao.sucessoSemValor());
 
         assertThat(controller.registerSpecialty(dto,
                 "[{\"description\":\"Consulta\",\"procedureType\":\"CONSULTA\"}]", loggedUser, redirectAttributes))
@@ -86,6 +87,7 @@ class SpecialtyControllerTest {
         dto.setId(1L);
         var loggedUser = sms();
         var redirectAttributes = redirect();
+        when(specialtyService.updateSpecialty(dto, loggedUser)).thenReturn(ResultadoOperacao.sucessoSemValor());
 
         assertThat(controller.updateSpecialty(dto,
                 "[{\"description\":\"Exame\",\"procedureType\":\"EXAME\"}]", loggedUser, redirectAttributes))
@@ -94,8 +96,8 @@ class SpecialtyControllerTest {
         assertThat(redirectAttributes.getFlashAttributes().get("error")).isEqualTo(false);
         verify(specialtyService).updateSpecialty(dto, loggedUser);
 
-        doThrow(new RuntimeException("falha")).when(specialtyService)
-                .updateSpecialty(any(SpecialtyDTO.class), any());
+        when(specialtyService.updateSpecialty(any(SpecialtyDTO.class), any()))
+                .thenReturn(ResultadoOperacao.falha("falha"));
         redirectAttributes = redirect();
         controller.updateSpecialty(new SpecialtyDTO(),
                 "[{\"description\":\"Exame\",\"procedureType\":\"EXAME\"}]", loggedUser, redirectAttributes);

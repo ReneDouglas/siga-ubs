@@ -41,8 +41,12 @@ public class TenantResolutionFilter extends OncePerRequestFilter {
                 return;
             }
 
-            var slug = tenantResolverService.resolveSlug(request.getHeader("X-Tenant-Slug"), request.getHeader("Host"));
-            if (slug.isEmpty()) {
+            var slugResolution = tenantResolverService.resolveSlug(request.getHeader("X-Tenant-Slug"), request.getHeader("Host"));
+            if (slugResolution.mismatch()) {
+                response.sendError(HttpStatus.FORBIDDEN.value());
+                return;
+            }
+            if (slugResolution.slug().isEmpty()) {
                 if (isAllowedWithoutTenant(request)) {
                     filterChain.doFilter(request, response);
                     return;
@@ -51,8 +55,8 @@ public class TenantResolutionFilter extends OncePerRequestFilter {
                 return;
             }
 
-            TenantContext tenant = tenantResolverService.findContextBySlug(slug.get())
-                    .or(() -> tenantResolverService.findActiveContextBySlug(slug.get()))
+            TenantContext tenant = tenantResolverService.findContextBySlug(slugResolution.slug().get())
+                    .or(() -> tenantResolverService.findActiveContextBySlug(slugResolution.slug().get()))
                     .orElse(null);
             if (tenant == null || tenant.isDisabled()) {
                 response.sendError(HttpStatus.NOT_FOUND.value());
@@ -70,8 +74,6 @@ public class TenantResolutionFilter extends OncePerRequestFilter {
             }
 
             filterChain.doFilter(request, response);
-        } catch (TenantResolverService.TenantSlugMismatchException e) {
-            response.sendError(HttpStatus.FORBIDDEN.value());
         } finally {
             MDC.remove("tenant_id");
             MDC.remove("tenant_slug");

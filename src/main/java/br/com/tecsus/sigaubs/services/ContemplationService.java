@@ -1,5 +1,6 @@
 package br.com.tecsus.sigaubs.services;
 
+import br.com.tecsus.sigaubs.dtos.ResultadoOperacao;
 import br.com.tecsus.sigaubs.entities.Appointment;
 import br.com.tecsus.sigaubs.entities.Contemplation;
 import br.com.tecsus.sigaubs.entities.MedicalSlot;
@@ -8,8 +9,6 @@ import br.com.tecsus.sigaubs.enums.Priorities;
 import br.com.tecsus.sigaubs.enums.ProcedureType;
 import br.com.tecsus.sigaubs.repositories.ContemplationRepository;
 import br.com.tecsus.sigaubs.security.SystemUserDetails;
-import br.com.tecsus.sigaubs.services.exceptions.CancelContemplationException;
-import br.com.tecsus.sigaubs.services.exceptions.ConfirmContemplationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -59,7 +58,9 @@ public class ContemplationService {
                         ubsId,
                         specialtyId,
                         yearMonth,
-                        status == null || status.isEmpty() ? null : AppointmentStatus.getByDescription(status),
+                        status == null || status.isEmpty()
+                                ? null
+                                : AppointmentStatus.findByDescription(status).orElse(null),
                         page);
     }
 
@@ -74,9 +75,19 @@ public class ContemplationService {
     }
 
     @Transactional
-    public void cancelContemplationByAdmin(Long contemplatedId, String reason, SystemUserDetails loggedUser) throws CancelContemplationException {
+    public ResultadoOperacao<Void> cancelContemplationByAdmin(Long contemplatedId, String reason,
+            SystemUserDetails loggedUser) {
 
         Contemplation contemplated = contemplationRepository.findFetchedForCancelById(contemplatedId);
+        if (contemplated == null) {
+            return ResultadoOperacao.falha("Contemplação não encontrada.");
+        }
+
+        var slotResult = medicalSlotService.addSlot(contemplated.getMedicalSlot());
+        if (slotResult.falhou()) {
+            return ResultadoOperacao.falha(slotResult.mensagem());
+        }
+
         contemplated.getAppointment().setStatus(AppointmentStatus.CONTEMPLACAO_CANCELADA);
         contemplated.setUpdateUser(loggedUser.getName());
         contemplated.setUpdateDate(LocalDateTime.now());
@@ -90,15 +101,18 @@ public class ContemplationService {
         contemplationRepository.save(contemplated);
         appointmentStatusHistoryService.registerAppointmentStatusHistory(contemplated.getAppointment(), loggedUser.getName());
 
-        log.info("Recuperando slot disponível.");
-        medicalSlotService.addSlot(contemplated.getMedicalSlot());
+        return ResultadoOperacao.sucessoSemValor();
 
     }
 
     @Transactional
-    public void confirmContemplationByAdmin(Long contemplationId, SystemUserDetails loggedUser) throws ConfirmContemplationException {
+    public ResultadoOperacao<Void> confirmContemplationByAdmin(Long contemplationId, SystemUserDetails loggedUser) {
 
         Contemplation contemplated = contemplationRepository.findFetchedForCancelById(contemplationId);
+        if (contemplated == null) {
+            return ResultadoOperacao.falha("Contemplação não encontrada.");
+        }
+
         contemplated.getAppointment().setStatus(AppointmentStatus.PRESENCA_CONFIRMADA);
         contemplated.setUpdateUser(loggedUser.getName());
         contemplated.setUpdateDate(LocalDateTime.now());
@@ -106,19 +120,26 @@ public class ContemplationService {
 
         contemplationRepository.save(contemplated);
         appointmentStatusHistoryService.registerAppointmentStatusHistory(contemplated.getAppointment(), loggedUser.getName());
+        return ResultadoOperacao.sucessoSemValor();
     }
 
     @Transactional
-    public void contemplateAppointmentByAdmin(Long appointmentId, String reason, Long medicalSlotId, SystemUserDetails loggedUser) {
+    public ResultadoOperacao<Void> contemplateAppointmentByAdmin(Long appointmentId, String reason,
+            Long medicalSlotId, SystemUserDetails loggedUser) {
 
         Appointment appt = appointmentService.findReferenceById(appointmentId);
-        appt.setStatus(AppointmentStatus.PRESENCA_CONFIRMADA);
 
         MedicalSlot medicalSlot = new MedicalSlot();
         medicalSlot.setId(medicalSlotId);
 
         log.info("Removendo slot disponível.");
-        medicalSlot = medicalSlotService.removeSlot(medicalSlot);
+        var slotResult = medicalSlotService.removeSlot(medicalSlot);
+        if (slotResult.falhou()) {
+            return ResultadoOperacao.falha(slotResult.mensagem());
+        }
+
+        medicalSlot = slotResult.valor();
+        appt.setStatus(AppointmentStatus.PRESENCA_CONFIRMADA);
 
         Contemplation contemplation = new Contemplation();
 
@@ -135,6 +156,7 @@ public class ContemplationService {
         contemplationRepository.save(contemplation);
         appointmentStatusHistoryService.registerAppointmentStatusHistory(appt, loggedUser.getName());
 
+        return ResultadoOperacao.sucessoSemValor();
     }
 
     @Transactional

@@ -59,10 +59,17 @@ public class PatientController {
                                   @AuthenticationPrincipal SystemUserDetails loggedUser,
                                   Model model) {
         try {
-            patientService.registerPatient(patient, loggedUser);
-            model.addAttribute("patient", new Patient());
-            model.addAttribute("message", "Paciente cadastrado com sucesso.");
-            model.addAttribute("error", false);
+            var resultado = patientService.registerPatient(patient, loggedUser);
+            if (resultado.sucesso()) {
+                model.addAttribute("patient", new Patient());
+                model.addAttribute("message", "Paciente cadastrado com sucesso.");
+                model.addAttribute("error", false);
+            } else {
+                log.error("Erro ao cadastrar paciente: {}", resultado.mensagem());
+                model.addAttribute("patient", patient);
+                model.addAttribute("message", resultado.mensagem());
+                model.addAttribute("error", true);
+            }
         } catch (DataIntegrityViolationException e) {
             log.error("Violação de integridade [Paciente]: {}", e.getMessage());
             model.addAttribute("patient", patient);
@@ -94,10 +101,18 @@ public class PatientController {
                                 Model model) {
 
         try {
-            Patient updatedPatient = patientService.updatePatient(patient, loggedUser);
-            model.addAttribute("patient", updatedPatient);
-            model.addAttribute("message", "Paciente atualizado com sucesso.");
-            model.addAttribute("error", false);
+            var resultado = patientService.updatePatient(patient, loggedUser);
+            if (resultado.sucesso()) {
+                model.addAttribute("patient", resultado.valor());
+                model.addAttribute("message", "Paciente atualizado com sucesso.");
+                model.addAttribute("error", false);
+            } else {
+                model.addAttribute("message", resultado.mensagem());
+                model.addAttribute("error", true);
+                addPatientFormOptions(model, loggedUser);
+                log.error("Erro ao atualizar paciente: {}", resultado.mensagem());
+                return "patientManagement/patientFragments/patient_form";
+            }
         } catch (Exception e) {
             model.addAttribute("message", "Erro ao atualizar paciente.");
             model.addAttribute("error", true);

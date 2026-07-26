@@ -1,6 +1,7 @@
 package br.com.tecsus.sigaubs.controllers;
 
 import br.com.tecsus.sigaubs.dtos.AdminUserSearchDTO;
+import br.com.tecsus.sigaubs.dtos.ResultadoOperacao;
 import br.com.tecsus.sigaubs.entities.SystemAdmin;
 import br.com.tecsus.sigaubs.security.SystemUserDetails;
 import br.com.tecsus.sigaubs.services.AdminUserManagementService;
@@ -20,6 +21,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import java.util.Locale;
 import java.util.Set;
 
 @Controller
@@ -70,15 +72,9 @@ public class AdminUserManagementController {
     public String createAdmin(@ModelAttribute SystemAdmin systemAdmin,
             @AuthenticationPrincipal SystemUserDetails loggedUser,
             RedirectAttributes redirectAttributes) {
-        try {
-            adminUserManagementService.create(systemAdmin, loggedUser);
-            redirectAttributes.addFlashAttribute("message", "Administrador cadastrado com sucesso.");
-            redirectAttributes.addFlashAttribute("error", false);
-        } catch (Exception e) {
-            redirectAttributes.addFlashAttribute("message", e.getMessage());
-            redirectAttributes.addFlashAttribute("error", true);
-            log.error("Erro ao cadastrar administrador: {}", e.getMessage());
-        }
+        var resultado = adminUserManagementService.create(systemAdmin, loggedUser);
+        addFlashResult(redirectAttributes, resultado, "Administrador cadastrado com sucesso.");
+        logResult("cadastrar administrador", resultado);
         return "redirect:/admin/admin-user-management";
     }
 
@@ -86,15 +82,9 @@ public class AdminUserManagementController {
     public String updateAdmin(@ModelAttribute SystemAdmin systemAdmin,
             @AuthenticationPrincipal SystemUserDetails loggedUser,
             RedirectAttributes redirectAttributes) {
-        try {
-            adminUserManagementService.update(systemAdmin, loggedUser);
-            redirectAttributes.addFlashAttribute("message", "Administrador atualizado com sucesso.");
-            redirectAttributes.addFlashAttribute("error", false);
-        } catch (Exception e) {
-            redirectAttributes.addFlashAttribute("message", e.getMessage());
-            redirectAttributes.addFlashAttribute("error", true);
-            log.error("Erro ao atualizar administrador: {}", e.getMessage());
-        }
+        var resultado = adminUserManagementService.update(systemAdmin, loggedUser);
+        addFlashResult(redirectAttributes, resultado, "Administrador atualizado com sucesso.");
+        logResult("atualizar administrador", resultado);
         return "redirect:/admin/admin-user-management";
     }
 
@@ -102,15 +92,9 @@ public class AdminUserManagementController {
     public String activateAdmin(@RequestParam("id") Long id,
             @AuthenticationPrincipal SystemUserDetails loggedUser,
             RedirectAttributes redirectAttributes) {
-        try {
-            adminUserManagementService.activate(id, loggedUser);
-            redirectAttributes.addFlashAttribute("message", "Administrador ativado com sucesso.");
-            redirectAttributes.addFlashAttribute("error", false);
-        } catch (Exception e) {
-            redirectAttributes.addFlashAttribute("message", e.getMessage());
-            redirectAttributes.addFlashAttribute("error", true);
-            log.error("Erro ao ativar administrador: {}", e.getMessage());
-        }
+        var resultado = adminUserManagementService.activate(id, loggedUser);
+        addFlashResult(redirectAttributes, resultado, "Administrador ativado com sucesso.");
+        logResult("ativar administrador", resultado);
         return "redirect:/admin/admin-user-management";
     }
 
@@ -118,15 +102,9 @@ public class AdminUserManagementController {
     public String deactivateAdmin(@RequestParam("id") Long id,
             @AuthenticationPrincipal SystemUserDetails loggedUser,
             RedirectAttributes redirectAttributes) {
-        try {
-            adminUserManagementService.deactivate(id, loggedUser);
-            redirectAttributes.addFlashAttribute("message", "Administrador desativado com sucesso.");
-            redirectAttributes.addFlashAttribute("error", false);
-        } catch (Exception e) {
-            redirectAttributes.addFlashAttribute("message", e.getMessage());
-            redirectAttributes.addFlashAttribute("error", true);
-            log.error("Erro ao desativar administrador: {}", e.getMessage());
-        }
+        var resultado = adminUserManagementService.deactivate(id, loggedUser);
+        addFlashResult(redirectAttributes, resultado, "Administrador desativado com sucesso.");
+        logResult("desativar administrador", resultado);
         return "redirect:/admin/admin-user-management";
     }
 
@@ -135,10 +113,26 @@ public class AdminUserManagementController {
     }
 
     private Sort.Direction normalizeDirection(String direction) {
-        try {
-            return Sort.Direction.valueOf(direction);
-        } catch (Exception e) {
+        if (direction == null) {
             return Sort.Direction.DESC;
+        }
+        return switch (direction.trim().toUpperCase(Locale.ROOT)) {
+            case "ASC" -> Sort.Direction.ASC;
+            case "DESC" -> Sort.Direction.DESC;
+            default -> Sort.Direction.DESC;
+        };
+    }
+
+    private void addFlashResult(RedirectAttributes redirectAttributes,
+            ResultadoOperacao<?> resultado,
+            String successMessage) {
+        redirectAttributes.addFlashAttribute("message", resultado.sucesso() ? successMessage : resultado.mensagem());
+        redirectAttributes.addFlashAttribute("error", resultado.falhou());
+    }
+
+    private void logResult(String action, ResultadoOperacao<?> resultado) {
+        if (resultado.falhou()) {
+            log.error("Erro ao {}: {}", action, resultado.mensagem());
         }
     }
 }

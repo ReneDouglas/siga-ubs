@@ -1,6 +1,7 @@
 package br.com.tecsus.sigaubs.services;
 
 import br.com.tecsus.sigaubs.dtos.TenantSearchDTO;
+import br.com.tecsus.sigaubs.dtos.ResultadoOperacao;
 import br.com.tecsus.sigaubs.entities.Tenant;
 import br.com.tecsus.sigaubs.enums.TenantStatus;
 import br.com.tecsus.sigaubs.repositories.TenantRepository;
@@ -50,42 +51,61 @@ public class TenantManagementService {
 
     @CacheEvict(value = "tenants", allEntries = true)
     @Transactional
-    public Tenant create(Tenant tenant, SystemUserDetails loggedUser) {
-        String slug = requireValidSlug(tenant.getSlug());
-        validateReservedSlug(slug);
+    public ResultadoOperacao<Tenant> create(Tenant tenant, SystemUserDetails loggedUser) {
+        String slug = normalizeSlug(tenant.getSlug());
+        if (slug == null) {
+            return ResultadoOperacao.falha("Slug inválido.");
+        }
+        if (isReservedSlug(slug)) {
+            return ResultadoOperacao.falha("Slug reservado para o admin global.");
+        }
         if (tenantRepository.existsBySlug(slug)) {
-            throw new IllegalArgumentException("Slug já cadastrado.");
+            return ResultadoOperacao.falha("Slug já cadastrado.");
+        }
+        String name = normalizeBlank(tenant.getName());
+        if (name == null) {
+            return ResultadoOperacao.falha("Nome obrigatório.");
         }
 
         tenant.setId(null);
         tenant.setSlug(slug);
-        tenant.setName(requireText(tenant.getName(), "Nome obrigatório."));
+        tenant.setName(name);
         tenant.setDomain(normalizeDomainOrDefault(tenant.getDomain(), slug));
         tenant.setStatus(TenantStatus.ACTIVE);
         tenant.setCreationDate(LocalDateTime.now());
         tenant.setCreationUser(loggedUser.getUsername());
-        return tenantRepository.save(tenant);
+        return ResultadoOperacao.sucesso(tenantRepository.save(tenant));
     }
 
     @CacheEvict(value = "tenants", allEntries = true)
     @Transactional
-    public Tenant update(Tenant tenant, SystemUserDetails loggedUser) {
-        Tenant persisted = findById(tenant.getId());
+    public ResultadoOperacao<Tenant> update(Tenant tenant, SystemUserDetails loggedUser) {
+        Tenant persisted = tenantRepository.findById(tenant.getId()).orElse(null);
+        if (persisted == null) {
+            return ResultadoOperacao.falha("Tenant não encontrado.");
+        }
         String domain = normalizeDomainOrDefault(tenant.getDomain(), persisted.getSlug());
         if (domain != null && tenantRepository.existsByDomainAndIdNot(domain, persisted.getId())) {
-            throw new IllegalArgumentException("Domínio já cadastrado.");
+            return ResultadoOperacao.falha("Domínio já cadastrado.");
+        }
+        String name = normalizeBlank(tenant.getName());
+        if (name == null) {
+            return ResultadoOperacao.falha("Nome obrigatório.");
         }
 
-        persisted.setName(requireText(tenant.getName(), "Nome obrigatório."));
+        persisted.setName(name);
         persisted.setDomain(domain);
         touch(persisted, loggedUser);
-        return tenantRepository.save(persisted);
+        return ResultadoOperacao.sucesso(tenantRepository.save(persisted));
     }
 
     @CacheEvict(value = "tenants", allEntries = true)
     @Transactional
-    public void disable(Long id, String reason, SystemUserDetails loggedUser) {
-        Tenant tenant = findById(id);
+    public ResultadoOperacao<Void> disable(Long id, String reason, SystemUserDetails loggedUser) {
+        Tenant tenant = tenantRepository.findById(id).orElse(null);
+        if (tenant == null) {
+            return ResultadoOperacao.falha("Tenant não encontrado.");
+        }
         tenant.setStatus(TenantStatus.DISABLED);
         tenant.setDisabledDate(LocalDateTime.now());
         tenant.setDisabledUser(loggedUser.getUsername());
@@ -96,12 +116,16 @@ public class TenantManagementService {
         touch(tenant, loggedUser);
         tenantRepository.save(tenant);
         tenantSessionService.expireTenantSessions(tenant.getId());
+        return ResultadoOperacao.sucessoSemValor();
     }
 
     @CacheEvict(value = "tenants", allEntries = true)
     @Transactional
-    public void reactivate(Long id, SystemUserDetails loggedUser) {
-        Tenant tenant = findById(id);
+    public ResultadoOperacao<Void> reactivate(Long id, SystemUserDetails loggedUser) {
+        Tenant tenant = tenantRepository.findById(id).orElse(null);
+        if (tenant == null) {
+            return ResultadoOperacao.falha("Tenant não encontrado.");
+        }
         tenant.setStatus(TenantStatus.ACTIVE);
         tenant.setDisabledDate(null);
         tenant.setDisabledUser(null);
@@ -111,14 +135,18 @@ public class TenantManagementService {
         tenant.setMaintenanceMessage(null);
         touch(tenant, loggedUser);
         tenantRepository.save(tenant);
+        return ResultadoOperacao.sucessoSemValor();
     }
 
     @CacheEvict(value = "tenants", allEntries = true)
     @Transactional
-    public void startMaintenance(Long id, String message, SystemUserDetails loggedUser) {
-        Tenant tenant = findById(id);
+    public ResultadoOperacao<Void> startMaintenance(Long id, String message, SystemUserDetails loggedUser) {
+        Tenant tenant = tenantRepository.findById(id).orElse(null);
+        if (tenant == null) {
+            return ResultadoOperacao.falha("Tenant não encontrado.");
+        }
         if (tenant.isDisabled()) {
-            throw new IllegalArgumentException("Tenant desabilitado não pode entrar em manutenção.");
+            return ResultadoOperacao.falha("Tenant desabilitado não pode entrar em manutenção.");
         }
         tenant.setStatus(TenantStatus.MAINTENANCE);
         tenant.setMaintenanceDate(LocalDateTime.now());
@@ -127,14 +155,18 @@ public class TenantManagementService {
         touch(tenant, loggedUser);
         tenantRepository.save(tenant);
         tenantSessionService.expireTenantSessions(tenant.getId());
+        return ResultadoOperacao.sucessoSemValor();
     }
 
     @CacheEvict(value = "tenants", allEntries = true)
     @Transactional
-    public void endMaintenance(Long id, SystemUserDetails loggedUser) {
-        Tenant tenant = findById(id);
+    public ResultadoOperacao<Void> endMaintenance(Long id, SystemUserDetails loggedUser) {
+        Tenant tenant = tenantRepository.findById(id).orElse(null);
+        if (tenant == null) {
+            return ResultadoOperacao.falha("Tenant não encontrado.");
+        }
         if (tenant.isDisabled()) {
-            throw new IllegalArgumentException("Tenant desabilitado não pode ser reativado por este fluxo.");
+            return ResultadoOperacao.falha("Tenant desabilitado não pode ser reativado por este fluxo.");
         }
         tenant.setStatus(TenantStatus.ACTIVE);
         tenant.setMaintenanceDate(null);
@@ -142,26 +174,35 @@ public class TenantManagementService {
         tenant.setMaintenanceMessage(null);
         touch(tenant, loggedUser);
         tenantRepository.save(tenant);
+        return ResultadoOperacao.sucessoSemValor();
     }
 
     @CacheEvict(value = "tenants", allEntries = true)
     @Transactional
-    public Tenant updateSlug(Long id,
+    public ResultadoOperacao<Tenant> updateSlug(Long id,
             String newSlug,
             String confirmation,
             SystemUserDetails loggedUser) {
 
-        Tenant tenant = findById(id);
-        String normalizedSlug = requireValidSlug(newSlug);
-        validateReservedSlug(normalizedSlug);
+        Tenant tenant = tenantRepository.findById(id).orElse(null);
+        if (tenant == null) {
+            return ResultadoOperacao.falha("Tenant não encontrado.");
+        }
+        String normalizedSlug = normalizeSlug(newSlug);
+        if (normalizedSlug == null) {
+            return ResultadoOperacao.falha("Slug inválido.");
+        }
+        if (isReservedSlug(normalizedSlug)) {
+            return ResultadoOperacao.falha("Slug reservado para o admin global.");
+        }
         if (!normalizedSlug.equals(confirmation)) {
-            throw new IllegalArgumentException("Confirmação do slug inválida.");
+            return ResultadoOperacao.falha("Confirmação do slug inválida.");
         }
         if (normalizedSlug.equals(tenant.getSlug())) {
-            return tenant;
+            return ResultadoOperacao.sucesso(tenant);
         }
         if (tenantRepository.existsBySlugAndIdNot(normalizedSlug, tenant.getId())) {
-            throw new IllegalArgumentException("Slug já cadastrado.");
+            return ResultadoOperacao.falha("Slug já cadastrado.");
         }
 
         tenant.setSlug(normalizedSlug);
@@ -169,7 +210,7 @@ public class TenantManagementService {
         touch(tenant, loggedUser);
         Tenant savedTenant = tenantRepository.save(tenant);
         tenantSessionService.expireTenantSessions(savedTenant.getId());
-        return savedTenant;
+        return ResultadoOperacao.sucesso(savedTenant);
     }
 
     public TenantStatus[] getStatuses() {
@@ -200,25 +241,17 @@ public class TenantManagementService {
         if (!hasText(status)) {
             return null;
         }
-        try {
-            return TenantStatus.valueOf(status.trim().toUpperCase(Locale.ROOT));
-        } catch (IllegalArgumentException e) {
-            return null;
+        String normalizedStatus = status.trim().toUpperCase(Locale.ROOT);
+        for (TenantStatus tenantStatus : TenantStatus.values()) {
+            if (tenantStatus.name().equals(normalizedStatus)) {
+                return tenantStatus;
+            }
         }
+        return null;
     }
 
-    private String requireValidSlug(String value) {
-        String slug = normalizeSlug(value);
-        if (slug == null) {
-            throw new IllegalArgumentException("Slug inválido.");
-        }
-        return slug;
-    }
-
-    private void validateReservedSlug(String slug) {
-        if (slug.equals(adminSubdomain)) {
-            throw new IllegalArgumentException("Slug reservado para o admin global.");
-        }
+    private boolean isReservedSlug(String slug) {
+        return slug.equals(adminSubdomain);
     }
 
     private String normalizeSlug(String value) {
@@ -243,13 +276,6 @@ public class TenantManagementService {
             return null;
         }
         return value.split(":")[0].trim().toLowerCase(Locale.ROOT);
-    }
-
-    private String requireText(String value, String message) {
-        if (!hasText(value)) {
-            throw new IllegalArgumentException(message);
-        }
-        return value.trim();
     }
 
     private boolean hasText(String value) {

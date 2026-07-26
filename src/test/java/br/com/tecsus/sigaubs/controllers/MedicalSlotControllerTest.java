@@ -1,6 +1,7 @@
 package br.com.tecsus.sigaubs.controllers;
 
 import br.com.tecsus.sigaubs.dtos.AvailableMedicalSlotsFormDTO;
+import br.com.tecsus.sigaubs.dtos.ResultadoOperacao;
 import br.com.tecsus.sigaubs.entities.BasicHealthUnit;
 import br.com.tecsus.sigaubs.entities.MedicalProcedure;
 import br.com.tecsus.sigaubs.entities.MedicalSlot;
@@ -10,7 +11,6 @@ import br.com.tecsus.sigaubs.services.AppointmentService;
 import br.com.tecsus.sigaubs.services.BasicHealthUnitService;
 import br.com.tecsus.sigaubs.services.MedicalSlotService;
 import br.com.tecsus.sigaubs.services.SpecialtyService;
-import br.com.tecsus.sigaubs.services.exceptions.DistinctAvailableMedicalSlotException;
 import br.com.tecsus.sigaubs.support.TestDataFactory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -27,7 +27,6 @@ import static br.com.tecsus.sigaubs.controllers.ControllerTestSupport.redirect;
 import static br.com.tecsus.sigaubs.controllers.ControllerTestSupport.sms;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -98,14 +97,16 @@ class MedicalSlotControllerTest {
         form.addRow(TestDataFactory.slot(10L, ubs, procedure, 10, 10));
         var loggedUser = sms();
         var redirectAttributes = redirect();
+        when(medicalSlotService.registerAvailableMedicalSlotsBatch(form, loggedUser))
+                .thenReturn(ResultadoOperacao.sucessoSemValor());
 
         assertThat(controller.registerAvailableMedicalSlots(form, loggedUser, redirectAttributes))
                 .isEqualTo("redirect:/medicalSlot-management");
         assertThat(redirectAttributes.getFlashAttributes().get("error")).isEqualTo(false);
         verify(medicalSlotService).registerAvailableMedicalSlotsBatch(form, loggedUser);
 
-        doThrow(new DistinctAvailableMedicalSlotException("UBS distinta")).when(medicalSlotService)
-                .registerAvailableMedicalSlotsBatch(form, loggedUser);
+        when(medicalSlotService.registerAvailableMedicalSlotsBatch(form, loggedUser))
+                .thenReturn(ResultadoOperacao.falha("UBS distinta"));
         redirectAttributes = redirect();
         controller.registerAvailableMedicalSlots(form, loggedUser, redirectAttributes);
         assertThat(redirectAttributes.getFlashAttributes().get("error")).isEqualTo(true);

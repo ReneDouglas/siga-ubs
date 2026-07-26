@@ -2,6 +2,7 @@ package br.com.tecsus.sigaubs.enums;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 
 public enum AppointmentStatus {
 
@@ -29,11 +30,15 @@ public enum AppointmentStatus {
     }
 
     public static AppointmentStatus getByDescription(String d) {
+        return findByDescription(d)
+                .orElseThrow(() -> new IllegalArgumentException("Erro ao encontrar status."));
+    }
+
+    public static Optional<AppointmentStatus> findByDescription(String d) {
         return Arrays
                 .stream(values())
                 .filter(status -> status.description.equals(d))
-                .findAny()
-                .orElseThrow(() -> new IllegalArgumentException("Erro ao encontrar status."));
+                .findAny();
     }
 
     public static List<AppointmentStatus> getContemplationValues() {

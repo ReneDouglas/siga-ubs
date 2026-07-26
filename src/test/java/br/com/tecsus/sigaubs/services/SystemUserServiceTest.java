@@ -8,7 +8,6 @@ import br.com.tecsus.sigaubs.repositories.SystemAdminRepository;
 import br.com.tecsus.sigaubs.repositories.SystemRoleRepository;
 import br.com.tecsus.sigaubs.repositories.SystemUserRepository;
 import br.com.tecsus.sigaubs.security.SystemUserDetails;
-import br.com.tecsus.sigaubs.services.exceptions.InvalidConfirmPasswordException;
 import br.com.tecsus.sigaubs.tenancy.TenantContextHolder;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -121,9 +120,10 @@ class SystemUserServiceTest {
         when(systemRoleRepository.findById(1L)).thenReturn(Optional.of(role));
         when(passwordEncoder.encode("123456")).thenReturn("hash");
 
-        service.registerNotAdminSystemUser(user,
+        var resultado = service.registerNotAdminSystemUser(user,
                 userDetails("admin", "Admin", null, 1L, "afogados", Roles.ROLE_SMS));
 
+        assertThat(resultado.sucesso()).isTrue();
         ArgumentCaptor<SystemUser> captor = ArgumentCaptor.forClass(SystemUser.class);
         verify(systemUserRepository).save(captor.capture());
         assertThat(captor.getValue().getPassword()).isEqualTo("hash");
@@ -138,10 +138,12 @@ class SystemUserServiceTest {
         user.setPassword("123");
         user.setConfirmPassword("456");
 
-        assertThatThrownBy(() -> service.registerNotAdminSystemUser(
+        var resultado = service.registerNotAdminSystemUser(
                 user,
-                userDetails("admin", "Admin", null, 1L, "afogados", Roles.ROLE_SMS)))
-                .isInstanceOf(InvalidConfirmPasswordException.class);
+                userDetails("admin", "Admin", null, 1L, "afogados", Roles.ROLE_SMS));
+
+        assertThat(resultado.falhou()).isTrue();
+        assertThat(resultado.mensagem()).contains("senhas");
     }
 
     @Test
@@ -155,8 +157,9 @@ class SystemUserServiceTest {
         when(systemRoleRepository.findById(1L)).thenReturn(Optional.of(role));
         when(passwordEncoder.encode("nova")).thenReturn("hash-nova");
 
-        service.updateNotAdminSystemUser(user);
+        var resultado = service.updateNotAdminSystemUser(user);
 
+        assertThat(resultado.sucesso()).isTrue();
         assertThat(user.getPassword()).isEqualTo("hash-nova");
         assertThat(user.getUpdateUser()).isEqualTo("admin");
         assertThat(user.getUpdateDate()).isNotNull();
@@ -183,11 +186,12 @@ class SystemUserServiceTest {
         when(systemUserRepository.findById(1L)).thenReturn(Optional.of(user));
 
         assertThat(service.findSystemUserById(1L)).isEqualTo(user);
-        service.deleteNotAdminSystemUser(1L);
+        var resultado = service.deleteNotAdminSystemUser(1L);
         service.updateBasicHealthUnitSystemUsers(List.of(user));
         service.getRolesNotAdmin();
         service.getRolesNotAdminAndNotManagement();
 
+        assertThat(resultado.sucesso()).isTrue();
         verify(systemUserRepository).delete(user);
         verify(systemUserRepository).saveAll(List.of(user));
         verify(systemRoleRepository).findByRoleNot(Roles.ROLE_ADMIN.toString());

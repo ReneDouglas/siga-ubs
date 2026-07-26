@@ -1,6 +1,7 @@
 package br.com.tecsus.sigaubs.services;
 
 import br.com.tecsus.sigaubs.dtos.PatientAppointmentsHistoryDTO;
+import br.com.tecsus.sigaubs.dtos.ResultadoOperacao;
 import br.com.tecsus.sigaubs.entities.BasicHealthUnit;
 import br.com.tecsus.sigaubs.entities.Patient;
 import br.com.tecsus.sigaubs.enums.Roles;
@@ -29,21 +30,31 @@ public class PatientService {
     }
 
     @Transactional
-    public Patient registerPatient(Patient patient, SystemUserDetails loggedUser) throws Exception{
+    public ResultadoOperacao<Patient> registerPatient(Patient patient, SystemUserDetails loggedUser) {
 
-        patient.setBasicHealthUnit(resolvePatientBasicHealthUnit(patient, loggedUser));
+        var basicHealthUnitResult = resolvePatientBasicHealthUnit(patient, loggedUser);
+        if (basicHealthUnitResult.falhou()) {
+            return ResultadoOperacao.falha(basicHealthUnitResult.mensagem());
+        }
+
+        patient.setBasicHealthUnit(basicHealthUnitResult.valor());
         patient.setCreationUser(loggedUser.getName());
         patient.setCreationDate(LocalDateTime.now());
 
-        return patientRepository.save(patient);
+        return ResultadoOperacao.sucesso(patientRepository.save(patient));
     }
 
     @Transactional
-    public Patient updatePatient(Patient patient, SystemUserDetails loggedUser) throws Exception{
-        patient.setBasicHealthUnit(resolvePatientBasicHealthUnit(patient, loggedUser));
+    public ResultadoOperacao<Patient> updatePatient(Patient patient, SystemUserDetails loggedUser) {
+        var basicHealthUnitResult = resolvePatientBasicHealthUnit(patient, loggedUser);
+        if (basicHealthUnitResult.falhou()) {
+            return ResultadoOperacao.falha(basicHealthUnitResult.mensagem());
+        }
+
+        patient.setBasicHealthUnit(basicHealthUnitResult.valor());
         patient.setUpdateUser(loggedUser.getName());
         patient.setUpdateDate(LocalDateTime.now());
-        return patientRepository.save(patient);
+        return ResultadoOperacao.sucesso(patientRepository.save(patient));
     }
 
     public List<Patient> searchNativePatients(String terms, Long id) {
@@ -111,16 +122,25 @@ public class PatientService {
         return patient;
     }
 
-    private BasicHealthUnit resolvePatientBasicHealthUnit(Patient patient, SystemUserDetails loggedUser) {
+    private ResultadoOperacao<BasicHealthUnit> resolvePatientBasicHealthUnit(Patient patient,
+            SystemUserDetails loggedUser) {
         if (canAccessAllBasicHealthUnits(loggedUser)) {
             Long id = patient.getBasicHealthUnit() != null ? patient.getBasicHealthUnit().getId() : null;
             if (id == null) {
-                throw new IllegalArgumentException("UBS obrigatória para cadastrar ou atualizar paciente.");
+                return ResultadoOperacao.falha("UBS obrigatória para cadastrar ou atualizar paciente.");
             }
-            return basicHealthUnitService.findSystemUserUBS(id);
+            return basicHealthUnitService.findSystemUserUBSOptional(id)
+                    .map(ResultadoOperacao::sucesso)
+                    .orElseGet(() -> ResultadoOperacao.falha("Nenhuma UBS encontrada para o usuário logado."));
         }
 
-        return basicHealthUnitService.findSystemUserUBS(requireLoggedUserBasicHealthUnitId(loggedUser));
+        Long loggedUserBasicHealthUnitId = loggedUser.getBasicHealthUnitId();
+        if (loggedUserBasicHealthUnitId == null) {
+            return ResultadoOperacao.falha("Usuário sem UBS vinculada.");
+        }
+        return basicHealthUnitService.findSystemUserUBSOptional(loggedUserBasicHealthUnitId)
+                .map(ResultadoOperacao::sucesso)
+                .orElseGet(() -> ResultadoOperacao.falha("Nenhuma UBS encontrada para o usuário logado."));
     }
 
     private Long getScopedBasicHealthUnitId(SystemUserDetails loggedUser) {

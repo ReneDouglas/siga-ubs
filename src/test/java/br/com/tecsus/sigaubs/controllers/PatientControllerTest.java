@@ -1,6 +1,7 @@
 package br.com.tecsus.sigaubs.controllers;
 
 import br.com.tecsus.sigaubs.dtos.PatientAppointmentsHistoryDTO;
+import br.com.tecsus.sigaubs.dtos.ResultadoOperacao;
 import br.com.tecsus.sigaubs.entities.BasicHealthUnit;
 import br.com.tecsus.sigaubs.entities.Patient;
 import br.com.tecsus.sigaubs.services.BasicHealthUnitService;
@@ -24,7 +25,6 @@ import static br.com.tecsus.sigaubs.controllers.ControllerTestSupport.ubsUser;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -69,6 +69,8 @@ class PatientControllerTest {
         Patient patient = TestDataFactory.patient(10L, "Maria", ubs);
         var loggedUser = ubsUser(1L);
         when(basicHealthUnitService.findSystemUserUBS(1L)).thenReturn(ubs);
+        when(patientService.registerPatient(patient, loggedUser))
+                .thenReturn(ResultadoOperacao.sucesso(patient));
         var model = model();
 
         assertThat(controller.registerPatient(patient, loggedUser, model))
@@ -76,16 +78,16 @@ class PatientControllerTest {
         assertThat(model.get("error")).isEqualTo(false);
         verify(patientService).registerPatient(patient, loggedUser);
 
-        doThrow(new DataIntegrityViolationException("cpf")).when(patientService)
-                .registerPatient(patient, loggedUser);
+        when(patientService.registerPatient(patient, loggedUser))
+                .thenThrow(new DataIntegrityViolationException("cpf"));
         model = model();
         controller.registerPatient(patient, loggedUser, model);
         assertThat(model.get("message")).isEqualTo("CPF ou Cartão SUS já cadastrados no sistema.");
         assertThat(model.get("error")).isEqualTo(true);
 
         var smsUser = sms();
-        doThrow(new RuntimeException("falha")).when(patientService)
-                .registerPatient(patient, smsUser);
+        when(patientService.registerPatient(patient, smsUser))
+                .thenThrow(new RuntimeException("falha"));
         when(basicHealthUnitService.findAllUBS()).thenReturn(List.of(ubs));
         model = model();
         controller.registerPatient(patient, smsUser, model);
@@ -105,16 +107,20 @@ class PatientControllerTest {
         assertThat(model.get("patient")).isSameAs(patient);
         assertThat(model.get("systemUserUBS")).isEqualTo(ubs);
 
-        when(patientService.updatePatient(patient, loggedUser)).thenReturn(patient);
+        when(patientService.updatePatient(patient, loggedUser))
+                .thenReturn(ResultadoOperacao.sucesso(patient));
         model = model();
         assertThat(controller.updatePatient(patient, loggedUser, model))
                 .isEqualTo("patientManagement/patientFragments/patient_info");
         assertThat(model.get("patient")).isSameAs(patient);
         assertThat(model.get("error")).isEqualTo(false);
 
-        doThrow(new RuntimeException("falha")).when(patientService).updatePatient(patient, sms());
+        var smsUser = sms();
+        when(patientService.updatePatient(patient, smsUser))
+                .thenReturn(ResultadoOperacao.falha("falha"));
+        when(basicHealthUnitService.findAllUBS()).thenReturn(List.of(ubs));
         model = model();
-        assertThat(controller.updatePatient(patient, sms(), model))
+        assertThat(controller.updatePatient(patient, smsUser, model))
                 .isEqualTo("patientManagement/patientFragments/patient_form");
         assertThat(model.get("error")).isEqualTo(true);
     }

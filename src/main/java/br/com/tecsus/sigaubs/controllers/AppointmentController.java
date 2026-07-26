@@ -9,9 +9,6 @@ import br.com.tecsus.sigaubs.security.SystemUserDetails;
 import br.com.tecsus.sigaubs.services.AppointmentService;
 import br.com.tecsus.sigaubs.services.PatientService;
 import br.com.tecsus.sigaubs.services.SpecialtyService;
-import br.com.tecsus.sigaubs.services.exceptions.AppointmentRegistrationFailureException;
-import br.com.tecsus.sigaubs.services.exceptions.CancelAppointmentException;
-import br.com.tecsus.sigaubs.services.exceptions.DuplicateAppointmentRegistrationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.MediaType;
@@ -100,17 +97,13 @@ public class AppointmentController {
                                             @AuthenticationPrincipal SystemUserDetails loggedUser,
                                             RedirectAttributes redirectAttributes) {
 
-        try{
-            appointmentService.registerAppointment(appointment, loggedUser);
+        var resultado = appointmentService.registerAppointment(appointment, loggedUser);
+        if (resultado.sucesso()) {
             redirectAttributes.addFlashAttribute("message", "Marcação agendada com sucesso.");
             redirectAttributes.addFlashAttribute("error", false);
             log.info("Marcação agendada com sucesso.");
-        } catch (AppointmentRegistrationFailureException e) {
-            log.error("Erro ao registrar consulta: {}", e.getMessage());
-            redirectAttributes.addFlashAttribute("message", "Erro ao agendar marcação. Tente novamente ou contate o TI.");
-            redirectAttributes.addFlashAttribute("error", true);
-        } catch (DuplicateAppointmentRegistrationException e) {
-            log.error("Marcação de consulta duplicada: {}", e.getMessage());
+        } else {
+            log.error("Erro ao registrar consulta: {}", resultado.mensagem());
             redirectAttributes.addFlashAttribute("message", "Existe uma marcação em aberto para este procedimento.");
             redirectAttributes.addFlashAttribute("error", true);
         }
@@ -124,13 +117,13 @@ public class AppointmentController {
                                                 @AuthenticationPrincipal SystemUserDetails loggedUser,
                                                 RedirectAttributes redirectAttributes) {
 
-        try {
-            appointmentService.cancelSolicitation(apptSolicitationId, loggedUser);
+        var resultado = appointmentService.cancelSolicitation(apptSolicitationId, loggedUser);
+        if (resultado.sucesso()) {
             redirectAttributes.addFlashAttribute("message", "Marcação cancelada com sucesso.");
             redirectAttributes.addFlashAttribute("error", false);
             log.info("Marcação cancelada com sucesso.");
-        } catch (CancelAppointmentException e) {
-            log.error("Não foi possível cancelar a marcação de consulta: {}", e.getMessage());
+        } else {
+            log.error("Não foi possível cancelar a marcação de consulta: {}", resultado.mensagem());
             redirectAttributes.addFlashAttribute("message", "Não foi possível cancelar a marcação. Contate o TI.");
             redirectAttributes.addFlashAttribute("error", true);
         }

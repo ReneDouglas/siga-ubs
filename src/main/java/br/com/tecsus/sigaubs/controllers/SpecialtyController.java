@@ -67,9 +67,15 @@ public class SpecialtyController {
         try {
             var procedures = objectMapper.readValue(proceduresJson, new TypeReference<List<ProcedureDTO>>() {});
             specialtyDTO.setProcedures(procedures);
-            specialtyService.registerSpecialty(specialtyDTO, loggedUser);
-            redirectAttributes.addFlashAttribute("message", "Especialidade cadastrada com sucesso.");
-            redirectAttributes.addFlashAttribute("error", false);
+            var resultado = specialtyService.registerSpecialty(specialtyDTO, loggedUser);
+            if (resultado.sucesso()) {
+                redirectAttributes.addFlashAttribute("message", "Especialidade cadastrada com sucesso.");
+                redirectAttributes.addFlashAttribute("error", false);
+            } else {
+                redirectAttributes.addFlashAttribute("message", "Erro ao cadastrar especialidade.");
+                redirectAttributes.addFlashAttribute("error", true);
+                log.error("Erro ao cadastrar especialidade: {}", resultado.mensagem());
+            }
         } catch (Exception e) {
             redirectAttributes.addFlashAttribute("message", "Erro ao cadastrar especialidade.");
             redirectAttributes.addFlashAttribute("error", true);
@@ -88,9 +94,15 @@ public class SpecialtyController {
         try {
             var procedures = objectMapper.readValue(proceduresJson, new TypeReference<List<ProcedureDTO>>() {});
             specialtyDTO.setProcedures(procedures);
-            specialtyService.updateSpecialty(specialtyDTO, loggedUser);
-            redirectAttributes.addFlashAttribute("message", "Especialidade atualizada com sucesso.");
-            redirectAttributes.addFlashAttribute("error", false);
+            var resultado = specialtyService.updateSpecialty(specialtyDTO, loggedUser);
+            if (resultado.sucesso()) {
+                redirectAttributes.addFlashAttribute("message", "Especialidade atualizada com sucesso.");
+                redirectAttributes.addFlashAttribute("error", false);
+            } else {
+                redirectAttributes.addFlashAttribute("message", "Erro ao atualizar especialidade.");
+                redirectAttributes.addFlashAttribute("error", true);
+                log.error("Erro ao atualizar especialidade: {}", resultado.mensagem());
+            }
         } catch (Exception e) {
             redirectAttributes.addFlashAttribute("message", "Erro ao atualizar especialidade.");
             redirectAttributes.addFlashAttribute("error", true);

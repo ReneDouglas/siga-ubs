@@ -8,7 +8,6 @@ import br.com.tecsus.sigaubs.enums.ProcedureType;
 import br.com.tecsus.sigaubs.enums.Roles;
 import br.com.tecsus.sigaubs.repositories.AppointmentRepository;
 import br.com.tecsus.sigaubs.repositories.MedicalProcedureRepository;
-import br.com.tecsus.sigaubs.services.exceptions.DuplicateAppointmentRegistrationException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -17,6 +16,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
+import java.util.Optional;
 
 import static br.com.tecsus.sigaubs.support.TestDataFactory.appointment;
 import static br.com.tecsus.sigaubs.support.TestDataFactory.openAppointment;
@@ -26,7 +26,6 @@ import static br.com.tecsus.sigaubs.support.TestDataFactory.specialty;
 import static br.com.tecsus.sigaubs.support.TestDataFactory.ubs;
 import static br.com.tecsus.sigaubs.support.TestDataFactory.userDetails;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -56,8 +55,9 @@ class AppointmentServiceTest {
         when(appointmentRepository.findPatientOpenAppointments(1L)).thenReturn(List.of());
         when(appointmentRepository.save(any(Appointment.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        appointmentService.registerAppointment(appointment, loggedUser);
+        var resultado = appointmentService.registerAppointment(appointment, loggedUser);
 
+        assertThat(resultado.sucesso()).isTrue();
         ArgumentCaptor<Appointment> captor = ArgumentCaptor.forClass(Appointment.class);
         verify(appointmentRepository).save(captor.capture());
         Appointment saved = captor.getValue();
@@ -83,8 +83,10 @@ class AppointmentServiceTest {
 
         when(appointmentRepository.findPatientOpenAppointments(1L)).thenReturn(List.of(open));
 
-        assertThatThrownBy(() -> appointmentService.registerAppointment(appointment, loggedUser))
-                .isInstanceOf(DuplicateAppointmentRegistrationException.class);
+        var resultado = appointmentService.registerAppointment(appointment, loggedUser);
+
+        assertThat(resultado.falhou()).isTrue();
+        assertThat(resultado.mensagem()).contains("consulta marcada");
 
         verify(appointmentRepository, never()).save(any());
         verify(appointmentStatusHistoryService, never()).registerAppointmentStatusHistory(any(), any());
@@ -96,11 +98,12 @@ class AppointmentServiceTest {
         Appointment appointment = appointment(100L,
                 patient(1L, "Paciente", ubs(1L, "UBS")),
                 procedure(10L, "Consulta", ProcedureType.CONSULTA, specialty(1L, "Cardiologia")));
-        when(appointmentRepository.getReferenceById(100L)).thenReturn(appointment);
+        when(appointmentRepository.findById(100L)).thenReturn(Optional.of(appointment));
         when(appointmentRepository.save(appointment)).thenReturn(appointment);
 
-        appointmentService.cancelSolicitation(100L, loggedUser);
+        var resultado = appointmentService.cancelSolicitation(100L, loggedUser);
 
+        assertThat(resultado.sucesso()).isTrue();
         assertThat(appointment.getStatus()).isEqualTo(AppointmentStatus.DESISTENCIA_PACIENTE);
         assertThat(appointment.getUpdateUser()).isEqualTo("Atendente");
         assertThat(appointment.getUpdateDate()).isNotNull();

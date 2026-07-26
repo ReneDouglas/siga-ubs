@@ -3,14 +3,12 @@ package br.com.tecsus.sigaubs.services;
 import br.com.tecsus.sigaubs.dtos.MedicalProceduresTotalDTO;
 import br.com.tecsus.sigaubs.dtos.PatientOpenAppointmentDTO;
 import br.com.tecsus.sigaubs.dtos.ProcedureTypeTotalDTO;
+import br.com.tecsus.sigaubs.dtos.ResultadoOperacao;
 import br.com.tecsus.sigaubs.entities.*;
 import br.com.tecsus.sigaubs.enums.AppointmentStatus;
 import br.com.tecsus.sigaubs.enums.ProcedureType;
 import br.com.tecsus.sigaubs.repositories.*;
 import br.com.tecsus.sigaubs.security.SystemUserDetails;
-import br.com.tecsus.sigaubs.services.exceptions.AppointmentRegistrationFailureException;
-import br.com.tecsus.sigaubs.services.exceptions.CancelAppointmentException;
-import br.com.tecsus.sigaubs.services.exceptions.DuplicateAppointmentRegistrationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -45,7 +43,7 @@ public class AppointmentService {
     }
 
     @Transactional
-    public void registerAppointment(Appointment appointment, SystemUserDetails loggedUser) throws AppointmentRegistrationFailureException, DuplicateAppointmentRegistrationException {
+    public ResultadoOperacao<Void> registerAppointment(Appointment appointment, SystemUserDetails loggedUser) {
 
         List<PatientOpenAppointmentDTO> patientOpenAppointments = appointmentRepository.findPatientOpenAppointments(appointment.getPatient().getId());
         MedicalProcedure medicalProcedure;
@@ -56,7 +54,7 @@ public class AppointmentService {
                 .anyMatch(patientOpenAppointment -> Objects.equals(patientOpenAppointment.medicalProcedureId(), finalAppointment.getMedicalProcedure().getId()));
 
         if (isDuplicated) {
-            throw new DuplicateAppointmentRegistrationException("Existe, pelo menos, uma consulta marcada para este procedimento em aberto.");
+            return ResultadoOperacao.falha("Existe, pelo menos, uma consulta marcada para este procedimento em aberto.");
         }
 
 
@@ -74,13 +72,17 @@ public class AppointmentService {
 
         appointmentStatusHistoryService.registerAppointmentStatusHistory(appointment, loggedUser.getName());
 
+        return ResultadoOperacao.sucessoSemValor();
 
     }
 
     @Transactional
-    public void cancelSolicitation(Long id, SystemUserDetails loggedUser) throws CancelAppointmentException {
+    public ResultadoOperacao<Void> cancelSolicitation(Long id, SystemUserDetails loggedUser) {
 
-        Appointment appt = appointmentRepository.getReferenceById(id);
+        Appointment appt = appointmentRepository.findById(id).orElse(null);
+        if (appt == null) {
+            return ResultadoOperacao.falha("Marcação não encontrada.");
+        }
 
         appt.setStatus(AppointmentStatus.DESISTENCIA_PACIENTE);
         appt.setUpdateUser(loggedUser.getName());
@@ -89,6 +91,7 @@ public class AppointmentService {
         appt = appointmentRepository.save(appt);
         appointmentStatusHistoryService.registerAppointmentStatusHistory(appt, loggedUser.getName());
 
+        return ResultadoOperacao.sucessoSemValor();
     }
 
     @Transactional(readOnly = true)

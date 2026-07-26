@@ -7,8 +7,6 @@ import br.com.tecsus.sigaubs.security.SystemUserDetails;
 import br.com.tecsus.sigaubs.services.BasicHealthUnitService;
 import br.com.tecsus.sigaubs.services.ContemplationService;
 import br.com.tecsus.sigaubs.services.SpecialtyService;
-import br.com.tecsus.sigaubs.services.exceptions.CancelContemplationException;
-import br.com.tecsus.sigaubs.services.exceptions.ConfirmContemplationException;
 import br.com.tecsus.sigaubs.utils.DefaultValues;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -218,17 +216,16 @@ public class ContemplationController {
                                       @AuthenticationPrincipal SystemUserDetails loggedUser,
                                       RedirectAttributes redirectAttributes) {
 
-
-        try {
-            log.info("Cancelando contemplação[id={}] pelo usuário[nome={}].", contemplationId, loggedUser.getName());
-            contemplationService.cancelContemplationByAdmin(contemplationId, reason, loggedUser);
+        log.info("Cancelando contemplação[id={}] pelo usuário[nome={}].", contemplationId, loggedUser.getName());
+        var resultado = contemplationService.cancelContemplationByAdmin(contemplationId, reason, loggedUser);
+        if (resultado.sucesso()) {
             redirectAttributes.addFlashAttribute("error", false);
             redirectAttributes.addFlashAttribute("message", "Contemplação cancelada com sucesso.");
             log.info("Contemplação[id={}] cancelada com sucesso pelo usuário[nome={}].", contemplationId, loggedUser.getName());
-        } catch (CancelContemplationException e) {
+        } else {
             redirectAttributes.addFlashAttribute("error", true);
             redirectAttributes.addFlashAttribute("message", "Erro ao cancelar contemplação.");
-            log.error("Erro ao cancelar contemplação: {}", e.getMessage());
+            log.error("Erro ao cancelar contemplação: {}", resultado.mensagem());
         }
 
         UriComponentsBuilder redirectURL = UriComponentsBuilder.fromPath("/contemplation-management/search");
@@ -249,15 +246,15 @@ public class ContemplationController {
                                        @AuthenticationPrincipal SystemUserDetails loggedUser,
                                        RedirectAttributes redirectAttributes) {
 
-        try {
-            contemplationService.confirmContemplationByAdmin(contemplationId, loggedUser);
+        var resultado = contemplationService.confirmContemplationByAdmin(contemplationId, loggedUser);
+        if (resultado.sucesso()) {
             redirectAttributes.addFlashAttribute("error", false);
             redirectAttributes.addFlashAttribute("message", "Contemplação confirmada com sucesso.");
             log.info("Contemplação[id={}] confirmada com sucesso pelo usuário[nome={}].", contemplationId, loggedUser.getName());
-        } catch (ConfirmContemplationException e) {
+        } else {
             redirectAttributes.addFlashAttribute("error", true);
             redirectAttributes.addFlashAttribute("message", "Erro ao confirmar contemplação.");
-            log.error("Erro ao confirmar contemplação: {}", e.getMessage());
+            log.error("Erro ao confirmar contemplação: {}", resultado.mensagem());
         }
 
         UriComponentsBuilder redirectURL = UriComponentsBuilder.fromPath("/contemplation-management/search");

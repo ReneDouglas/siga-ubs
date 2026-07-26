@@ -136,7 +136,6 @@
                         <exclude>br/com/tecsus/sigaubs/entities/SystemRole*</exclude>
                         <exclude>br/com/tecsus/sigaubs/entities/SystemUser*</exclude>
                         <exclude>br/com/tecsus/sigaubs/entities/Tenant*</exclude>
-                        <exclude>br/com/tecsus/sigaubs/services/exceptions/*</exclude>
                         <exclude>br/com/tecsus/sigaubs/security/config/HttpsWebServerConfig*</exclude>
                         <exclude>gg/jte/generated/**</exclude>
                     </excludes>

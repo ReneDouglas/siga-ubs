@@ -1,6 +1,7 @@
 package br.com.tecsus.sigaubs.services;
 
 import br.com.tecsus.sigaubs.dtos.UBSsystemUserDTO;
+import br.com.tecsus.sigaubs.dtos.ResultadoOperacao;
 import br.com.tecsus.sigaubs.entities.SystemRole;
 import br.com.tecsus.sigaubs.entities.SystemAdmin;
 import br.com.tecsus.sigaubs.entities.SystemUser;
@@ -9,7 +10,6 @@ import br.com.tecsus.sigaubs.repositories.SystemRoleRepository;
 import br.com.tecsus.sigaubs.repositories.SystemAdminRepository;
 import br.com.tecsus.sigaubs.repositories.SystemUserRepository;
 import br.com.tecsus.sigaubs.security.SystemUserDetails;
-import br.com.tecsus.sigaubs.services.exceptions.InvalidConfirmPasswordException;
 import br.com.tecsus.sigaubs.tenancy.TenantContext;
 import br.com.tecsus.sigaubs.tenancy.TenantContextHolder;
 import org.slf4j.Logger;
@@ -105,17 +105,18 @@ public class SystemUserService implements UserDetailsService {
     }
 
     @Transactional
-    public void registerNotAdminSystemUser(SystemUser systemUser, SystemUserDetails loggedUser) throws Exception {
+    public ResultadoOperacao<Void> registerNotAdminSystemUser(SystemUser systemUser, SystemUserDetails loggedUser) {
 
         if (!systemUser.getPassword().equals(systemUser.getConfirmPassword())) {
-            throw new InvalidConfirmPasswordException("As senhas não conferem.");
+            return ResultadoOperacao.falha("As senhas não conferem.");
         }
 
         SystemRole role = systemRoleRepository.findById(systemUser.getSelectedRoleId())
-                .orElseThrow(() -> {
-                    log.error("[insert user] Erro ao encontrar role [id = {}]", systemUser.getSelectedRoleId());
-                    return new Exception("Erro ao cadastrar usuário.");
-                });
+                .orElse(null);
+        if (role == null) {
+            log.error("[insert user] Erro ao encontrar role [id = {}]", systemUser.getSelectedRoleId());
+            return ResultadoOperacao.falha("Erro ao cadastrar usuário.");
+        }
 
         systemUser.setPassword(passwordEncoder.encode(systemUser.getPassword()));
         systemUser.setRoles(Set.of(role));
@@ -124,16 +125,18 @@ public class SystemUserService implements UserDetailsService {
         systemUser.setActive(true);
 
         systemUserRepository.save(systemUser);
+        return ResultadoOperacao.sucessoSemValor();
 
     }
 
-    public void updateNotAdminSystemUser(SystemUser systemUser) throws Exception {
+    public ResultadoOperacao<Void> updateNotAdminSystemUser(SystemUser systemUser) {
 
         SystemRole role = systemRoleRepository.findById(systemUser.getSelectedRoleId())
-                .orElseThrow(() -> {
-                    log.error("[update user] Erro ao encontrar role [id = {}]", systemUser.getSelectedRoleId());
-                    return new Exception("Erro ao cadastrar usuário.");
-                });
+                .orElse(null);
+        if (role == null) {
+            log.error("[update user] Erro ao encontrar role [id = {}]", systemUser.getSelectedRoleId());
+            return ResultadoOperacao.falha("Erro ao cadastrar usuário.");
+        }
 
         systemUser.setPassword(passwordEncoder.encode(systemUser.getPassword()));
         systemUser.setUpdateUser(SecurityContextHolder.getContext().getAuthentication().getName());
@@ -142,6 +145,7 @@ public class SystemUserService implements UserDetailsService {
         systemUser.setActive(systemUser.getActive());
 
         systemUserRepository.save(systemUser);
+        return ResultadoOperacao.sucessoSemValor();
     }
 
     public List<SystemRole> getRolesNotAdmin() {
@@ -166,12 +170,14 @@ public class SystemUserService implements UserDetailsService {
     }
 
     @Transactional
-    public void deleteNotAdminSystemUser(Long id) throws Exception{
-        SystemUser systemUser = systemUserRepository.findById(id).orElseThrow(() -> {
+    public ResultadoOperacao<Void> deleteNotAdminSystemUser(Long id) {
+        SystemUser systemUser = systemUserRepository.findById(id).orElse(null);
+        if (systemUser == null) {
             log.error("Usuário [id = {}] não encontrado.", id);
-            return new Exception("Erro ao deletar usuário.");
-        });
+            return ResultadoOperacao.falha("Erro ao deletar usuário.");
+        }
         systemUserRepository.delete(systemUser);
+        return ResultadoOperacao.sucessoSemValor();
     }
 
     public List<UBSsystemUserDTO> findSystemUserByNameContaining(String username) {

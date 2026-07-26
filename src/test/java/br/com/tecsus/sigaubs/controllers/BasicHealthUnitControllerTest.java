@@ -1,6 +1,7 @@
 package br.com.tecsus.sigaubs.controllers;
 
 import br.com.tecsus.sigaubs.dtos.UBSsystemUserDTO;
+import br.com.tecsus.sigaubs.dtos.ResultadoOperacao;
 import br.com.tecsus.sigaubs.entities.BasicHealthUnit;
 import br.com.tecsus.sigaubs.entities.Specialty;
 import br.com.tecsus.sigaubs.services.BasicHealthUnitService;
@@ -19,7 +20,6 @@ import static br.com.tecsus.sigaubs.controllers.ControllerTestSupport.model;
 import static br.com.tecsus.sigaubs.controllers.ControllerTestSupport.redirect;
 import static br.com.tecsus.sigaubs.controllers.ControllerTestSupport.sms;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -61,27 +61,32 @@ class BasicHealthUnitControllerTest {
     void deveCadastrarAtualizarETratarFalhas() throws Exception {
         var loggedUser = sms();
         var redirectAttributes = redirect();
+        when(basicHealthUnitService.registerBasicHealthUnit(ubs, loggedUser))
+                .thenReturn(ResultadoOperacao.sucessoSemValor());
 
         assertThat(controller.registerBasicHealthUnit(ubs, loggedUser, redirectAttributes))
                 .isEqualTo("redirect:/basicHealthUnit-management");
         assertThat(redirectAttributes.getFlashAttributes().get("error")).isEqualTo(false);
         verify(basicHealthUnitService).registerBasicHealthUnit(ubs, loggedUser);
 
-        doThrow(new RuntimeException("falha")).when(basicHealthUnitService)
-                .registerBasicHealthUnit(ubs, loggedUser);
+        when(basicHealthUnitService.registerBasicHealthUnit(ubs, loggedUser))
+                .thenReturn(ResultadoOperacao.falha("falha"));
         redirectAttributes = redirect();
         controller.registerBasicHealthUnit(ubs, loggedUser, redirectAttributes);
         assertThat(redirectAttributes.getFlashAttributes().get("error")).isEqualTo(true);
 
+        when(basicHealthUnitService.updateBasicHealthUnit(ubs, loggedUser))
+                .thenReturn(ResultadoOperacao.sucessoSemValor());
         redirectAttributes = redirect();
         controller.updateSystemUser(ubs, redirectAttributes, loggedUser);
         assertThat(redirectAttributes.getFlashAttributes().get("error")).isEqualTo(false);
         verify(basicHealthUnitService).updateBasicHealthUnit(ubs, loggedUser);
 
-        doThrow(new RuntimeException("falha")).when(basicHealthUnitService)
-                .updateBasicHealthUnit(TestDataFactory.ubs(2L, "Outra"), loggedUser);
+        var outraUbs = TestDataFactory.ubs(2L, "Outra");
+        when(basicHealthUnitService.updateBasicHealthUnit(outraUbs, loggedUser))
+                .thenReturn(ResultadoOperacao.falha("falha"));
         redirectAttributes = redirect();
-        controller.updateSystemUser(TestDataFactory.ubs(2L, "Outra"), redirectAttributes, loggedUser);
+        controller.updateSystemUser(outraUbs, redirectAttributes, loggedUser);
         assertThat(redirectAttributes.getFlashAttributes().get("error")).isEqualTo(true);
     }
 
@@ -145,12 +150,15 @@ class BasicHealthUnitControllerTest {
         assertThat(controller.deleteBasicHealthUnit(null, loggedUser, redirect()))
                 .isEqualTo("redirect:/basicHealthUnit-management");
 
+        when(basicHealthUnitService.deleteBasicHealtUnit(1L, loggedUser))
+                .thenReturn(ResultadoOperacao.sucessoSemValor());
         var redirectAttributes = redirect();
         controller.deleteBasicHealthUnit(1L, loggedUser, redirectAttributes);
         assertThat(redirectAttributes.getFlashAttributes().get("error")).isEqualTo(false);
         verify(basicHealthUnitService).deleteBasicHealtUnit(1L, loggedUser);
 
-        doThrow(new RuntimeException("falha")).when(basicHealthUnitService).deleteBasicHealtUnit(2L, loggedUser);
+        when(basicHealthUnitService.deleteBasicHealtUnit(2L, loggedUser))
+                .thenReturn(ResultadoOperacao.falha("falha"));
         redirectAttributes = redirect();
         controller.deleteBasicHealthUnit(2L, loggedUser, redirectAttributes);
         assertThat(redirectAttributes.getFlashAttributes().get("error")).isEqualTo(true);
@@ -161,6 +169,8 @@ class BasicHealthUnitControllerTest {
         var loggedUser = sms();
         var user = new UBSsystemUserDTO(10L, "Maria", "Atendente", "true");
         when(basicHealthUnitService.findUBSsystemUsersByUBSid(1L)).thenReturn(List.of(user), List.of());
+        when(basicHealthUnitService.unlinkBasicHealthUnitSystemUser(10L, loggedUser))
+                .thenReturn(ResultadoOperacao.sucessoSemValor());
         var model = model();
 
         assertThat(controller.unlinkBasicHealthUnitSystemUser(10L, 1L, loggedUser, model))
@@ -168,6 +178,8 @@ class BasicHealthUnitControllerTest {
         assertThat(model.get("attach_error")).isEqualTo(false);
         verify(basicHealthUnitService).unlinkBasicHealthUnitSystemUser(10L, loggedUser);
 
+        when(basicHealthUnitService.attachSystemUserToUBS(10L, 1L))
+                .thenReturn(ResultadoOperacao.sucessoSemValor());
         model = model();
         assertThat(controller.appendSystemUserToBasicHealthUnit("Maria", 1L, 10L, model))
                 .isEqualTo("basicHealthUnitManagement/ubsFragments/emptySystemUsersUBSTable");
@@ -178,8 +190,8 @@ class BasicHealthUnitControllerTest {
     @Test
     void deveRegistrarErroAoVincularOuDesvincularUsuario() throws Exception {
         var loggedUser = sms();
-        doThrow(new RuntimeException("falha")).when(basicHealthUnitService)
-                .unlinkBasicHealthUnitSystemUser(10L, loggedUser);
+        when(basicHealthUnitService.unlinkBasicHealthUnitSystemUser(10L, loggedUser))
+                .thenReturn(ResultadoOperacao.falha("falha"));
         when(basicHealthUnitService.findUBSsystemUsersByUBSid(1L)).thenReturn(List.of());
         var model = model();
 
@@ -187,7 +199,8 @@ class BasicHealthUnitControllerTest {
                 .isEqualTo("basicHealthUnitManagement/ubsFragments/emptySystemUsersUBSTable");
         assertThat(model.get("attach_error")).isEqualTo(true);
 
-        doThrow(new RuntimeException("falha")).when(basicHealthUnitService).attachSystemUserToUBS(11L, 1L);
+        when(basicHealthUnitService.attachSystemUserToUBS(11L, 1L))
+                .thenReturn(ResultadoOperacao.falha("falha"));
         model = model();
         controller.appendSystemUserToBasicHealthUnit("Joao", 1L, 11L, model);
         assertThat(model.get("attach_error")).isEqualTo(true);

@@ -1,10 +1,10 @@
 package br.com.tecsus.sigaubs.services;
 
 import br.com.tecsus.sigaubs.dtos.AvailableMedicalSlotsFormDTO;
+import br.com.tecsus.sigaubs.dtos.ResultadoOperacao;
 import br.com.tecsus.sigaubs.entities.MedicalSlot;
 import br.com.tecsus.sigaubs.repositories.MedicalSlotRepository;
 import br.com.tecsus.sigaubs.security.SystemUserDetails;
-import br.com.tecsus.sigaubs.services.exceptions.DistinctAvailableMedicalSlotException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
@@ -31,8 +31,15 @@ public class MedicalSlotService {
     }
 
     @Transactional
-    public void registerAvailableMedicalSlotsBatch(AvailableMedicalSlotsFormDTO availableMedicalSlotsFormDTO,
-            SystemUserDetails loggedUser) throws DistinctAvailableMedicalSlotException {
+    public ResultadoOperacao<Void> registerAvailableMedicalSlotsBatch(
+            AvailableMedicalSlotsFormDTO availableMedicalSlotsFormDTO,
+            SystemUserDetails loggedUser) {
+
+        if (availableMedicalSlotsFormDTO == null
+                || availableMedicalSlotsFormDTO.getAvailableMedicalSlots() == null
+                || availableMedicalSlotsFormDTO.getAvailableMedicalSlots().isEmpty()) {
+            return ResultadoOperacao.falha("Informe ao menos uma vaga.");
+        }
 
         Long referenceUbsId = availableMedicalSlotsFormDTO.getAvailableMedicalSlots().get(0).getBasicHealthUnit()
                 .getId();
@@ -40,7 +47,7 @@ public class MedicalSlotService {
                 .anyMatch(slotUbs -> !slotUbs.getBasicHealthUnit().getId().equals(referenceUbsId));
 
         if (isDistinct) {
-            throw new DistinctAvailableMedicalSlotException("Cadastre as vagas para uma UBS de cada vez.");
+            return ResultadoOperacao.falha("Cadastre as vagas para uma UBS de cada vez.");
         }
 
         for (MedicalSlot medicalSlot : availableMedicalSlotsFormDTO.getAvailableMedicalSlots()) {
@@ -50,6 +57,7 @@ public class MedicalSlotService {
         }
 
         medicalSlotRepository.saveAll(availableMedicalSlotsFormDTO.getAvailableMedicalSlots());
+        return ResultadoOperacao.sucessoSemValor();
 
     }
 
@@ -75,28 +83,28 @@ public class MedicalSlotService {
     }
 
     @Transactional
-    public MedicalSlot addSlot(MedicalSlot medicalSlot) {
+    public ResultadoOperacao<MedicalSlot> addSlot(MedicalSlot medicalSlot) {
 
         MedicalSlot ms = medicalSlotRepository.getReferenceById(medicalSlot.getId());
 
         if (Objects.equals(ms.getCurrentSlots(), ms.getTotalSlots())) {
-            throw new RuntimeException("O limite máximo de slots já foi atingido.");
+            return ResultadoOperacao.falha("O limite máximo de slots já foi atingido.");
         }
 
         ms.setCurrentSlots(ms.getCurrentSlots() + 1);
-        return medicalSlotRepository.save(ms);
+        return ResultadoOperacao.sucesso(medicalSlotRepository.save(ms));
     }
 
     @Transactional
-    public MedicalSlot removeSlot(MedicalSlot medicalSlot) {
+    public ResultadoOperacao<MedicalSlot> removeSlot(MedicalSlot medicalSlot) {
 
         MedicalSlot ms = medicalSlotRepository.getReferenceById(medicalSlot.getId());
 
         if (ms.getCurrentSlots() == 0) {
-            throw new RuntimeException("Não há mais slots disponíveis.");
+            return ResultadoOperacao.falha("Não há mais slots disponíveis.");
         }
 
         ms.setCurrentSlots(ms.getCurrentSlots() - 1);
-        return medicalSlotRepository.save(ms);
+        return ResultadoOperacao.sucesso(medicalSlotRepository.save(ms));
     }
 }

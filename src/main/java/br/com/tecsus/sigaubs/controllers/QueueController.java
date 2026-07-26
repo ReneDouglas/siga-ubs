@@ -5,7 +5,6 @@ import br.com.tecsus.sigaubs.entities.*;
 import br.com.tecsus.sigaubs.enums.ProcedureType;
 import br.com.tecsus.sigaubs.security.SystemUserDetails;
 import br.com.tecsus.sigaubs.services.*;
-import br.com.tecsus.sigaubs.services.exceptions.CancelContemplationException;
 import br.com.tecsus.sigaubs.utils.DefaultValues;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -333,18 +332,19 @@ public class QueueController {
             @AuthenticationPrincipal SystemUserDetails loggedUser,
             RedirectAttributes redirectAttributes) {
 
-        try {
-            log.info("Iniciando contemplação de paciente.");
-            contemplationService.contemplateAppointmentByAdmin(appointmentId, reason, medicalSlotId, loggedUser);
+        log.info("Iniciando contemplação de paciente.");
+        var resultado = contemplationService.contemplateAppointmentByAdmin(appointmentId, reason, medicalSlotId, loggedUser);
+        if (resultado.sucesso()) {
             redirectAttributes.addFlashAttribute("error", false);
             redirectAttributes.addFlashAttribute("message", "Paciente contemplado com sucesso.");
             log.info("Paciente [Appoinment.id={}] contemplado com sucesso pelo usuário[nome={}].", appointmentId,
                     loggedUser.getName());
-        } catch (CancelContemplationException e) {
+        } else {
             redirectAttributes.addFlashAttribute("error", true);
-            redirectAttributes.addFlashAttribute("message", "Erro ao cancelar contemplação.");
-            log.info("Erro ao contemplar paciente [Appoinment.id={}][SystemUser={}].", appointmentId,
-                    loggedUser.getName());
+            redirectAttributes.addFlashAttribute("message", resultado.mensagem());
+            log.info("Erro ao contemplar paciente [Appoinment.id={}][SystemUser={}]: {}", appointmentId,
+                    loggedUser.getName(),
+                    resultado.mensagem());
         }
 
         return "redirect:/queue-management/search?basicHealthUnit=" + ubs + "&specialty=" + specialty;
@@ -362,19 +362,20 @@ public class QueueController {
             @AuthenticationPrincipal SystemUserDetails loggedUser,
             RedirectAttributes redirectAttributes) {
 
-        try {
-            log.info("Iniciando contemplação de paciente.");
-            contemplationService.contemplateAppointmentByAdmin(appointmentId, reason,
-                    medicalSlotId, loggedUser);
+        log.info("Iniciando contemplação de paciente.");
+        var resultado = contemplationService.contemplateAppointmentByAdmin(appointmentId, reason,
+                medicalSlotId, loggedUser);
+        if (resultado.sucesso()) {
             redirectAttributes.addFlashAttribute("error", false);
             redirectAttributes.addFlashAttribute("message", "Paciente contemplado com sucesso.");
             log.info("Paciente [Appoinment.id={}] contemplado com sucesso pelo usuário[nome={}].", appointmentId,
                     loggedUser.getName());
-        } catch (CancelContemplationException e) {
+        } else {
             redirectAttributes.addFlashAttribute("error", true);
-            redirectAttributes.addFlashAttribute("message", "Erro ao cancelar contemplação.");
-            log.info("Erro ao contemplar paciente [Appoinment.id={}][SystemUser={}].", appointmentId,
-                    loggedUser.getName());
+            redirectAttributes.addFlashAttribute("message", resultado.mensagem());
+            log.info("Erro ao contemplar paciente [Appoinment.id={}][SystemUser={}]: {}", appointmentId,
+                    loggedUser.getName(),
+                    resultado.mensagem());
         }
 
         UriComponentsBuilder redirectUrl = UriComponentsBuilder.fromPath("/queue-management/v2");
