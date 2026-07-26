@@ -28,7 +28,7 @@ public class SpecialtyService {
         this.medicalProcedureRepository = medicalProcedureRepository;
     }
 
-    @Cacheable("especialidades")
+    @Cacheable(value = "especialidades", key = "T(br.com.tecsus.sigaubs.tenancy.TenantContextHolder).getRequiredTenantId()")
     public List<Specialty> findSpecialties() {
         return specialtyRepository.findAllByOrderByTitleAsc();
     }

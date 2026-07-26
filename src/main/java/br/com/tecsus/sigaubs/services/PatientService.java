@@ -3,6 +3,7 @@ package br.com.tecsus.sigaubs.services;
 import br.com.tecsus.sigaubs.dtos.PatientAppointmentsHistoryDTO;
 import br.com.tecsus.sigaubs.entities.BasicHealthUnit;
 import br.com.tecsus.sigaubs.entities.Patient;
+import br.com.tecsus.sigaubs.enums.Roles;
 import br.com.tecsus.sigaubs.repositories.PatientRepository;
 import br.com.tecsus.sigaubs.security.SystemUserDetails;
 import org.slf4j.Logger;
@@ -30,7 +31,7 @@ public class PatientService {
     @Transactional
     public Patient registerPatient(Patient patient, SystemUserDetails loggedUser) throws Exception{
 
-        patient.setBasicHealthUnit(basicHealthUnitService.findSystemUserUBS(loggedUser.getBasicHealthUnitId()));
+        patient.setBasicHealthUnit(resolvePatientBasicHealthUnit(patient, loggedUser));
         patient.setCreationUser(loggedUser.getName());
         patient.setCreationDate(LocalDateTime.now());
 
@@ -39,6 +40,7 @@ public class PatientService {
 
     @Transactional
     public Patient updatePatient(Patient patient, SystemUserDetails loggedUser) throws Exception{
+        patient.setBasicHealthUnit(resolvePatientBasicHealthUnit(patient, loggedUser));
         patient.setUpdateUser(loggedUser.getName());
         patient.setUpdateDate(LocalDateTime.now());
         return patientRepository.save(patient);
@@ -46,6 +48,10 @@ public class PatientService {
 
     public List<Patient> searchNativePatients(String terms, Long id) {
        return patientRepository.searchNativePatientsContainingByUBS(terms, id);
+    }
+
+    public List<Patient> searchNativePatients(String terms, SystemUserDetails loggedUser) {
+       return patientRepository.searchNativePatientsContainingByUBS(terms, getScopedBasicHealthUnitId(loggedUser));
     }
 
     @Transactional(readOnly = true)
@@ -62,10 +68,13 @@ public class PatientService {
     @Transactional(readOnly = true)
     public Page<Patient> findPatientsPage(Patient patient, PageRequest pageRequest, SystemUserDetails loggedUser) {
 
-        //BasicHealthUnit ubs = basicHealthUnitService.findById(loggedUser.getBasicHealthUnitId());
-        BasicHealthUnit ubs = new BasicHealthUnit();
-        ubs.setId(loggedUser.getBasicHealthUnitId());
-        patient.setBasicHealthUnit(ubs);
+        if (!canAccessAllBasicHealthUnits(loggedUser)) {
+            BasicHealthUnit ubs = new BasicHealthUnit();
+            ubs.setId(requireLoggedUserBasicHealthUnitId(loggedUser));
+            patient.setBasicHealthUnit(ubs);
+        } else if (patient.getBasicHealthUnit() != null && patient.getBasicHealthUnit().getId() == null) {
+            patient.setBasicHealthUnit(null);
+        }
         return patientRepository.findPatientsPaginated(patient, pageRequest);
     }
 
@@ -73,10 +82,11 @@ public class PatientService {
     public Page<PatientAppointmentsHistoryDTO> findPatientAppointmentsHistoryPage(Long patientId, PageRequest pageRequest, SystemUserDetails loggedUser) {
 
         Patient patient = new Patient();
-        BasicHealthUnit ubs = new BasicHealthUnit();
-        ubs.setId(loggedUser.getBasicHealthUnitId());
-        //BasicHealthUnit ubs = basicHealthUnitService.findById(loggedUser.getBasicHealthUnitId());
-        patient.setBasicHealthUnit(ubs);
+        if (!canAccessAllBasicHealthUnits(loggedUser)) {
+            BasicHealthUnit ubs = new BasicHealthUnit();
+            ubs.setId(requireLoggedUserBasicHealthUnitId(loggedUser));
+            patient.setBasicHealthUnit(ubs);
+        }
         patient.setId(patientId);
         return patientRepository.findPatientAppointmentsHistoryPaginated(patient, pageRequest);
     }
@@ -86,6 +96,48 @@ public class PatientService {
             log.error("Paciente [id = {}] não encontrado.", id);
             return new RuntimeException("Paciente não encontrado. Contate o TI.");
         } );
+    }
+
+    public Patient findPatientToEdit(Long id, SystemUserDetails loggedUser) throws RuntimeException {
+        if (canAccessAllBasicHealthUnits(loggedUser)) {
+            return findPatientToEdit(id);
+        }
+
+        Patient patient = findByIdAndUBS(id, requireLoggedUserBasicHealthUnitId(loggedUser));
+        if (patient == null) {
+            log.error("Paciente [id = {}] não encontrado para a UBS do usuário logado.", id);
+            throw new RuntimeException("Paciente não encontrado. Contate o TI.");
+        }
+        return patient;
+    }
+
+    private BasicHealthUnit resolvePatientBasicHealthUnit(Patient patient, SystemUserDetails loggedUser) {
+        if (canAccessAllBasicHealthUnits(loggedUser)) {
+            Long id = patient.getBasicHealthUnit() != null ? patient.getBasicHealthUnit().getId() : null;
+            if (id == null) {
+                throw new IllegalArgumentException("UBS obrigatória para cadastrar ou atualizar paciente.");
+            }
+            return basicHealthUnitService.findSystemUserUBS(id);
+        }
+
+        return basicHealthUnitService.findSystemUserUBS(requireLoggedUserBasicHealthUnitId(loggedUser));
+    }
+
+    private Long getScopedBasicHealthUnitId(SystemUserDetails loggedUser) {
+        return canAccessAllBasicHealthUnits(loggedUser) ? null : requireLoggedUserBasicHealthUnitId(loggedUser);
+    }
+
+    private Long requireLoggedUserBasicHealthUnitId(SystemUserDetails loggedUser) {
+        if (loggedUser.getBasicHealthUnitId() == null) {
+            throw new IllegalArgumentException("Usuário sem UBS vinculada.");
+        }
+        return loggedUser.getBasicHealthUnitId();
+    }
+
+    private boolean canAccessAllBasicHealthUnits(SystemUserDetails loggedUser) {
+        return loggedUser.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals(Roles.ROLE_ADMIN.toString())
+                        || a.getAuthority().equals(Roles.ROLE_SMS.toString()));
     }
 
 }

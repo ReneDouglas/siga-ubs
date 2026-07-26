@@ -122,7 +122,7 @@
         </div>
 
         <input type="hidden" id="id" name="id" value="${patient.getId() != null ? patient.getId().toString() : ""}"/>
-        @if(patient.getId() != null)
+        @if(patient.getId() != null && !secHelper.hasAnyRole("ADMIN", "SMS"))
         <input type="hidden" id="ubsid" name="basicHealthUnit.id" value="${patient.getBasicHealthUnit() != null ? patient.getBasicHealthUnit().getId().toString() : ""}"/>
         @endif
         <input type="hidden" name="${csrf.parameterName()}" value="${csrf.token()}"/>

@@ -57,7 +57,9 @@ public class PatientRepositoryCustomImpl implements PatientRepositoryCustom {
     @Override
     public Page<Patient> findPatientsPaginated(Patient patient, Pageable page) {
 
-        Long ubsId = validationUtils.attrIsNotNull(patient.getBasicHealthUnit().getId()) ? patient.getBasicHealthUnit().getId() : null;
+        Long ubsId = patient.getBasicHealthUnit() != null && validationUtils.attrIsNotNull(patient.getBasicHealthUnit().getId())
+                ? patient.getBasicHealthUnit().getId()
+                : null;
         String name = validationUtils.attrIsNotNull(patient.getName()) ? "%" + patient.getName() + "%" : null;
         String phoneNumber = validationUtils.attrIsNotNull(patient.getPhoneNumber()) ? patient.getPhoneNumber() : null;
         String cpf = validationUtils.attrIsNotNull(patient.getCpf()) ? patient.getCpf() : null;
@@ -90,33 +92,32 @@ public class PatientRepositoryCustomImpl implements PatientRepositoryCustom {
         idsQuery.setFirstResult(page.getPageNumber() * page.getPageSize());
         idsQuery.setMaxResults(page.getPageSize());
 
+        TypedQuery<Long> countQuery = em.createQuery("""
+            SELECT COUNT(p.id) FROM Patient p
+            WHERE (:ubsId IS NULL OR p.basicHealthUnit.id = :ubsId)
+                AND (:name IS NULL OR p.name LIKE :name)
+                AND (:phoneNumber IS NULL OR p.phoneNumber = :phoneNumber)
+                AND (:cpf IS NULL OR p.cpf = :cpf)
+                AND (:susNumber IS NULL OR p.susNumber = :susNumber)
+                AND (:addressStreet IS NULL OR p.addressStreet LIKE :addressStreet)
+                AND (:socialSituationRating IS NULL OR p.socialSituationRating = :socialSituationRating)
+                AND (:acsName IS NULL OR p.acsName = :acsName)
+        """, Long.class);
+
+        countQuery.setParameter("ubsId", ubsId);
+        countQuery.setParameter("name", name);
+        countQuery.setParameter("phoneNumber", phoneNumber);
+        countQuery.setParameter("cpf", cpf);
+        countQuery.setParameter("susNumber", susNumber);
+        countQuery.setParameter("addressStreet", addressStreet);
+        countQuery.setParameter("socialSituationRating", socialSituationRating);
+        countQuery.setParameter("acsName", acsName);
+        long totalCount = countQuery.getSingleResult();
+
         var ids = idsQuery.getResultList();
-        long totalCount = 0;
 
-        if (ids.size() < page.getPageSize()) {
-            totalCount = ids.size();
-        } else {
-            TypedQuery<Long> countQuery = em.createQuery("""
-                SELECT COUNT(p.id) FROM Patient p
-                WHERE (:ubsId IS NULL OR p.basicHealthUnit.id = :ubsId)
-                    AND (:name IS NULL OR p.name LIKE :name)
-                    AND (:phoneNumber IS NULL OR p.phoneNumber = :phoneNumber)
-                    AND (:cpf IS NULL OR p.cpf = :cpf)
-                    AND (:susNumber IS NULL OR p.susNumber = :susNumber)
-                    AND (:addressStreet IS NULL OR p.addressStreet LIKE :addressStreet)
-                    AND (:socialSituationRating IS NULL OR p.socialSituationRating = :socialSituationRating)
-                    AND (:acsName IS NULL OR p.acsName = :acsName)
-            """, Long.class);
-
-            countQuery.setParameter("ubsId", ubsId);
-            countQuery.setParameter("name", name);
-            countQuery.setParameter("phoneNumber", phoneNumber);
-            countQuery.setParameter("cpf", cpf);
-            countQuery.setParameter("susNumber", susNumber);
-            countQuery.setParameter("addressStreet", addressStreet);
-            countQuery.setParameter("socialSituationRating", socialSituationRating);
-            countQuery.setParameter("acsName", acsName);
-            totalCount = countQuery.getSingleResult();
+        if (ids.isEmpty()) {
+            return new PageImpl<>(List.of(), page, totalCount);
         }
 
         TypedQuery<Patient> patientsQuery = em.createQuery("""
@@ -135,6 +136,10 @@ public class PatientRepositoryCustomImpl implements PatientRepositoryCustom {
     @Override
     public Page<PatientAppointmentsHistoryDTO> findPatientAppointmentsHistoryPaginated(Patient patient, Pageable page) {
 
+        Long ubsId = patient.getBasicHealthUnit() != null && validationUtils.attrIsNotNull(patient.getBasicHealthUnit().getId())
+                ? patient.getBasicHealthUnit().getId()
+                : null;
+
         TypedQuery<Long> appointmentsHistoryIdQueryPaginated = em.createQuery("""
                 SELECT
                       a.id
@@ -144,37 +149,36 @@ public class PatientRepositoryCustomImpl implements PatientRepositoryCustom {
                 LEFT JOIN a.medicalProcedure mp
                 LEFT JOIN mp.specialty s
                 LEFT JOIN a.patient p
-                WHERE p.id = :id AND p.basicHealthUnit.id = :ubsId
+                WHERE p.id = :id AND (:ubsId IS NULL OR p.basicHealthUnit.id = :ubsId)
                 ORDER BY a.requestDate DESC
                 """, Long.class);
 
         appointmentsHistoryIdQueryPaginated.setParameter("id", patient.getId());
-        appointmentsHistoryIdQueryPaginated.setParameter("ubsId", patient.getBasicHealthUnit().getId());
+        appointmentsHistoryIdQueryPaginated.setParameter("ubsId", ubsId);
 
         appointmentsHistoryIdQueryPaginated.setFirstResult(page.getPageNumber() * page.getPageSize());
         appointmentsHistoryIdQueryPaginated.setMaxResults(page.getPageSize());
 
+        TypedQuery<Long> count = em.createQuery("""
+            SELECT
+                  COUNT(a.id)
+            FROM
+                  Appointment a
+            LEFT JOIN a.contemplation c
+            LEFT JOIN a.medicalProcedure mp
+            LEFT JOIN mp.specialty s
+            LEFT JOIN a.patient p
+            WHERE p.id = :id AND (:ubsId IS NULL OR p.basicHealthUnit.id = :ubsId)
+            """, Long.class);
+
+        count.setParameter("id", patient.getId());
+        count.setParameter("ubsId", ubsId);
+        long totalCountAppointmentsHistory = count.getSingleResult();
+
         var appointmentsHistoryIdsPaginated = appointmentsHistoryIdQueryPaginated.getResultList();
-        long totalCountAppointmentsHistory = 0;
 
-        if (appointmentsHistoryIdsPaginated.size() < page.getPageSize()) {
-            totalCountAppointmentsHistory = appointmentsHistoryIdsPaginated.size();
-        } else {
-            TypedQuery<Long> count = em.createQuery("""
-                SELECT
-                      COUNT(a.id)
-                FROM
-                      Appointment a
-                LEFT JOIN a.contemplation c
-                LEFT JOIN a.medicalProcedure mp
-                LEFT JOIN mp.specialty s
-                LEFT JOIN a.patient p
-                WHERE p.id = :id AND p.basicHealthUnit.id = :ubsId
-                """, Long.class);
-
-            count.setParameter("id", patient.getId());
-            count.setParameter("ubsId", patient.getBasicHealthUnit().getId());
-            totalCountAppointmentsHistory = (long) count.getSingleResult();
+        if (appointmentsHistoryIdsPaginated.isEmpty()) {
+            return new PageImpl<>(List.of(), page, totalCountAppointmentsHistory);
         }
 
         TypedQuery<PatientAppointmentsHistoryDTO> appointmentsHistoryQuery = em.createQuery("""

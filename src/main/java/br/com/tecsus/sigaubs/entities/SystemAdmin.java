@@ -6,6 +6,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
 
 import java.io.Serializable;
 import java.time.LocalDateTime;
@@ -22,6 +23,8 @@ public class SystemAdmin implements Serializable {
     @Column(unique = true, updatable = false)
     private String username;
     private String password;
+    @Transient
+    private String confirmPassword;
     private String name;
     private String email;
     private Boolean active;
@@ -63,6 +66,14 @@ public class SystemAdmin implements Serializable {
 
     public void setPassword(String password) {
         this.password = password;
+    }
+
+    public String getConfirmPassword() {
+        return confirmPassword;
+    }
+
+    public void setConfirmPassword(String confirmPassword) {
+        this.confirmPassword = confirmPassword;
     }
 
     public String getName() {

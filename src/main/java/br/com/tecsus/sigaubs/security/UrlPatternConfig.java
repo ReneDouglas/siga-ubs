@@ -11,6 +11,7 @@ public final class UrlPatternConfig {
             "/logout",
             "/error",
             "/expired",
+            "/maintenance",
             "/webjars/**",
             "/favicon.ico",
             /*"/actuator/**"*/

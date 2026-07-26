@@ -2,6 +2,7 @@
 @import br.com.tecsus.sigaubs.security.StaticResourceHelper
 @param SecurityHelper secHelper
 @param StaticResourceHelper res
+@param Boolean adminArea = false
 <header class="top-0 left-0 justify-center items-center h-16 w-full bg-slate-200 flex sticky sm:px-4 md:relative sm:justify-between">
 
     <div class="flex justify-center items-center">
@@ -13,7 +14,7 @@
     <div class="hidden sm:flex items-center space-x-4">
         <div class="font-bold text-slate-700 hover:text-blue-500 transition duration-500">
             ${secHelper.username()}
-            <p class="text-sm font-light text-slate-900">Manager</p>
+            <p class="text-sm font-light text-slate-900">${adminArea != null && adminArea ? "Administrador Global" : "Manager"}</p>
         </div>
         <div class="w-10 h-10 rounded-full bg-slate-100 ring-2 ring-slate-200 hover:ring-2 hover:ring-blue-500 transition duration-500">
             <%-- Foto-User --%>

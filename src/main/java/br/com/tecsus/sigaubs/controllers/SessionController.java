@@ -8,6 +8,7 @@ import br.com.tecsus.sigaubs.services.SystemUserService;
 import br.com.tecsus.sigaubs.services.exceptions.InvalidConfirmPasswordException;
 import br.com.tecsus.sigaubs.utils.DefaultValues;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,11 +20,12 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+
+import java.time.LocalDateTime;
 
 @Controller
 public class SessionController {
@@ -79,6 +81,18 @@ public class SessionController {
         return "expired";
     }
 
+    @GetMapping("/maintenance")
+    public String getMaintenancePage(HttpServletRequest request,
+            HttpServletResponse response,
+            Model model) {
+        response.setStatus(HttpServletResponse.SC_SERVICE_UNAVAILABLE);
+        Object message = request.getAttribute("maintenanceMessage");
+        Object endDate = request.getAttribute("maintenanceEndDate");
+        model.addAttribute("maintenanceMessage", message instanceof String ? message : null);
+        model.addAttribute("maintenanceEndDate", endDate instanceof LocalDateTime ? endDate : null);
+        return "sessionManagement/maintenance";
+    }
+
     @PreAuthorize("hasAnyRole('ADMIN', 'SMS')")
     @GetMapping("/systemUser-management")
     public String getSystemUserInsertPage(Model model,
@@ -94,7 +108,6 @@ public class SessionController {
         model.addAttribute("basicHealthUnits", basicHealthUnitService
                 .findAllUBS());
 
-        systemUser.setCreationUser(SecurityContextHolder.getContext().getAuthentication().getName());
         systemUser
                 .setName(systemUser.getName() == null || systemUser.getName().isEmpty() ? null : systemUser.getName());
         systemUser.setUsername(systemUser.getUsername() == null || systemUser.getUsername().isEmpty() ? null
@@ -153,7 +166,6 @@ public class SessionController {
                 .findAllUBS());
 
         SystemUser su = new SystemUser();
-        su.setCreationUser(loggedUser.getUsername());
 
         Page<SystemUser> systemUsersPage = systemUserService
                 .findAllUsersByCreationUserPaginated(su,

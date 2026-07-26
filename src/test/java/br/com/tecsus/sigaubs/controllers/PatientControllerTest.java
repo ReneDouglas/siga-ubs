@@ -17,6 +17,7 @@ import org.springframework.data.domain.PageRequest;
 
 import java.util.List;
 
+import static br.com.tecsus.sigaubs.controllers.ControllerTestSupport.admin;
 import static br.com.tecsus.sigaubs.controllers.ControllerTestSupport.model;
 import static br.com.tecsus.sigaubs.controllers.ControllerTestSupport.sms;
 import static br.com.tecsus.sigaubs.controllers.ControllerTestSupport.ubsUser;
@@ -57,6 +58,10 @@ class PatientControllerTest {
         model = model();
         controller.getPatientInsertPage(model, null, sms());
         assertThat(model.get("basicHealthUnits")).isEqualTo(List.of(ubs));
+
+        model = model();
+        controller.getPatientInsertPage(model, null, admin());
+        assertThat(model.get("basicHealthUnits")).isEqualTo(List.of(ubs));
     }
 
     @Test
@@ -94,9 +99,11 @@ class PatientControllerTest {
         var loggedUser = ubsUser(1L);
         var model = model();
 
-        assertThat(controller.patientToEdit(patient, model))
+        when(basicHealthUnitService.findSystemUserUBS(1L)).thenReturn(ubs);
+        assertThat(controller.patientToEdit(patient, loggedUser, model))
                 .isEqualTo("patientManagement/patientFragments/patient_form");
         assertThat(model.get("patient")).isSameAs(patient);
+        assertThat(model.get("systemUserUBS")).isEqualTo(ubs);
 
         when(patientService.updatePatient(patient, loggedUser)).thenReturn(patient);
         model = model();
@@ -164,7 +171,7 @@ class PatientControllerTest {
         assertThat(model.get("patients")).isEqualTo(List.of());
 
         Patient patient = TestDataFactory.patient(10L, "Maria", ubs);
-        when(patientService.searchNativePatients("Maria", 1L)).thenReturn(List.of(patient));
+        when(patientService.searchNativePatients("Maria", loggedUser)).thenReturn(List.of(patient));
         model = model();
         assertThat(controller.searchPatient("Maria", true, loggedUser, model))
                 .isEqualTo("patientManagement/patientFragments/patient_search_autocomplete");
@@ -174,7 +181,8 @@ class PatientControllerTest {
     @Test
     void deveLimparEditarEAbrirPacienteSelecionado() {
         Patient patient = TestDataFactory.patient(10L, "Maria", ubs);
-        when(patientService.findPatientToEdit(10L)).thenReturn(patient);
+        var loggedUser = ubsUser(1L);
+        when(patientService.findPatientToEdit(10L, loggedUser)).thenReturn(patient);
 
         assertThat(controller.cancelPatientEdit()).isEqualTo("redirect:/patient-management");
         assertThat(controller.clearPatientsPage()).isEqualTo("redirect:/patient-list");
@@ -182,7 +190,7 @@ class PatientControllerTest {
 
         when(basicHealthUnitService.findSystemUserUBS(1L)).thenReturn(ubs);
         var model = model();
-        controller.getPatientInsertPage(model, 10L, ubsUser(1L));
+        controller.getPatientInsertPage(model, 10L, loggedUser);
         assertThat(model.get("patient")).isSameAs(patient);
     }
 }

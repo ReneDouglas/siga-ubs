@@ -4,6 +4,7 @@
 @param SecurityHelper secHelper
 @param StaticResourceHelper res
 @param CsrfHelper csrf
+@param Boolean adminArea = false
 <aside x-data="{ open: true }"
        x-bind:class="open ? 'w-64' : 'w-16'"
        @mouseenter="open = true"
@@ -27,6 +28,16 @@
 
         <%-- Buttons-Section --%>
         <div class="flex flex-col flex-1 space-y-2.5 overflow-auto">
+            @if(adminArea != null && adminArea)
+            <a href="/admin/tenant-management" class="text-sm bg-slate-950 inline-flex flex-nowrap items-center p-2.5 gap-x-2 tracking-wide rounded-lg text-white hover:bg-white hover:text-slate-900 overflow-hidden flex-shrink-0 min-h-10">
+                <span class="material-symbols-outlined inline-block align-middle">domain</span>
+                <span :class="open ? 'block' : 'hidden'" class="text-nowrap">Tenants</span>
+            </a>
+            <a href="/admin/admin-user-management" class="text-sm bg-slate-950 inline-flex flex-nowrap items-center p-2.5 gap-x-2 tracking-wide rounded-lg text-white hover:bg-white hover:text-slate-900 overflow-hidden flex-shrink-0 min-h-10">
+                <span class="material-symbols-outlined inline-block align-middle">admin_panel_settings</span>
+                <span :class="open ? 'block' : 'hidden'" class="text-nowrap">Admins</span>
+            </a>
+            @else
             <%-- Dashboard Item --%>
             <a href="/" class="text-sm bg-slate-950 inline-flex flex-nowrap items-center p-2.5 gap-x-2 tracking-wide rounded-lg text-white hover:bg-white hover:text-slate-900 overflow-hidden flex-shrink-0 min-h-10">
                 <span class="material-symbols-outlined inline-block align-middle">dashboard</span>
@@ -97,11 +108,12 @@
             </a>
             @endif
 
+            @endif
         </div>
         <%-- Buttons-Section End --%>
     </div>
     <div class="flex flex-col flex-1 mt-2.5 bg-white bg-opacity-5 rounded-lg">
-        <form action="/logout" method="post" class="m-0">
+        <form action="${adminArea != null && adminArea ? "/admin/logout" : "/logout"}" method="post" class="m-0">
             <input type="hidden" name="${csrf.parameterName()}" value="${csrf.token()}"/>
             <button type="submit" class="w-full text-sm inline-flex items-center flex-nowrap p-2.5 gap-x-2 tracking-wide rounded-lg text-white hover:bg-white hover:text-slate-900 overflow-hidden flex-shrink-0 min-h-10 text-left">
                 <span class="material-symbols-outlined inline-block align-middle hover:text-red-500">logout</span>

@@ -1,7 +1,9 @@
 package br.com.tecsus.sigaubs.tenancy;
 
 import br.com.tecsus.sigaubs.entities.Tenant;
+import br.com.tecsus.sigaubs.enums.TenantStatus;
 import br.com.tecsus.sigaubs.repositories.TenantRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -14,15 +16,21 @@ import java.util.Optional;
 @Service
 public class TenantResolverService {
 
-    private static final String ACTIVE = "ACTIVE";
-
     private final TenantRepository tenantRepository;
     private final String baseDomain;
+    private final String adminSubdomain;
 
+    @Autowired
     public TenantResolverService(TenantRepository tenantRepository,
-            @Value("${sigaubs.tenancy.base-domain:sigaubs.com.br}") String baseDomain) {
+            @Value("${sigaubs.tenancy.base-domain:sigaubs.com.br}") String baseDomain,
+            @Value("${sigaubs.tenancy.admin-subdomain:admin}") String adminSubdomain) {
         this.tenantRepository = tenantRepository;
         this.baseDomain = normalizeHost(baseDomain);
+        this.adminSubdomain = normalizeSlug(adminSubdomain);
+    }
+
+    public TenantResolverService(TenantRepository tenantRepository, String baseDomain) {
+        this(tenantRepository, baseDomain, "admin");
     }
 
     @Transactional(readOnly = true)
@@ -31,25 +39,51 @@ public class TenantResolverService {
         if (normalizedSlug == null) {
             return Optional.empty();
         }
-        return tenantRepository.findBySlugAndStatus(normalizedSlug, ACTIVE);
+        return tenantRepository.findBySlugAndStatus(normalizedSlug, TenantStatus.ACTIVE.name());
     }
 
     @Cacheable(
             value = "tenants",
-            key = "#slug == null ? '' : #slug.trim().toLowerCase(T(java.util.Locale).ROOT)",
+            key = "'context:' + (#slug == null ? '' : #slug.trim().toLowerCase(T(java.util.Locale).ROOT))",
+            unless = "#result == null")
+    @Transactional(readOnly = true)
+    public Optional<TenantContext> findContextBySlug(String slug) {
+        String normalizedSlug = normalizeSlug(slug);
+        if (normalizedSlug == null) {
+            return Optional.empty();
+        }
+        return tenantRepository.findBySlug(normalizedSlug)
+                .map(tenant -> new TenantContext(
+                        tenant.getId(),
+                        tenant.getSlug(),
+                        tenant.getStatus(),
+                        tenant.getMaintenanceMessage()));
+    }
+
+    @Cacheable(
+            value = "tenants",
+            key = "'active:' + (#slug == null ? '' : #slug.trim().toLowerCase(T(java.util.Locale).ROOT))",
             unless = "#result == null")
     @Transactional(readOnly = true)
     public Optional<TenantContext> findActiveContextBySlug(String slug) {
         return findActiveBySlug(slug)
-                .map(tenant -> new TenantContext(tenant.getId(), tenant.getSlug()));
+                .map(tenant -> new TenantContext(
+                        tenant.getId(),
+                        tenant.getSlug(),
+                        tenant.getStatus(),
+                        tenant.getMaintenanceMessage()));
     }
 
     @Transactional(readOnly = true)
     public List<Tenant> findActiveTenants() {
-        return tenantRepository.findAllByStatusOrderBySlugAsc(ACTIVE);
+        return tenantRepository.findAllByStatusOrderBySlugAsc(TenantStatus.ACTIVE);
     }
 
     public Optional<String> resolveSlug(String headerSlug, String hostHeader) {
+        if (isAdminHost(hostHeader)) {
+            return Optional.empty();
+        }
+
         String explicitSlug = normalizeSlug(headerSlug);
         String hostSlug = resolveSlugFromHost(hostHeader).orElse(null);
 
@@ -67,9 +101,18 @@ public class TenantResolverService {
         return "localhost".equals(host) || baseDomain.equals(host);
     }
 
+    public boolean isAdminHost(String hostHeader) {
+        String host = normalizeHost(hostHeader);
+        if (host == null || adminSubdomain == null) {
+            return false;
+        }
+        return host.equals(adminSubdomain + ".localhost")
+                || host.equals(adminSubdomain + "." + baseDomain);
+    }
+
     private Optional<String> resolveSlugFromHost(String hostHeader) {
         String host = normalizeHost(hostHeader);
-        if (host == null || isRootHost(host)) {
+        if (host == null || isRootHost(host) || isAdminHost(host)) {
             return Optional.empty();
         }
         if (host.endsWith(".localhost")) {

@@ -1,7 +1,10 @@
 package br.com.tecsus.sigaubs.entities;
 
+import br.com.tecsus.sigaubs.enums.TenantStatus;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -21,7 +24,27 @@ public class Tenant {
     private String slug;
     private String name;
     private String domain;
-    private String status;
+
+    @Enumerated(EnumType.STRING)
+    private TenantStatus status;
+
+    @Column(name = "disabled_date")
+    private LocalDateTime disabledDate;
+
+    @Column(name = "disabled_user")
+    private String disabledUser;
+
+    @Column(name = "disabled_reason")
+    private String disabledReason;
+
+    @Column(name = "maintenance_date")
+    private LocalDateTime maintenanceDate;
+
+    @Column(name = "maintenance_user")
+    private String maintenanceUser;
+
+    @Column(name = "maintenance_message")
+    private String maintenanceMessage;
 
     @Column(name = "creation_date", updatable = false)
     private LocalDateTime creationDate;
@@ -70,12 +93,64 @@ public class Tenant {
         this.domain = domain;
     }
 
-    public String getStatus() {
+    public TenantStatus getStatus() {
         return status;
     }
 
-    public void setStatus(String status) {
+    public void setStatus(TenantStatus status) {
         this.status = status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status == null ? null : TenantStatus.valueOf(status);
+    }
+
+    public LocalDateTime getDisabledDate() {
+        return disabledDate;
+    }
+
+    public void setDisabledDate(LocalDateTime disabledDate) {
+        this.disabledDate = disabledDate;
+    }
+
+    public String getDisabledUser() {
+        return disabledUser;
+    }
+
+    public void setDisabledUser(String disabledUser) {
+        this.disabledUser = disabledUser;
+    }
+
+    public String getDisabledReason() {
+        return disabledReason;
+    }
+
+    public void setDisabledReason(String disabledReason) {
+        this.disabledReason = disabledReason;
+    }
+
+    public LocalDateTime getMaintenanceDate() {
+        return maintenanceDate;
+    }
+
+    public void setMaintenanceDate(LocalDateTime maintenanceDate) {
+        this.maintenanceDate = maintenanceDate;
+    }
+
+    public String getMaintenanceUser() {
+        return maintenanceUser;
+    }
+
+    public void setMaintenanceUser(String maintenanceUser) {
+        this.maintenanceUser = maintenanceUser;
+    }
+
+    public String getMaintenanceMessage() {
+        return maintenanceMessage;
+    }
+
+    public void setMaintenanceMessage(String maintenanceMessage) {
+        this.maintenanceMessage = maintenanceMessage;
     }
 
     public LocalDateTime getCreationDate() {
@@ -111,7 +186,15 @@ public class Tenant {
     }
 
     public boolean isActive() {
-        return "ACTIVE".equalsIgnoreCase(status);
+        return TenantStatus.ACTIVE.equals(status);
+    }
+
+    public boolean isMaintenance() {
+        return TenantStatus.MAINTENANCE.equals(status);
+    }
+
+    public boolean isDisabled() {
+        return TenantStatus.DISABLED.equals(status);
     }
 
     @Override

@@ -14,6 +14,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaContext;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Collections;
 import java.util.List;
 
 //@Repository
@@ -54,45 +55,46 @@ public class SystemUserRepositoryImpl implements SystemUserRepositoryCustom {
     @Transactional(readOnly = true)
     public Page<SystemUser> findSystemUsersPaginated(SystemUser systemUser, Pageable page) {
 
-        StringBuilder jpql = new StringBuilder();
+        StringBuilder filters = new StringBuilder();
+        boolean filteringByRole = validationUtils.attrIsNotNull(systemUser.getSelectedRoleId());
 
-        jpql.append("SELECT su.id FROM SystemUser su ");
-        jpql.append("LEFT JOIN su.roles r ");
-        jpql.append("WHERE su.creationUser = :creationUser ");
+        filters.append("FROM SystemUser su ");
+        if (filteringByRole) {
+            filters.append("JOIN su.roles r ");
+        }
+        filters.append("WHERE 1 = 1 ");
 
         if (validationUtils.attrIsNotNull(systemUser.getUsername())) {
-            jpql.append("AND su.username = :username ");
+            filters.append("AND su.username = :username ");
         }
         if (validationUtils.attrIsNotNull(systemUser.getName())) {
-            jpql.append("AND su.name = :name ");
+            filters.append("AND su.name = :name ");
         }
         if (validationUtils.attrIsNotNull(systemUser.getBasicHealthUnit())) {
-            jpql.append("AND su.basicHealthUnit.id = :ubsId ");
+            filters.append("AND su.basicHealthUnit.id = :ubsId ");
         }
-        if (validationUtils.attrIsNotNull(systemUser.getSelectedRoleId())) {
-            jpql.append("AND r.id = :roleId ");
+        if (filteringByRole) {
+            filters.append("AND r.id = :roleId ");
         }
         if (validationUtils.attrIsNotNull(systemUser.getActive())) {
-            jpql.append("AND su.active = :active ");
+            filters.append("AND su.active = :active ");
         }
 
-        jpql.append("ORDER BY su.creationDate DESC ");
+        String idsJpql = "SELECT su.id " + filters + "ORDER BY su.creationDate DESC ";
 
-        TypedQuery<Long> systemUsersIdQuery = em.createQuery(jpql.toString(), Long.class);
+        TypedQuery<Long> systemUsersIdQuery = em.createQuery(idsJpql, Long.class);
         attachParameters(systemUsersIdQuery, systemUser);
 
         systemUsersIdQuery.setFirstResult(page.getPageNumber() * page.getPageSize());
         systemUsersIdQuery.setMaxResults(page.getPageSize());
         var systemUsersIds = systemUsersIdQuery.getResultList();
 
-        long totalCountSystemUsers = 0;
+        Query count = em.createQuery("SELECT COUNT(su.id) " + filters);
+        attachParameters(count, systemUser);
+        long totalCountSystemUsers = (long) count.getSingleResult();
 
-        if (systemUsersIds.size() < page.getPageSize()) {
-            totalCountSystemUsers = systemUsersIds.size();
-        } else {
-            Query count = em.createQuery(jpql.toString().replace("su.id", "count(su.id)"));
-            attachParameters(count, systemUser);
-            totalCountSystemUsers = (long) count.getSingleResult();
+        if (systemUsersIds.isEmpty()) {
+            return new PageImpl<>(Collections.emptyList(), page, totalCountSystemUsers);
         }
 
         TypedQuery<SystemUser> systemUsersQuery = em.createQuery("""
@@ -110,9 +112,6 @@ public class SystemUserRepositoryImpl implements SystemUserRepositoryCustom {
     }
 
     private void attachParameters(Query query, SystemUser systemUser) {
-
-        query.setParameter("creationUser", systemUser.getCreationUser());
-
         if (validationUtils.attrIsNotNull(systemUser.getUsername())) {
             query.setParameter("username", systemUser.getUsername());
         }

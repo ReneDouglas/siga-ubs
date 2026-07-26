@@ -45,7 +45,7 @@ public class PatientController {
             @RequestParam(value = "id", required = false) Long patientId,
             @AuthenticationPrincipal SystemUserDetails loggedUser) {
 
-        Patient patient = patientId != null ? patientService.findPatientToEdit(patientId) : new Patient();
+        Patient patient = patientId != null ? patientService.findPatientToEdit(patientId, loggedUser) : new Patient();
         model.addAttribute("patient", patient);
         model.addAttribute("socialSituations", SocialSituationRating.getDescriptionSortedByRating());
 
@@ -80,9 +80,11 @@ public class PatientController {
 
     @PostMapping("/patient-management/edit")
     public String patientToEdit(@ModelAttribute Patient patient,
+                                @AuthenticationPrincipal SystemUserDetails loggedUser,
                                 Model model) {
 
         model.addAttribute("patient", patient);
+        addPatientFormOptions(model, loggedUser);
         return "patientManagement/patientFragments/patient_form";
     }
 
@@ -99,6 +101,7 @@ public class PatientController {
         } catch (Exception e) {
             model.addAttribute("message", "Erro ao atualizar paciente.");
             model.addAttribute("error", true);
+            addPatientFormOptions(model, loggedUser);
             log.error("Erro ao atualizar paciente: {}", e.getMessage());
             return "patientManagement/patientFragments/patient_form";
         }
@@ -166,7 +169,7 @@ public class PatientController {
             return "patientManagement/patientFragments/patient_search_dropdown";
         }
 
-        model.addAttribute("patients", patientService.searchNativePatients(patient, loggedUser.getBasicHealthUnitId()));
+        model.addAttribute("patients", patientService.searchNativePatients(patient, loggedUser));
 
         if (autocomplete) {
             return "patientManagement/patientFragments/patient_search_autocomplete";
@@ -191,11 +194,12 @@ public class PatientController {
     }
 
     private void addPatientFormOptions(Model model, SystemUserDetails loggedUser) {
-        boolean isAdmin = loggedUser.getAuthorities().stream()
-                .anyMatch(a -> a.getAuthority().equals(Roles.ROLE_SMS.toString()));
-        if (isAdmin) {
+        boolean canSelectBasicHealthUnit = loggedUser.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals(Roles.ROLE_ADMIN.toString())
+                        || a.getAuthority().equals(Roles.ROLE_SMS.toString()));
+        if (canSelectBasicHealthUnit) {
             model.addAttribute("basicHealthUnits", basicHealthUnitService.findAllUBS());
-        } else {
+        } else if (loggedUser.getBasicHealthUnitId() != null) {
             model.addAttribute("systemUserUBS", basicHealthUnitService.findSystemUserUBS(loggedUser.getBasicHealthUnitId()));
         }
     }

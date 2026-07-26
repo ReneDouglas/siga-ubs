@@ -5,6 +5,7 @@
 
 CREATE DATABASE IF NOT EXISTS sigaubs CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE sigaubs;
+SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 CREATE TABLE tenants (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
@@ -12,12 +13,28 @@ CREATE TABLE tenants (
     name VARCHAR(255) NOT NULL,
     domain VARCHAR(255),
     status VARCHAR(30) NOT NULL DEFAULT 'ACTIVE',
+    disabled_date DATETIME(6),
+    disabled_user VARCHAR(255),
+    disabled_reason VARCHAR(255),
+    maintenance_date DATETIME(6),
+    maintenance_user VARCHAR(255),
+    maintenance_message VARCHAR(500),
     creation_date DATETIME(6) NOT NULL,
     creation_user VARCHAR(255) NOT NULL,
     update_date DATETIME(6),
     update_user VARCHAR(255),
     CONSTRAINT uk_tenants_slug UNIQUE (slug),
     CONSTRAINT uk_tenants_domain UNIQUE (domain)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE system_maintenance (
+    id BIGINT PRIMARY KEY,
+    enabled TINYINT(1) NOT NULL DEFAULT 0,
+    message VARCHAR(500),
+    start_date DATETIME(6),
+    end_date DATETIME(6),
+    update_date DATETIME(6),
+    update_user VARCHAR(255)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE system_roles (

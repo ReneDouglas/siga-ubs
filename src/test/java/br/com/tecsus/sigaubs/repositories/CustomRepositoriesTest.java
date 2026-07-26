@@ -106,8 +106,9 @@ class CustomRepositoriesTest {
                 AppointmentStatus.AGUARDANDO_CONTEMPLACAO, ProcedureType.CONSULTA, "Consulta",
                 "Cardiologia", "Sem observações.", 3L, 20L, null, 10L);
         TypedQuery<Long> historyIds = typedQuery(List.of(20L));
+        TypedQuery<Long> historyCount = typedQuery(List.of(), 1L);
         TypedQuery<PatientAppointmentsHistoryDTO> historyQuery = typedQuery(List.of(history));
-        when(em.createQuery(anyString(), eq(Long.class))).thenReturn(historyIds);
+        when(em.createQuery(anyString(), eq(Long.class))).thenReturn(historyIds, historyCount);
         when(em.createQuery(anyString(), eq(PatientAppointmentsHistoryDTO.class))).thenReturn(historyQuery);
 
         var historyPage = repository.findPatientAppointmentsHistoryPaginated(patient, PageRequest.of(0, 10));
