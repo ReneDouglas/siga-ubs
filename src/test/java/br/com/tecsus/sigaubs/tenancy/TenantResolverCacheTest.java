@@ -21,7 +21,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 @SpringBootTest(properties = {
         "spring.jpa.properties.hibernate.generate_statistics=true",
         "spring.cache.type=caffeine",
-        "spring.cache.caffeine.spec=maximumSize=10,expireAfterWrite=5m"
+        "spring.cache.caffeine.spec=maximumSize=10,expireAfterWrite=5m,recordStats"
 })
 @ActiveProfiles("test")
 @Transactional
