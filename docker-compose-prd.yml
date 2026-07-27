@@ -83,3 +83,5 @@ services:
 
 volumes:
   sigaubs_mysql_prd_data:
+    name: sigaubs_mysql_prd_data
+    external: true
