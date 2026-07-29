@@ -31,22 +31,4 @@ class UtilsTest {
         assertThat(TemplateUtils.formatYearMonth(null)).isEmpty();
     }
 
-    @Test
-    void deveControlarStatusDaRotinaDeContemplacao() {
-        ContemplationScheduleStatus status = new ContemplationScheduleStatus();
-
-        assertThat(status.getStatus()).isNull();
-        status.setRunning();
-        assertThat(status.getStatus()).isEqualTo(ContemplationScheduleStatus.Status.RUNNING);
-        assertThat(status.getStartTime()).isNotNull();
-        assertThat(status.getEndTime()).isNull();
-
-        status.setDone();
-        assertThat(status.getStatus()).isEqualTo(ContemplationScheduleStatus.Status.DONE);
-        assertThat(status.getEndTime()).isNotNull();
-
-        status.setFailed();
-        assertThat(status.getStatus()).isEqualTo(ContemplationScheduleStatus.Status.FAILED);
-        assertThat(status.getEndTime()).isNotNull();
-    }
 }

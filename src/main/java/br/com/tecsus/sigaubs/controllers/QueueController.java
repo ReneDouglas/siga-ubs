@@ -4,6 +4,7 @@ import br.com.tecsus.sigaubs.dtos.PatientOpenAppointmentDTO;
 import br.com.tecsus.sigaubs.entities.*;
 import br.com.tecsus.sigaubs.enums.ProcedureType;
 import br.com.tecsus.sigaubs.security.SystemUserDetails;
+import br.com.tecsus.sigaubs.security.ReauthenticationService;
 import br.com.tecsus.sigaubs.services.*;
 import br.com.tecsus.sigaubs.utils.DefaultValues;
 import org.slf4j.Logger;
@@ -25,6 +26,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.util.List;
 import java.util.Optional;
+import jakarta.servlet.http.HttpSession;
 
 @Controller
 public class QueueController {
@@ -36,16 +38,26 @@ public class QueueController {
     private final BasicHealthUnitService basicHealthUnitService;
     private final SpecialtyService specialtyService;
     private final ContemplationService contemplationService;
+    private final ReauthenticationService reauthenticationService;
 
     @Autowired
     public QueueController(BasicHealthUnitService basicHealthUnitService, SpecialtyService specialtyService,
             AppointmentService appointmentService, MedicalSlotService medicalSlotService,
-            ContemplationService contemplationService) {
+            ContemplationService contemplationService,
+            ReauthenticationService reauthenticationService) {
         this.basicHealthUnitService = basicHealthUnitService;
         this.specialtyService = specialtyService;
         this.appointmentService = appointmentService;
         this.medicalSlotService = medicalSlotService;
         this.contemplationService = contemplationService;
+        this.reauthenticationService = reauthenticationService;
+    }
+
+    QueueController(BasicHealthUnitService basicHealthUnitService, SpecialtyService specialtyService,
+            AppointmentService appointmentService, MedicalSlotService medicalSlotService,
+            ContemplationService contemplationService) {
+        this(basicHealthUnitService, specialtyService, appointmentService, medicalSlotService,
+                contemplationService, null);
     }
 
     @PreAuthorize("hasAnyRole('ADMIN', 'SMS')")
@@ -203,7 +215,7 @@ public class QueueController {
                             ProcedureType.CONSULTA,
                             ubs,
                             specialty,
-                            PageRequest.of(currentPage, consultasPageSize)));
+                            PageRequest.of(Math.max(0, currentPage), Math.clamp(consultasPageSize, 1, 100))));
             return "queueManagement/queueFragments/queue_tabs_consultas";
         } else if (procedureType.equals(ProcedureType.EXAME.toString())) {
             model.addAttribute("examesPage", appointmentService
@@ -211,7 +223,7 @@ public class QueueController {
                             ProcedureType.EXAME,
                             ubs,
                             specialty,
-                            PageRequest.of(currentPage, examesPageSize)));
+                            PageRequest.of(Math.max(0, currentPage), Math.clamp(examesPageSize, 1, 100))));
             return "queueManagement/queueFragments/queue_tabs_exames";
         } else if (procedureType.equals(ProcedureType.CIRURGIA.toString())) {
             model.addAttribute("cirurgiasPage", appointmentService
@@ -219,7 +231,7 @@ public class QueueController {
                             ProcedureType.CIRURGIA,
                             ubs,
                             specialty,
-                            PageRequest.of(currentPage, cirurgiasPageSize)));
+                            PageRequest.of(Math.max(0, currentPage), Math.clamp(cirurgiasPageSize, 1, 100))));
             return "queueManagement/queueFragments/queue_tabs_cirurgias";
 
         }
@@ -253,7 +265,7 @@ public class QueueController {
                         ubs,
                         specialty,
                         medicalProcedure,
-                        PageRequest.of(page, size)));
+                        PageRequest.of(Math.max(0, page), Math.clamp(size, 1, 100))));
 
         return "queueManagement/queueFragments/queue_datatable";
     }
@@ -342,9 +354,12 @@ public class QueueController {
             @RequestParam Long appointmentId,
             @RequestParam Long medicalSlotId,
             @AuthenticationPrincipal SystemUserDetails loggedUser,
+            HttpSession session,
             RedirectAttributes redirectAttributes) {
 
         log.info("Iniciando contemplação de paciente.");
+        reauthenticationService.requireAndConsume(
+                session, loggedUser, ReauthenticationService.MANUAL_CONTEMPLATION, appointmentId);
         var resultado = contemplationService.contemplateAppointmentByAdmin(appointmentId, reason, medicalSlotId, loggedUser);
         if (resultado.sucesso()) {
             redirectAttributes.addFlashAttribute("error", false);
@@ -372,9 +387,12 @@ public class QueueController {
             @RequestParam Long appointmentId,
             @RequestParam Long medicalSlotId,
             @AuthenticationPrincipal SystemUserDetails loggedUser,
+            HttpSession session,
             RedirectAttributes redirectAttributes) {
 
         log.info("Iniciando contemplação de paciente.");
+        reauthenticationService.requireAndConsume(
+                session, loggedUser, ReauthenticationService.MANUAL_CONTEMPLATION, appointmentId);
         var resultado = contemplationService.contemplateAppointmentByAdmin(appointmentId, reason,
                 medicalSlotId, loggedUser);
         if (resultado.sucesso()) {

@@ -2,6 +2,8 @@ package br.com.tecsus.sigaubs.utils;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.Instant;
+import java.time.ZoneId;
 import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
 import java.util.Locale;
@@ -18,6 +20,12 @@ public class TemplateUtils {
 
     public static String formatDateTime(LocalDateTime dt) {
         return dt != null ? DATETIME.format(dt) : "";
+    }
+
+    public static String formatInstant(Instant instant) {
+        return instant != null
+                ? DATETIME.format(LocalDateTime.ofInstant(instant, ZoneId.systemDefault()))
+                : "";
     }
 
     public static String formatYearMonth(YearMonth ym) {

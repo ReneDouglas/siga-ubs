@@ -61,37 +61,4 @@
     </section>
 </main>
 </body>
-<script>
-    $(document).ready(function () {
-        var procedures = [];
-        $('#addProcedureBtn').click(function () {
-            var procedureName = $('#procedure').val();
-            var procedureType = $('#procedureType option:selected').text();
-
-            if (procedureName && procedureType !== "Selecione") {
-                $('#procedureTable tbody').append('<tr><td class="border-b text-sm py-2 pl-4 text-nowrap">' + procedureName + '</td><td class="border-b text-sm py-2 pl-4">' + procedureType + '</td><td class="border-b text-sm py-2 pl-4"></td></tr>');
-
-                procedures.push({description: procedureName, procedureType: procedureType});
-
-                $('#procedure').val('').prop('disabled', false);
-                $('#procedureType').prop('selectedIndex', 0);
-            } else {
-                alert("Por favor, preencha ambos os campos antes de adicionar um procedimento.");
-            }
-        });
-
-        $('form').submit(function () {
-            $('#proceduresJson').val(JSON.stringify(procedures));
-        });
-
-        $('#procedureType').change(function () {
-            var selectedValue = $('#procedureType option:selected').val();
-            if (selectedValue === "Consulta") {
-                $('#procedure').val('-').prop('disabled', true);
-            } else {
-                $('#procedure').prop('disabled', false);
-            }
-        });
-    });
-</script>
 </html>

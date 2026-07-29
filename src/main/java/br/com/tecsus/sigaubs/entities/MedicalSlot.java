@@ -12,6 +12,7 @@ import jakarta.persistence.OneToMany;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.Convert;
+import jakarta.persistence.Version;
 import org.hibernate.annotations.DynamicUpdate;
 import org.springframework.format.annotation.DateTimeFormat;
 import java.time.LocalDateTime;
@@ -28,6 +29,9 @@ public class MedicalSlot extends TenantScopedEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @Version
+    private Long version;
 
     @DateTimeFormat(pattern = "yyyy-MM")
     @Convert(converter = YearMonthDateAttributeConverter.class)
@@ -73,6 +77,14 @@ public class MedicalSlot extends TenantScopedEntity {
 
     public void setId(Long id) {
         this.id = id;
+    }
+
+    public Long getVersion() {
+        return version;
+    }
+
+    public void setVersion(Long version) {
+        this.version = version;
     }
 
     public YearMonth getReferenceMonth() {

@@ -42,10 +42,11 @@
                     <td class="border-b text-sm py-2">
                         <div class="inline-flex py-2">
                             <div class="relative group cursor-pointer">
-                                <button type="button" onclick="openModal('${patientHistory.observations() != null ? patientHistory.observations().replace("'", "\\'") : ""}')"
+                                <button type="button" data-action="show-observation"
                                         class="inline-flex p-2 rounded-lg hover:bg-slate-200 cursor-pointer transition transition-300">
                                     <span class="material-symbols-outlined hover:text-blue-500 transition-all duration-300">pending_actions</span>
                                 </button>
+                                <span data-observation-source class="hidden">${patientHistory.observations() != null ? patientHistory.observations() : ""}</span>
                                 <div class="absolute right-full top-1/2 transform -translate-y-1/2 -translate-x-1 hidden group-hover:block bg-slate-800 text-white text-sm rounded px-2 py-1">
                                     Observações
                                 </div>

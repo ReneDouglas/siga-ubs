@@ -6,6 +6,8 @@ import java.util.Collection;
 
 public class SystemUserDetails extends User {
 
+    private final Long userId;
+    private final String loginUsername;
     private String name;
     private String email;
     private Boolean active;
@@ -22,13 +24,40 @@ public class SystemUserDetails extends User {
                              Long basicHealthUnitId,
                              Long tenantId,
                              String tenantSlug) {
-        super(username, password, authorities);
+        this(null, username, password, authorities, name, email, active, basicHealthUnitId, tenantId, tenantSlug);
+    }
+
+    public SystemUserDetails(Long userId,
+                             String username,
+                             String password,
+                             Collection<? extends GrantedAuthority> authorities,
+                             String name,
+                             String email,
+                             Boolean active,
+                             Long basicHealthUnitId,
+                             Long tenantId,
+                             String tenantSlug) {
+        super(buildSessionPrincipalKey(userId, username, authorities, tenantId), password, authorities);
+        this.userId = userId;
+        this.loginUsername = username;
         this.name = name;
         this.email = email;
         this.active = active;
         this.basicHealthUnitId = basicHealthUnitId;
         this.tenantId = tenantId;
         this.tenantSlug = tenantSlug;
+    }
+
+    public Long getUserId() {
+        return userId;
+    }
+
+    public String getLoginUsername() {
+        return loginUsername;
+    }
+
+    public String getSessionPrincipalKey() {
+        return getUsername();
     }
 
     public String getName() {
@@ -77,5 +106,20 @@ public class SystemUserDetails extends User {
 
     public void setTenantSlug(String tenantSlug) {
         this.tenantSlug = tenantSlug;
+    }
+
+    private static String buildSessionPrincipalKey(
+            Long userId,
+            String username,
+            Collection<? extends GrantedAuthority> authorities,
+            Long tenantId) {
+        if (userId == null) {
+            return username;
+        }
+        boolean admin = authorities.stream()
+                .anyMatch(authority -> "ROLE_ADMIN".equals(authority.getAuthority()));
+        return admin
+                ? "admin:" + userId
+                : "tenant:" + tenantId + ":user:" + userId;
     }
 }

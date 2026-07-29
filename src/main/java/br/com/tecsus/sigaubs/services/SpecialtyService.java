@@ -70,7 +70,7 @@ public class SpecialtyService {
         specialty.setTitle(specialtyDTO.getTitle());
         specialty.setDescription(specialtyDTO.getDescription());
         specialty.setActive(true);
-        specialty.setCreationUser(loggedUser.getUsername());
+        specialty.setCreationUser(loggedUser.getLoginUsername());
         specialty.setCreationDate(LocalDateTime.now());
 
         for (ProcedureDTO procedureDTO : specialtyDTO.getProcedures()) {
@@ -78,7 +78,7 @@ public class SpecialtyService {
             medicalProcedure.setId(null);
             medicalProcedure.setDescription(procedureDTO.getDescription());
             medicalProcedure.setProcedureType(ProcedureType.findByDescription(procedureDTO.getProcedureType()).orElse(null));
-            medicalProcedure.setCreationUser(loggedUser.getUsername());
+            medicalProcedure.setCreationUser(loggedUser.getLoginUsername());
             medicalProcedure.setCreationDate(LocalDateTime.now());
             medicalProcedure.setSpecialty(specialty);
             procedures.add(medicalProcedure);
@@ -98,11 +98,15 @@ public class SpecialtyService {
             return validationResult;
         }
 
-        Specialty specialty = new Specialty();
-        specialty.setId(specialtyDTO.getId());
-        specialty.setTitle(specialtyDTO.getTitle());
-        specialty.setDescription(specialtyDTO.getDescription());
-        specialty.setActive(specialtyDTO.getActive());
+        Specialty specialty = specialtyRepository.findById(specialtyDTO.getId()).orElse(null);
+        if (specialty == null) {
+            return ResultadoOperacao.falha("Especialidade não encontrada.");
+        }
+        specialty.setTitle(specialtyDTO.getTitle().trim());
+        specialty.setDescription(specialtyDTO.getDescription() == null
+                ? null
+                : specialtyDTO.getDescription().trim());
+        specialty.setActive(Boolean.TRUE.equals(specialtyDTO.getActive()));
 
         specialty = specialtyRepository.save(specialty);
 
@@ -111,7 +115,7 @@ public class SpecialtyService {
             medicalProcedure.setId(null);
             medicalProcedure.setDescription(procedureDTO.getDescription());
             medicalProcedure.setProcedureType(ProcedureType.findByDescription(procedureDTO.getProcedureType()).orElse(null));
-            medicalProcedure.setCreationUser(loggedUser.getUsername());
+            medicalProcedure.setCreationUser(loggedUser.getLoginUsername());
             medicalProcedure.setCreationDate(LocalDateTime.now());
             medicalProcedure.setSpecialty(specialty);
             medicalProcedureRepository.save(medicalProcedure);
@@ -123,8 +127,15 @@ public class SpecialtyService {
         if (specialtyDTO.getProcedures() == null) {
             return ResultadoOperacao.falha("Procedimentos obrigatórios.");
         }
+        if (specialtyDTO.getProcedures().size() > 100) {
+            return ResultadoOperacao.falha("Limite de procedimentos excedido.");
+        }
         for (ProcedureDTO procedureDTO : specialtyDTO.getProcedures()) {
-            if (ProcedureType.findByDescription(procedureDTO.getProcedureType()).isEmpty()) {
+            if (procedureDTO == null
+                    || procedureDTO.getDescription() == null
+                    || procedureDTO.getDescription().isBlank()
+                    || procedureDTO.getDescription().length() > 255
+                    || ProcedureType.findByDescription(procedureDTO.getProcedureType()).isEmpty()) {
                 return ResultadoOperacao.falha("Erro ao encontrar procedimento.");
             }
         }

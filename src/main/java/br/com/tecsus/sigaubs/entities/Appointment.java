@@ -21,6 +21,9 @@ public class Appointment extends TenantScopedEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Version
+    private Long version;
+
     @Column(name = "request_date", updatable = false)
     private LocalDateTime requestDate;
 
@@ -65,6 +68,14 @@ public class Appointment extends TenantScopedEntity {
 
     public void setId(Long id) {
         this.id = id;
+    }
+
+    public Long getVersion() {
+        return version;
+    }
+
+    public void setVersion(Long version) {
+        this.version = version;
     }
 
     public LocalDateTime getRequestDate() {

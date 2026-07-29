@@ -70,7 +70,7 @@
                     <input type="hidden" name="contemplationId" value="${contemplated != null ? contemplated.getId().toString() : ""}">
                     <button type="button"
                         class="text-sm inline-block rounded-lg bg-green-600 py-2.5 px-6 text-white cursor-pointer hover:bg-green-500 active:bg-green-400 transition duration-300"
-                        onclick="handleConfirmation()">
+                        data-action="confirm-form" data-form-id="confirmForm">
                         Confirmar Presença
                     </button>
                 </form>
@@ -82,7 +82,7 @@
                     <input type="hidden" id="reason" name="reason" value="">
                     <button type="button"
                         class="text-sm inline-block rounded-lg bg-red-600 py-2.5 px-6 text-white cursor-pointer hover:bg-red-500 active:bg-red-400 transition duration-300"
-                        onclick="handleCancel()">
+                        data-action="cancel-contemplation" data-form-id="cancelForm">
                         Cancelar
                     </button>
                 </form>
@@ -104,7 +104,8 @@
                 <input type="hidden" id="reason" name="reason" value="">
                 <button type="button"
                     class="text-sm inline-block rounded-lg py-2.5 px-6 text-white cursor-pointer transition duration-300 ${availableSlots == 0 ? "bg-gray-600 opacity-50" : "bg-green-600 hover:bg-green-500 active:bg-green-400"}"
-                    onclick="handleContemplation()" disabled="${availableSlots == 0}">
+                    data-action="manual-contemplation" data-form-id="contemplationForm"
+                    disabled="${availableSlots == 0}">
                     Contemplar Paciente
                 </button>
             </form>

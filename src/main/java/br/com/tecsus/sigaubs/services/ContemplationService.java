@@ -9,6 +9,7 @@ import br.com.tecsus.sigaubs.enums.Priorities;
 import br.com.tecsus.sigaubs.enums.ProcedureType;
 import br.com.tecsus.sigaubs.repositories.ContemplationRepository;
 import br.com.tecsus.sigaubs.security.SystemUserDetails;
+import br.com.tecsus.sigaubs.security.AuthorizationScopeService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,14 +32,30 @@ public class ContemplationService {
     private final MedicalSlotService medicalSlotService;
     private final AppointmentService appointmentService;
     private final AppointmentStatusHistoryService appointmentStatusHistoryService;
+    private final AuthorizationScopeService authorizationScopeService;
 
     @Autowired
-    public ContemplationService(ContemplationRepository contemplationRepository, MedicalSlotService medicalSlotService, AppointmentService appointmentService, AppointmentStatusHistoryService appointmentStatusHistoryService) {
+    public ContemplationService(ContemplationRepository contemplationRepository,
+            MedicalSlotService medicalSlotService,
+            AppointmentService appointmentService,
+            AppointmentStatusHistoryService appointmentStatusHistoryService,
+            AuthorizationScopeService authorizationScopeService) {
         this.contemplationRepository = contemplationRepository;
         this.medicalSlotService = medicalSlotService;
         this.appointmentStatusHistoryService = appointmentStatusHistoryService;
         this.formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss");
         this.appointmentService = appointmentService;
+        this.authorizationScopeService = authorizationScopeService != null
+                ? authorizationScopeService
+                : new AuthorizationScopeService();
+    }
+
+    ContemplationService(ContemplationRepository contemplationRepository,
+            MedicalSlotService medicalSlotService,
+            AppointmentService appointmentService,
+            AppointmentStatusHistoryService appointmentStatusHistoryService) {
+        this(contemplationRepository, medicalSlotService, appointmentService,
+                appointmentStatusHistoryService, new AuthorizationScopeService());
     }
 
     public Page<Contemplation> findContemplationsByUBSAndSpecialty(ProcedureType type,
@@ -78,9 +95,19 @@ public class ContemplationService {
     public ResultadoOperacao<Void> cancelContemplationByAdmin(Long contemplatedId, String reason,
             SystemUserDetails loggedUser) {
 
-        Contemplation contemplated = contemplationRepository.findFetchedForCancelById(contemplatedId);
+        Contemplation contemplated = contemplationRepository.findFetchedForUpdateById(contemplatedId);
         if (contemplated == null) {
             return ResultadoOperacao.falha("Contemplação não encontrada.");
+        }
+        authorizationScopeService.requireCurrentTenant(contemplated);
+        authorizationScopeService.requireBasicHealthUnit(
+                loggedUser, contemplated.getAppointment().getPatient().getBasicHealthUnit().getId());
+        if (contemplated.getAppointment().getStatus() == AppointmentStatus.CONTEMPLACAO_CANCELADA) {
+            return ResultadoOperacao.falha("A contemplação já foi cancelada.");
+        }
+        String normalizedReason = normalizeReason(reason);
+        if (normalizedReason == null) {
+            return ResultadoOperacao.falha("Motivo obrigatório e limitado a 500 caracteres.");
         }
 
         var slotResult = medicalSlotService.addSlot(contemplated.getMedicalSlot());
@@ -93,9 +120,12 @@ public class ContemplationService {
         contemplated.setUpdateDate(LocalDateTime.now());
 
         if (contemplated.isEmptyObservation()) {
-            contemplated.setObservation("Cancelado por " + loggedUser.getName() + " em " + LocalDateTime.now().format(formatter) + " -- Motivo: " + reason);
+            contemplated.setObservation("Cancelado por " + loggedUser.getName() + " em "
+                    + LocalDateTime.now().format(formatter) + " -- Motivo: " + normalizedReason);
         } else {
-            contemplated.setObservation(contemplated.getObservation() + " -- Cancelado por " + loggedUser.getName() + " em " + LocalDateTime.now().format(formatter) + " -- Motivo: " + reason);
+            contemplated.setObservation(truncate(contemplated.getObservation() + " -- Cancelado por "
+                    + loggedUser.getName() + " em " + LocalDateTime.now().format(formatter)
+                    + " -- Motivo: " + normalizedReason, 2_000));
         }
 
         contemplationRepository.save(contemplated);
@@ -108,9 +138,15 @@ public class ContemplationService {
     @Transactional
     public ResultadoOperacao<Void> confirmContemplationByAdmin(Long contemplationId, SystemUserDetails loggedUser) {
 
-        Contemplation contemplated = contemplationRepository.findFetchedForCancelById(contemplationId);
+        Contemplation contemplated = contemplationRepository.findFetchedForUpdateById(contemplationId);
         if (contemplated == null) {
             return ResultadoOperacao.falha("Contemplação não encontrada.");
+        }
+        authorizationScopeService.requireCurrentTenant(contemplated);
+        authorizationScopeService.requireBasicHealthUnit(
+                loggedUser, contemplated.getAppointment().getPatient().getBasicHealthUnit().getId());
+        if (contemplated.getAppointment().getStatus() != AppointmentStatus.PACIENTE_CONTEMPLADO) {
+            return ResultadoOperacao.falha("A contemplação não pode ser confirmada no estado atual.");
         }
 
         contemplated.getAppointment().setStatus(AppointmentStatus.PRESENCA_CONFIRMADA);
@@ -127,41 +163,116 @@ public class ContemplationService {
     public ResultadoOperacao<Void> contemplateAppointmentByAdmin(Long appointmentId, String reason,
             Long medicalSlotId, SystemUserDetails loggedUser) {
 
-        Appointment appt = appointmentService.findReferenceById(appointmentId);
+        String normalizedReason = normalizeReason(reason);
+        if (normalizedReason == null) {
+            return ResultadoOperacao.falha("Motivo obrigatório e limitado a 500 caracteres.");
+        }
+        return contemplateAtomically(
+                appointmentId,
+                medicalSlotId,
+                Priorities.ADMINISTRATIVO,
+                AppointmentStatus.PRESENCA_CONFIRMADA,
+                loggedUser.getLoginUsername(),
+                loggedUser.getName(),
+                "Paciente contemplado por " + loggedUser.getName() + " em "
+                        + LocalDateTime.now().format(formatter) + " -- Motivo: " + normalizedReason,
+                loggedUser);
+    }
 
-        MedicalSlot medicalSlot = new MedicalSlot();
-        medicalSlot.setId(medicalSlotId);
+    @Transactional
+    public ResultadoOperacao<Void> contemplateAppointmentByJob(
+            Long appointmentId, Long medicalSlotId, Priorities contemplatedBy) {
+        return contemplateAtomically(
+                appointmentId,
+                medicalSlotId,
+                contemplatedBy,
+                AppointmentStatus.PACIENTE_CONTEMPLADO,
+                "ROTINA",
+                "ROTINA",
+                null,
+                null);
+    }
 
-        log.info("Removendo slot disponível.");
+    private ResultadoOperacao<Void> contemplateAtomically(
+            Long appointmentId,
+            Long medicalSlotId,
+            Priorities contemplatedBy,
+            AppointmentStatus resultingStatus,
+            String auditUser,
+            String historyUser,
+            String observation,
+            SystemUserDetails loggedUser) {
+        Appointment appointment = appointmentService.findForUpdateWithQueueDetails(appointmentId);
+        if (appointment == null) {
+            return ResultadoOperacao.falha("Marcação não encontrada.");
+        }
+        authorizationScopeService.requireCurrentTenant(appointment);
+        if (loggedUser != null) {
+            authorizationScopeService.requireBasicHealthUnit(
+                    loggedUser, appointment.getPatient().getBasicHealthUnit().getId());
+        }
+        if (appointment.getStatus() != AppointmentStatus.AGUARDANDO_CONTEMPLACAO
+                || appointment.getContemplation() != null) {
+            return ResultadoOperacao.falha("A marcação já foi processada.");
+        }
+
+        MedicalSlot medicalSlot = medicalSlotService.findById(medicalSlotId);
+        if (medicalSlot == null) {
+            return ResultadoOperacao.falha("Vaga não encontrada.");
+        }
+        authorizationScopeService.requireCurrentTenant(medicalSlot);
+        if (!java.util.Objects.equals(
+                    medicalSlot.getBasicHealthUnit().getId(),
+                    appointment.getPatient().getBasicHealthUnit().getId())
+                || !java.util.Objects.equals(
+                    medicalSlot.getMedicalProcedure().getId(),
+                    appointment.getMedicalProcedure().getId())) {
+            return ResultadoOperacao.falha("Vaga incompatível com a UBS ou procedimento da marcação.");
+        }
+
         var slotResult = medicalSlotService.removeSlot(medicalSlot);
         if (slotResult.falhou()) {
             return ResultadoOperacao.falha(slotResult.mensagem());
         }
 
-        medicalSlot = slotResult.valor();
-        appt.setStatus(AppointmentStatus.PRESENCA_CONFIRMADA);
-
+        LocalDateTime now = LocalDateTime.now();
         Contemplation contemplation = new Contemplation();
+        contemplation.setContemplationDate(now);
+        contemplation.setContemplatedBy(contemplatedBy);
+        contemplation.setCreationDate(now);
+        contemplation.setCreationUser(auditUser);
+        contemplation.setAppointment(appointment);
+        contemplation.setMedicalSlot(slotResult.valor());
+        contemplation.setObservation(truncate(observation, 2_000));
+        contemplation = contemplationRepository.save(contemplation);
 
-        contemplation.setContemplationDate(LocalDateTime.now());
-        contemplation.setContemplatedBy(Priorities.ADMINISTRATIVO);
-        contemplation.setCreationDate(LocalDateTime.now());
-        contemplation.setCreationUser(loggedUser.getUsername());
-        contemplation.setAppointment(appt);
-        contemplation.setMedicalSlot(medicalSlot);
-        contemplation.setObservation("Paciente contemplado por " + loggedUser.getName() + " em " + LocalDateTime.now().format(formatter) + " -- Motivo: " + reason);
-
-        log.info("Salvando contemplação via administrativo.");
-        appt = appointmentService.updateAppointment(appt);
-        contemplationRepository.save(contemplation);
-        appointmentStatusHistoryService.registerAppointmentStatusHistory(appt, loggedUser.getName());
-
+        appointment.setContemplation(contemplation);
+        appointment.setStatus(resultingStatus);
+        appointment.setUpdateDate(now);
+        appointment.setUpdateUser(auditUser);
+        appointment = appointmentService.updateAppointment(appointment);
+        appointmentStatusHistoryService.registerAppointmentStatusHistory(appointment, historyUser);
         return ResultadoOperacao.sucessoSemValor();
     }
 
     @Transactional
     public Contemplation registerContemplation(Contemplation contemplation) {
         return contemplationRepository.save(contemplation);
+    }
+
+    private String normalizeReason(String reason) {
+        if (reason == null || reason.isBlank()) {
+            return null;
+        }
+        String normalized = reason.trim();
+        return normalized.length() <= 500 ? normalized : null;
+    }
+
+    private String truncate(String value, int maximumLength) {
+        if (value == null || value.length() <= maximumLength) {
+            return value;
+        }
+        return value.substring(0, maximumLength);
     }
 
 }

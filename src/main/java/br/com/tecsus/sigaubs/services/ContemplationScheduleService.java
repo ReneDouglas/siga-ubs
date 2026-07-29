@@ -16,7 +16,9 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.time.YearMonth;
 import java.util.List;
 import java.util.Map;
@@ -31,6 +33,9 @@ public class ContemplationScheduleService {
 
     private static final int NEXT_PATIENT = 1;
     private static final String USERNAME_JOB = "ROTINA";
+    private static final ZoneId BUSINESS_ZONE = ZoneId.of("America/Sao_Paulo");
+    private static final Runnable NO_OP_HEARTBEAT = () -> {
+    };
 
     private final MedicalSlotService medicalSlotService;
     private final AppointmentService appointmentService;
@@ -38,6 +43,7 @@ public class ContemplationScheduleService {
     private final AppointmentStatusHistoryService appointmentStatusHistoryService;
     private final TenantResolverService tenantResolverService;
     private final TransactionTemplate transactionTemplate;
+    private final ContemplationJobExecutionService executionService;
 
     @Autowired
     public ContemplationScheduleService(MedicalSlotService medicalSlotService,
@@ -45,17 +51,32 @@ public class ContemplationScheduleService {
             ContemplationService contemplationService,
             AppointmentStatusHistoryService appointmentStatusHistoryService,
             TenantResolverService tenantResolverService,
-            TransactionTemplate transactionTemplate) {
+            TransactionTemplate transactionTemplate,
+            ContemplationJobExecutionService executionService) {
         this.medicalSlotService = medicalSlotService;
         this.appointmentService = appointmentService;
         this.contemplationService = contemplationService;
         this.appointmentStatusHistoryService = appointmentStatusHistoryService;
         this.tenantResolverService = tenantResolverService;
         this.transactionTemplate = transactionTemplate;
+        this.executionService = executionService;
+    }
+
+    ContemplationScheduleService(MedicalSlotService medicalSlotService,
+            AppointmentService appointmentService,
+            ContemplationService contemplationService,
+            AppointmentStatusHistoryService appointmentStatusHistoryService,
+            TenantResolverService tenantResolverService,
+            TransactionTemplate transactionTemplate) {
+        this(medicalSlotService, appointmentService, contemplationService,
+                appointmentStatusHistoryService, tenantResolverService, transactionTemplate, null);
     }
 
     public void executeContemplation() {
         var tenants = tenantResolverService.findActiveTenants();
+        LocalDate executionDate = LocalDate.now(BUSINESS_ZONE);
+        LocalDateTime windowStart = executionDate.atStartOfDay();
+        String executionKey = "contemplation:" + executionDate;
 
         if (tenants.isEmpty()) {
             log.info("Nenhum tenant ativo encontrado para executar a rotina de contemplação.");
@@ -65,11 +86,32 @@ public class ContemplationScheduleService {
         RuntimeException firstFailure = null;
 
         for (var tenant : tenants) {
+            ContemplationJobExecutionService.Lease lease = null;
+            if (executionService != null) {
+                var acquiredLease =
+                        executionService.tryStart(tenant.getId(), executionKey, windowStart);
+                if (acquiredLease.isEmpty()) {
+                    log.info("Rotina já adquirida ou concluída para tenant_id={}.", tenant.getId());
+                    continue;
+                }
+                lease = acquiredLease.get();
+            }
+            ContemplationJobExecutionService.Lease currentLease = lease;
+            Runnable heartbeat = heartbeatFor(currentLease);
             TenantContextHolder.setTenant(tenant.getId(), tenant.getSlug());
             try {
-                transactionTemplate.executeWithoutResult(status -> executeContemplationForCurrentTenant());
+                transactionTemplate.executeWithoutResult(
+                        status -> executeContemplationForCurrentTenant(heartbeat));
+                heartbeat.run();
+                if (currentLease != null) {
+                    executionService.complete(currentLease);
+                }
             } catch (RuntimeException e) {
-                log.error("Erro ao executar rotina de contemplação para o tenant [{}].", tenant.getSlug(), e);
+                if (currentLease != null) {
+                    executionService.fail(currentLease);
+                }
+                log.error("Erro na rotina de contemplação para tenant_id={} [{}].",
+                        tenant.getId(), e.getClass().getSimpleName());
                 if (firstFailure == null) {
                     firstFailure = e;
                 }
@@ -83,7 +125,20 @@ public class ContemplationScheduleService {
         }
     }
 
-    private void executeContemplationForCurrentTenant() {
+    private Runnable heartbeatFor(ContemplationJobExecutionService.Lease lease) {
+        if (executionService == null || lease == null) {
+            return NO_OP_HEARTBEAT;
+        }
+        var renewalSchedule = executionService.newRenewalSchedule();
+        return () -> {
+            if (renewalSchedule.claimIfDue()) {
+                executionService.renewLease(lease);
+            }
+        };
+    }
+
+    private void executeContemplationForCurrentTenant(Runnable heartbeat) {
+        heartbeat.run();
         YearMonth referenceMonth = YearMonth.now();
         var availableSlots = medicalSlotService.findAvailableSlotsByReferenceMonth();
 
@@ -104,18 +159,21 @@ public class ContemplationScheduleService {
         Map<BasicHealthUnit, List<MedicalSlot>> slotsByUBS = availableSlots.stream()
                 .collect(Collectors.groupingBy(MedicalSlot::getBasicHealthUnit));
 
-        processSlotsByUBS(slotsByUBS);
+        processSlotsByUBS(slotsByUBS, heartbeat);
     }
 
-    private void processSlotsByUBS(Map<BasicHealthUnit, List<MedicalSlot>> slotsByUBS) {
+    private void processSlotsByUBS(
+            Map<BasicHealthUnit, List<MedicalSlot>> slotsByUBS,
+            Runnable heartbeat) {
 
         log.info(" ");
         log.info("======== INICIANDO CONTEMPLAÇÕES POR UBS ========");
         log.info(" ");
 
         slotsByUBS.forEach((ubs, slots) -> {
+            heartbeat.run();
             log.info("::::::::::::::::::INICIO DA CONTEMPLAÇÃO [{}] ::::::::::::::::::", ubs.getName());
-            slots.forEach(this::processSlotsByProcedure);
+            slots.forEach(slot -> processSlotsByProcedure(slot, heartbeat));
             log.info("::::::::::::::::::: FIM DA CONTEMPLAÇÃO [{}] :::::::::::::::::::", ubs.getName());
         });
 
@@ -125,8 +183,11 @@ public class ContemplationScheduleService {
         log.info("========================================");
     }
 
-    private void processSlotsByProcedure(MedicalSlot slotsByProcedure) {
+    private void processSlotsByProcedure(
+            MedicalSlot slotsByProcedure,
+            Runnable heartbeat) {
 
+        heartbeat.run();
         log.info(" ");
         log.info(">>> Vagas disponíveis para {}[{}][{}]: {}",
                 slotsByProcedure.getMedicalProcedure().getDescription(),
@@ -143,11 +204,12 @@ public class ContemplationScheduleService {
         }
 
         log.info(">> Iniciando contemplação...");
-        log.info("::::::::: [NOME DO PACIENTE] ::::::::: [CPF] ::::::::: [CONTEMPLADO POR] :::::::::");
+        log.info("::::::::: [ID DA MARCAÇÃO] ::::::::: [CRITÉRIO] :::::::::");
 
         int totalPatients = queue.getContent().size() - 1;
 
         for (int slot = 0; slot < slotsByProcedure.getCurrentSlots(); slot++) {
+            heartbeat.run();
 
             if (slot > totalPatients) {
                 log.info(">> Vagas restantes sem pacientes na fila. Encerrando.");
@@ -175,34 +237,16 @@ public class ContemplationScheduleService {
             PatientOpenAppointmentDTO nextPatient,
             MedicalSlot slotsByProcedure) {
 
-        var contemplated = new Contemplation();
-        contemplated.setMedicalSlot(slotsByProcedure);
-        contemplated.setContemplatedBy(contemplatedBy(currentPatient, nextPatient));
-        contemplated.setContemplationDate(LocalDateTime.now());
-        contemplated.setCreationDate(LocalDateTime.now());
-        contemplated.setCreationUser(USERNAME_JOB);
-
-        var slotResult = medicalSlotService.removeSlot(slotsByProcedure);
-        if (slotResult.falhou()) {
-            log.warn("> Paciente [{}] não contemplado: {}",
-                    currentPatient.patientName(),
-                    slotResult.mensagem());
+        Priorities criterion = contemplatedBy(currentPatient, nextPatient);
+        var result = contemplationService.contemplateAppointmentByJob(
+                currentPatient.appointmentId(), slotsByProcedure.getId(), criterion);
+        if (result.falhou()) {
+            log.warn("> Marcação id={} não contemplada: {}",
+                    currentPatient.appointmentId(), result.mensagem());
             return;
         }
-
-        contemplated = contemplationService.registerContemplation(contemplated);
-
-        var appt = appointmentService.findReferenceById(currentPatient.appointmentId());
-        appt.setContemplation(contemplated);
-        appt.setStatus(AppointmentStatus.PACIENTE_CONTEMPLADO);
-        appt = appointmentService.updateAppointment(appt);
-
-        appointmentStatusHistoryService.registerAppointmentStatusHistory(appt, USERNAME_JOB);
-
-        log.info("> Contemplado: [{}] [{}] [{}]",
-                currentPatient.patientName(),
-                currentPatient.patientCPF(),
-                contemplated.getContemplatedBy().getDescription());
+        log.info("> Marcação id={} contemplada pelo critério={}.",
+                currentPatient.appointmentId(), criterion.name());
     }
 
     private Priorities contemplatedBy(PatientOpenAppointmentDTO currentPatient,

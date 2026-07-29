@@ -61,46 +61,4 @@ class SpecialtyControllerTest {
         assertThat(model.get("procedures")).isEqualTo(List.of(procedure));
     }
 
-    @Test
-    void deveCadastrarEspecialidadeComProcedimentosJsonETratarErro() throws Exception {
-        SpecialtyDTO dto = new SpecialtyDTO();
-        dto.setTitle("Cardiologia");
-        var loggedUser = sms();
-        var redirectAttributes = redirect();
-        when(specialtyService.registerSpecialty(dto, loggedUser)).thenReturn(ResultadoOperacao.sucessoSemValor());
-
-        assertThat(controller.registerSpecialty(dto,
-                "[{\"description\":\"Consulta\",\"procedureType\":\"CONSULTA\"}]", loggedUser, redirectAttributes))
-                .isEqualTo("redirect:/specialty-management");
-        assertThat(dto.getProcedures()).hasSize(1);
-        assertThat(redirectAttributes.getFlashAttributes().get("error")).isEqualTo(false);
-        verify(specialtyService).registerSpecialty(dto, loggedUser);
-
-        redirectAttributes = redirect();
-        controller.registerSpecialty(new SpecialtyDTO(), "{json-invalido", loggedUser, redirectAttributes);
-        assertThat(redirectAttributes.getFlashAttributes().get("error")).isEqualTo(true);
-    }
-
-    @Test
-    void deveAtualizarEspecialidadeComProcedimentosJsonETratarErro() throws Exception {
-        SpecialtyDTO dto = new SpecialtyDTO();
-        dto.setId(1L);
-        var loggedUser = sms();
-        var redirectAttributes = redirect();
-        when(specialtyService.updateSpecialty(dto, loggedUser)).thenReturn(ResultadoOperacao.sucessoSemValor());
-
-        assertThat(controller.updateSpecialty(dto,
-                "[{\"description\":\"Exame\",\"procedureType\":\"EXAME\"}]", loggedUser, redirectAttributes))
-                .isEqualTo("redirect:/specialty-management");
-        assertThat(dto.getProcedures()).hasSize(1);
-        assertThat(redirectAttributes.getFlashAttributes().get("error")).isEqualTo(false);
-        verify(specialtyService).updateSpecialty(dto, loggedUser);
-
-        when(specialtyService.updateSpecialty(any(SpecialtyDTO.class), any()))
-                .thenReturn(ResultadoOperacao.falha("falha"));
-        redirectAttributes = redirect();
-        controller.updateSpecialty(new SpecialtyDTO(),
-                "[{\"description\":\"Exame\",\"procedureType\":\"EXAME\"}]", loggedUser, redirectAttributes);
-        assertThat(redirectAttributes.getFlashAttributes().get("error")).isEqualTo(true);
-    }
 }

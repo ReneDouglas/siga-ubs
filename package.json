@@ -18,6 +18,9 @@
     "tailwindcss": "^3.4.17"
   },
   "dependencies": {
+    "@fontsource-variable/manrope": "5.3.0",
+    "apexcharts": "3.54.1",
+    "material-symbols": "0.45.8",
     "sigaubs": "file:"
   }
 }

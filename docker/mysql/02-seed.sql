@@ -1,7 +1,8 @@
 -- =============================================================================
 -- SIGA-UBS — Dados iniciais para desenvolvimento
 -- ATENÇÃO: Alterar as senhas no primeiro uso em ambiente de produção!
--- Senhas padrão: admin/admin123 | sms/sms123 | user/user123
+-- Senhas exclusivas de desenvolvimento:
+-- admin/AdminDev#2026 | sms/SmsDev#2026 | user/UserDev#2026
 -- =============================================================================
 
 USE sigaubs;
@@ -24,7 +25,6 @@ INSERT INTO tenants (id, slug, name, domain, status, creation_date, creation_use
 -- Perfis de acesso
 -- -----------------------------------------------------------------------------
 INSERT INTO system_roles (id, `role`, title, description, root, creation_date, creation_user) VALUES
-(1, 'ROLE_ADMIN',      'Administrador',          'Administrador do Sistema',                               TRUE,  NOW(6), 'sistema'),
 (2, 'ROLE_SMS',        'Secretaria de Saúde',    'Gestão da Secretaria Municipal de Saúde',                FALSE, NOW(6), 'sistema'),
 (3, 'ROLE_ATENDENTE',  'Atendente',              'Atendente da Unidade Básica de Saúde',                   FALSE, NOW(6), 'sistema'),
 (4, 'ROLE_ENFERMEIRO', 'Enfermeiro',             'Enfermeiro da Unidade Básica de Saúde',                  FALSE, NOW(6), 'sistema'),
@@ -33,11 +33,10 @@ INSERT INTO system_roles (id, `role`, title, description, root, creation_date, c
 
 -- -----------------------------------------------------------------------------
 -- Administradores globais
--- Hash BCrypt (custo 10) da senha padrão:
---   admin123 → $2b$10$yHZY3T5CccLi.gG8FhUrtekFVlb7Xuk2yc5Mf6Fj62kre7abaFFWa
+-- Hash BCrypt (custo 12) da senha exclusiva de desenvolvimento.
 -- -----------------------------------------------------------------------------
 INSERT INTO system_admins (id, username, `password`, name, email, active, creation_date, creation_user) VALUES
-(1, 'admin', '$2b$10$yHZY3T5CccLi.gG8FhUrtekFVlb7Xuk2yc5Mf6Fj62kre7abaFFWa', 'Administrador do Sistema', 'admin@sigaubs.local', 1, NOW(6), 'sistema');
+(1, 'admin', '$2y$12$8K8OmpqHQokX3TKK.tKt/uVIU4mAUHP5t2WyIH5Qy7xP8ZKopnWFe', 'Administrador do Sistema', 'admin@sigaubs.local', 1, NOW(6), 'sistema');
 
 -- -----------------------------------------------------------------------------
 -- Unidades Básicas de Saúde
@@ -62,15 +61,13 @@ INSERT INTO basic_health_units (id, tenant_id, name, neighborhood, creation_date
 
 -- -----------------------------------------------------------------------------
 -- Usuários do sistema
--- Hashes BCrypt (custo 10) das senhas padrão:
---   sms123   → $2b$10$yVOU/qiqTg2C5TUi3oW3mOjkuBBUuTKgjfS3ZgshRTuH4i2aCXbHS
---   user123  → $2b$10$bsKGvbAi45.Ga33soqVuaeh4qTW6uBRdLjOt5ET46wUyFph7lcEh6
+-- Hashes BCrypt (custo 12) das senhas exclusivas de desenvolvimento.
 -- -----------------------------------------------------------------------------
 INSERT INTO system_users (id, tenant_id, username, `password`, name, email, active, id_basic_health_unit, creation_date, creation_user) VALUES
-(1, 1, 'sms',  '$2b$10$yVOU/qiqTg2C5TUi3oW3mOjkuBBUuTKgjfS3ZgshRTuH4i2aCXbHS', 'Secretaria Municipal',        'sms@afogados.sigaubs.local',  1, NULL, NOW(6), 'sistema'),
-(2, 1, 'user', '$2b$10$bsKGvbAi45.Ga33soqVuaeh4qTW6uBRdLjOt5ET46wUyFph7lcEh6', 'Usuário UBS São Francisco',   'user@afogados.sigaubs.local', 1, 1,    NOW(6), 'sistema'),
-(3, 2, 'sms',  '$2b$10$yVOU/qiqTg2C5TUi3oW3mOjkuBBUuTKgjfS3ZgshRTuH4i2aCXbHS', 'Secretaria Municipal Caruaru','sms@caruaru.sigaubs.local',   1, NULL, NOW(6), 'sistema'),
-(4, 2, 'user', '$2b$10$bsKGvbAi45.Ga33soqVuaeh4qTW6uBRdLjOt5ET46wUyFph7lcEh6', 'Usuário USF Agamenon',        'user@caruaru.sigaubs.local',  1, 101,  NOW(6), 'sistema');
+(1, 1, 'sms',  '$2y$12$qTZNzElTly6bwFdk0EWBu.pXlJkq2Sdl.mDabIbCpR8H1gyy7uAO.', 'Secretaria Municipal',        'sms@afogados.sigaubs.local',  1, NULL, NOW(6), 'sistema'),
+(2, 1, 'user', '$2y$12$LFBA2FKSTWlQtmXVyYWOCuNIIYHV/nBRk.QxqXHrzUH0Ykar.hOpy', 'Usuário UBS São Francisco',   'user@afogados.sigaubs.local', 1, 1,    NOW(6), 'sistema'),
+(3, 2, 'sms',  '$2y$12$qTZNzElTly6bwFdk0EWBu.pXlJkq2Sdl.mDabIbCpR8H1gyy7uAO.', 'Secretaria Municipal Caruaru','sms@caruaru.sigaubs.local',   1, NULL, NOW(6), 'sistema'),
+(4, 2, 'user', '$2y$12$LFBA2FKSTWlQtmXVyYWOCuNIIYHV/nBRk.QxqXHrzUH0Ykar.hOpy', 'Usuário USF Agamenon',        'user@caruaru.sigaubs.local',  1, 101,  NOW(6), 'sistema');
 
 -- -----------------------------------------------------------------------------
 -- Associação de perfis aos usuários
@@ -198,7 +195,7 @@ DROP FUNCTION IF EXISTS mock_seed_cns;
 DELIMITER $$
 
 CREATE FUNCTION mock_seed_cpf(p_seed INT)
-RETURNS VARCHAR(14)
+RETURNS CHAR(11)
 DETERMINISTIC
 BEGIN
     DECLARE raw_base CHAR(9);
@@ -236,12 +233,7 @@ BEGIN
         SET second_check = 0;
     END IF;
 
-    RETURN CONCAT(
-        SUBSTRING(raw_base, 1, 3), '.',
-        SUBSTRING(raw_base, 4, 3), '.',
-        SUBSTRING(raw_base, 7, 3), '-',
-        first_check, second_check
-    );
+    RETURN CONCAT(raw_base, first_check, second_check);
 END$$
 
 CREATE FUNCTION mock_seed_cns(p_seed INT)
@@ -586,18 +578,9 @@ SELECT
     mock_seed_cns(tenant.tenant_id * 1000 + number.n) AS sus_card_number,
     mock_seed_cpf(tenant.tenant_id * 1000 + number.n) AS cpf,
     CONCAT(
-        '(', CASE WHEN tenant.tenant_id = 1 THEN '87' ELSE '81' END, ') 9',
-        SUBSTRING(
-            LPAD(10000000 + MOD((tenant.tenant_id * 1000 + number.n) * 3571, 89999999), 8, '0'),
-            1,
-            4
-        ),
-        '-',
-        SUBSTRING(
-            LPAD(10000000 + MOD((tenant.tenant_id * 1000 + number.n) * 3571, 89999999), 8, '0'),
-            5,
-            4
-        )
+        CASE WHEN tenant.tenant_id = 1 THEN '87' ELSE '81' END,
+        '9',
+        LPAD(10000000 + MOD((tenant.tenant_id * 1000 + number.n) * 3571, 89999999), 8, '0')
     ) AS phone_number,
     street.street,
     CASE

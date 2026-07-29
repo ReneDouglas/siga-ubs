@@ -29,19 +29,15 @@
                     !{int ubsIdx = 0;}
                     @for(var ubs : dashboard.ubsSummaries())
                     !{int colorIdx = ubsIdx % 5;}
-                    <div x-data="{ showModal: false, tooltipX: 0, tooltipY: 0 }" @mouseover="showModal = true"
-                         @mouseleave="showModal = false"
-                         @mousemove="tooltipX = ($event.clientX + 270 > window.innerWidth) ? $event.clientX - 270 : $event.clientX + 10; tooltipY = ($event.clientY + 230 > window.innerHeight) ? $event.clientY - 230 : $event.clientY + 10"
-                         class="relative">
+                    <div data-tooltip-container class="relative">
                         <div class="bg-white rounded-lg shadow-md p-4 cursor-pointer hover:shadow-lg transition duration-300 border-l-4 ${colorIdx == 0 ? "border-blue-500" : colorIdx == 1 ? "border-green-500" : colorIdx == 2 ? "border-purple-500" : colorIdx == 3 ? "border-amber-500" : "border-rose-500"}">
                             <h3 class="font-bold text-lg text-slate-700">${ubs.name()}</h3>
                             <p class="text-sm text-slate-500">Bairro: ${ubs.neighborhood()}</p>
                         </div>
 
                         <%-- Modal Tooltip --%>
-                        <div x-show="showModal" x-cloak
-                             class="fixed z-50 bg-white p-4 rounded-lg shadow-xl border border-gray-200 w-64"
-                             :style="'top: ' + tooltipY + 'px; left: ' + tooltipX + 'px'">
+                        <div data-tooltip
+                             class="hidden fixed z-50 bg-white p-4 rounded-lg shadow-xl border border-gray-200 w-64">
                             <h4 class="font-bold text-slate-700 mb-2">Informações - ${ubs.name()}</h4>
                             <ul class="text-sm space-y-1">
                                 <li class="flex justify-between"><span>Marcações em aberto:</span> <span class="font-medium">${ubs.totalOpenAppointments()}</span></li>
@@ -87,7 +83,7 @@
                     <div class="flex items-center justify-center h-64">
                         <div class="text-center">
 
-                            @if("DONE".equals(dashboard.contemplationStatus().status()))
+                            @if("COMPLETED".equals(dashboard.contemplationStatus().status()))
                             <div>
                                 <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
                                     <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -116,6 +112,16 @@
                                 </div>
                                 <h4 class="text-lg font-medium text-red-600 mb-1">Falha na execução</h4>
                                 <p class="text-sm text-slate-500">Última tentativa: ${dashboard.contemplationStatus().endTime()}</p>
+                            </div>
+                            @elseif("INTERRUPTED".equals(dashboard.contemplationStatus().status()))
+                            <div>
+                                <div class="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3m0 4h.01M10.3 3.7L2.7 17a2 2 0 001.7 3h15.2a2 2 0 001.7-3L13.7 3.7a2 2 0 00-3.4 0z" />
+                                    </svg>
+                                </div>
+                                <h4 class="text-lg font-medium text-amber-600 mb-1">Execução interrompida</h4>
+                                <p class="text-sm text-slate-500">Lease expirada em: ${dashboard.contemplationStatus().endTime()}</p>
                             </div>
                             @else
                             <div>
@@ -148,173 +154,8 @@
                     <div id="occupancyChart" class="overflow-y-auto" style="max-height: 420px;"></div>
                 </div>
             </div>
-
-            <%-- ApexCharts Script (apenas para ADMIN/SMS) --%>
-            <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
-            <script>
-                document.addEventListener('DOMContentLoaded', function () {
-                    var dailyLabels = [
-                        @for(var d : dashboard.dailyAppointments())
-                        "${d.day()}",
-                        @endfor
-                    ];
-                    var dailyData = [
-                        @for(var d : dashboard.dailyAppointments())
-                        ${d.total()},
-                        @endfor
-                    ];
-
-                    var monthlyOpenLabels = [
-                        @for(var m : dashboard.monthlyOpenAppointments())
-                        "${m.month()}",
-                        @endfor
-                    ];
-                    var monthlyOpenData = [
-                        @for(var m : dashboard.monthlyOpenAppointments())
-                        ${m.total()},
-                        @endfor
-                    ];
-
-                    var monthlyContLabels = [
-                        @for(var m : dashboard.monthlyContemplations())
-                        "${m.month()}",
-                        @endfor
-                    ];
-                    var monthlyContData = [
-                        @for(var m : dashboard.monthlyContemplations())
-                        ${m.total()},
-                        @endfor
-                    ];
-
-                    var pieLabels = [
-                        @for(var p : dashboard.priorityDistribution())
-                        "${p.priority()}",
-                        @endfor
-                    ];
-                    var pieData = [
-                        @for(var p : dashboard.priorityDistribution())
-                        ${p.total()},
-                        @endfor
-                    ];
-
-                    var procLabels = [
-                        @for(var p : dashboard.procedureTypeDistribution())
-                        "${p.procedureType()}",
-                        @endfor
-                    ];
-                    var procData = [
-                        @for(var p : dashboard.procedureTypeDistribution())
-                        ${p.total()},
-                        @endfor
-                    ];
-
-                    var bottleneckLabels = [
-                        @for(var b : dashboard.topBottlenecks())
-                        "${b.specialty()} - ${b.procedure()}",
-                        @endfor
-                    ];
-                    var bottleneckData = [
-                        @for(var b : dashboard.topBottlenecks())
-                        ${b.total()},
-                        @endfor
-                    ];
-
-                    var ubsNames = [
-                        @for(var s : dashboard.slotOccupancy())
-                        "${s.ubsName()}",
-                        @endfor
-                    ];
-                    var totalSlotsData = [
-                        @for(var s : dashboard.slotOccupancy())
-                        ${s.totalSlots()},
-                        @endfor
-                    ];
-                    var consumedSlotsData = [
-                        @for(var s : dashboard.slotOccupancy())
-                        ${s.consumedSlots()},
-                        @endfor
-                    ];
-
-                    var monthlyLabels = monthlyOpenLabels.length >= monthlyContLabels.length ? monthlyOpenLabels : monthlyContLabels;
-
-                    var dailyOptions = {
-                        series: [{ name: 'Marcações', data: dailyData }],
-                        chart: { height: '100%', type: 'line', zoom: { enabled: false }, toolbar: { show: false } },
-                        dataLabels: { enabled: false },
-                        stroke: { curve: 'smooth', width: 3, colors: ['#3B82F6'] },
-                        xaxis: { categories: dailyLabels },
-                        tooltip: { y: { formatter: function (val) { return val + " marcações" } } },
-                        colors: ['#3B82F6'],
-                        noData: { text: 'Sem dados para o período', align: 'center', verticalAlign: 'middle' }
-                    };
-                    new ApexCharts(document.querySelector("#dailyChart"), dailyOptions).render();
-
-                    var monthlyOptions = {
-                        series: [{ name: 'Marcações em Aberto', data: monthlyOpenData }, { name: 'Contemplados', data: monthlyContData }],
-                        chart: { height: '100%', type: 'line', zoom: { enabled: false }, toolbar: { show: false } },
-                        dataLabels: { enabled: false },
-                        stroke: { curve: 'smooth', width: 3 },
-                        colors: ['#EF4444', '#10B981'],
-                        xaxis: { categories: monthlyLabels },
-                        tooltip: { y: { formatter: function (val) { return val + " pacientes" } } },
-                        legend: { position: 'top' },
-                        noData: { text: 'Sem dados para o período', align: 'center', verticalAlign: 'middle' }
-                    };
-                    new ApexCharts(document.querySelector("#monthlyChart"), monthlyOptions).render();
-
-                    var priorityColorMap = { 'Urgência': '#EF4444', 'Retorno': '#3B82F6', 'Prioritário': '#F59E0B', 'Eletivo': '#10B981', 'Administrativo': '#8B5CF6' };
-                    var priorityColors = pieLabels.map(function (label) { return priorityColorMap[label] || '#6B7280'; });
-                    var priorityOptions = {
-                        series: pieData, chart: { type: 'donut', height: 300 }, labels: pieLabels, colors: priorityColors,
-                        plotOptions: { pie: { donut: { labels: { show: true, total: { show: true, label: 'Total em Aberto', fontSize: '14px', fontWeight: 600 } } } } },
-                        dataLabels: { enabled: true, formatter: function (val, opts) { return opts.w.config.series[opts.seriesIndex] + ' (' + val.toFixed(0) + '%)'; } },
-                        responsive: [{ breakpoint: 480, options: { chart: { height: 250 } } }],
-                        legend: { position: 'bottom' },
-                        noData: { text: 'Sem dados', align: 'center', verticalAlign: 'middle' }
-                    };
-                    new ApexCharts(document.querySelector("#priorityDonut"), priorityOptions).render();
-
-                    var procColorMap = { 'Consulta': '#3B82F6', 'Exame': '#F59E0B', 'Cirurgia': '#EF4444' };
-                    var procColors = procLabels.map(function (label) { return procColorMap[label] || '#6B7280'; });
-                    var procedureOptions = {
-                        series: procData, chart: { type: 'donut', height: 300 }, labels: procLabels, colors: procColors,
-                        plotOptions: { pie: { donut: { labels: { show: true, total: { show: true, label: 'Total', fontSize: '14px', fontWeight: 600 } } } } },
-                        dataLabels: { enabled: true, formatter: function (val, opts) { return opts.w.config.series[opts.seriesIndex] + ' (' + val.toFixed(0) + '%)'; } },
-                        responsive: [{ breakpoint: 480, options: { chart: { height: 250 } } }],
-                        legend: { position: 'bottom' },
-                        noData: { text: 'Sem dados', align: 'center', verticalAlign: 'middle' }
-                    };
-                    new ApexCharts(document.querySelector("#procedureDonut"), procedureOptions).render();
-
-                    var bottleneckHeight = Math.max(300, bottleneckLabels.length * 40);
-                    var bottleneckOptions = {
-                        series: [{ name: 'Na fila', data: bottleneckData }],
-                        chart: { type: 'bar', height: bottleneckHeight, toolbar: { show: false } },
-                        plotOptions: { bar: { horizontal: true, borderRadius: 4, barHeight: '60%' } },
-                        xaxis: { categories: bottleneckLabels },
-                        colors: ['#EF4444'],
-                        dataLabels: { enabled: true, style: { fontSize: '12px' } },
-                        tooltip: { y: { formatter: function (val) { return val + ' marcações'; } } },
-                        noData: { text: 'Sem gargalos identificados', align: 'center', verticalAlign: 'middle' }
-                    };
-                    new ApexCharts(document.querySelector("#bottleneckChart"), bottleneckOptions).render();
-
-                    var availableData = totalSlotsData.map(function (total, i) { return total - consumedSlotsData[i]; });
-                    var occupancyHeight = Math.max(300, ubsNames.length * 45);
-                    var occupancyOptions = {
-                        series: [{ name: 'Consumidas', data: consumedSlotsData }, { name: 'Disponíveis', data: availableData }],
-                        chart: { type: 'bar', height: occupancyHeight, stacked: true, toolbar: { show: false } },
-                        plotOptions: { bar: { horizontal: true, borderRadius: 4, barHeight: '55%' } },
-                        xaxis: { categories: ubsNames },
-                        colors: ['#3B82F6', '#D1FAE5'],
-                        dataLabels: { enabled: true, style: { fontSize: '11px' } },
-                        legend: { position: 'top' },
-                        tooltip: { y: { formatter: function (val) { return val + ' vagas'; } } },
-                        noData: { text: 'Sem vagas cadastradas neste mês', align: 'center', verticalAlign: 'middle' }
-                    };
-                    new ApexCharts(document.querySelector("#occupancyChart"), occupancyOptions).render();
-                });
-            </script>
+            <script src="${res.url("/js/apexcharts-3.54.1.min.js")}" defer></script>
+            <script src="${res.url("/js/dashboard.js")}" defer></script>
         @endif
 
         <%-- Dashboard para demais roles --%>
@@ -395,15 +236,6 @@
                     </table>
                 </div>
             </div>
-
-            <script>
-                $(document).click(function (event) {
-                    if (!$(event.target).closest('#dropdown').length && !$(event.target).closest('#patientSearch').length) {
-                        $('#dropdown').hide();
-                    }
-                });
-                $('#patientSearch').on('input', function () { $('#dropdown').show(); });
-            </script>
         @endif
 
         <%-- Aviso se usuário não está vinculado a nenhuma UBS --%>

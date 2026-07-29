@@ -44,7 +44,7 @@ public class SystemMaintenanceService {
         maintenance.setMessage(normalizeBlank(message));
         maintenance.setEndDate(endDate);
         maintenance.setUpdateDate(LocalDateTime.now());
-        maintenance.setUpdateUser(loggedUser.getUsername());
+        maintenance.setUpdateUser(loggedUser.getLoginUsername());
 
         if (shouldEnable && maintenance.getStartDate() == null) {
             maintenance.setStartDate(LocalDateTime.now());

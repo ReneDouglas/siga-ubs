@@ -8,6 +8,7 @@ import br.com.tecsus.sigaubs.enums.ProcedureType;
 import br.com.tecsus.sigaubs.enums.Roles;
 import br.com.tecsus.sigaubs.repositories.AppointmentRepository;
 import br.com.tecsus.sigaubs.repositories.MedicalProcedureRepository;
+import br.com.tecsus.sigaubs.security.AuthorizationScopeService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -42,6 +43,9 @@ class AppointmentServiceTest {
 
     @Mock
     private AppointmentStatusHistoryService appointmentStatusHistoryService;
+
+    @Mock
+    private AuthorizationScopeService authorizationScopeService;
 
     @InjectMocks
     private AppointmentService appointmentService;
@@ -98,7 +102,7 @@ class AppointmentServiceTest {
         Appointment appointment = appointment(100L,
                 patient(1L, "Paciente", ubs(1L, "UBS")),
                 procedure(10L, "Consulta", ProcedureType.CONSULTA, specialty(1L, "Cardiologia")));
-        when(appointmentRepository.findById(100L)).thenReturn(Optional.of(appointment));
+        when(appointmentRepository.findByIdWithQueueDetails(100L)).thenReturn(Optional.of(appointment));
         when(appointmentRepository.save(appointment)).thenReturn(appointment);
 
         var resultado = appointmentService.cancelSolicitation(100L, loggedUser);

@@ -47,7 +47,7 @@
                                    name="name" value="${patient.getName() != null ? patient.getName() : ""}"
                                    hx-get="/patient-list/search"
                                    hx-trigger="input changed delay:500ms, patientSearch"
-                                   hx-vals="js:{'autocomplete':true}"
+                                   hx-vals='{"autocomplete":true}'
                                    hx-target="#dropdown"
                                    hx-swap="outerHTML">
                             <div class="absolute top-full w-full z-50">
@@ -145,7 +145,7 @@
                                 <div class="relative bg-white rounded-lg shadow dark:bg-gray-700">
                                     <div class="flex items-center justify-between p-4 md:p-5 border-b rounded-t dark:border-gray-600">
                                         <h3 class="text-xl font-semibold text-gray-900 dark:text-white">Observações</h3>
-                                        <button type="button" onclick="closeModal()"
+                                        <button type="button" data-action="close-modal" data-modal-id="default-modal"
                                                 class="text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm w-8 h-8 ms-auto inline-flex justify-center items-center dark:hover:bg-gray-600 dark:hover:text-white">
                                             <svg class="w-3 h-3" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 14 14">
                                                 <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m1 1 6 6m0 0 6 6M7 7l6-6M7 7l-6 6"/>
@@ -167,33 +167,4 @@
 </body>
 
 <script src="${res.url("/js/cpfmask.js")}"></script>
-<script>
-    $(document).click(function (event) {
-        var target = $(event.target);
-        if (!target.closest('#dropdown').length && !target.closest('#patientSearch').length) {
-            $('#dropdown').hide();
-        }
-    });
-
-    function autocompleteInputSearch(patientName) {
-        document.getElementById('patientSearch').value = patientName;
-        document.getElementById('dropdown').classList.add('hidden');
-    }
-
-    function openModal(observacoes) {
-        let modal = document.getElementById("default-modal");
-        let modalObservacoes = modal.querySelector("#modal-observacoes")
-        modalObservacoes.innerText = observacoes;
-        modal.classList.remove("hidden");
-        modal.classList.add("flex");
-        modal.classList.add("opacity-100");
-    }
-
-    function closeModal() {
-        let modal = document.getElementById("default-modal");
-        modal.classList.add("opacity-0");
-        modal.classList.add("hidden");
-        modal.classList.remove("flex");
-    }
-</script>
 </html>

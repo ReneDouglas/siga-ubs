@@ -4,6 +4,10 @@ import br.com.tecsus.sigaubs.entities.Tenant;
 import br.com.tecsus.sigaubs.enums.TenantStatus;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import jakarta.persistence.LockModeType;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
@@ -43,4 +47,8 @@ public interface TenantRepository extends JpaRepository<Tenant, Long>, JpaSpecif
 
     @Transactional(readOnly = true)
     boolean existsByDomainAndIdNot(String domain, Long id);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT tenant FROM Tenant tenant WHERE tenant.id = :id")
+    Optional<Tenant> findByIdForUpdate(@Param("id") Long id);
 }

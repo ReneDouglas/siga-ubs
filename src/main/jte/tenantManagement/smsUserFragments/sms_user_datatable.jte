@@ -47,6 +47,10 @@
                 <td class="border-b text-sm py-2 pl-4 text-nowrap">${TemplateUtils.formatDateTime(user.getCreationDate())}</td>
                 <td class="border-b text-sm py-2 px-4">
                     <div class="inline-flex items-center gap-1">
+                        <a href="/admin/tenant-management/${tenant.getId()}/sms-users/${user.getId()}/sessions" class="relative group inline-flex p-2 rounded-lg hover:bg-slate-200 cursor-pointer transition duration-300">
+                            <span class="material-symbols-outlined hover:text-blue-500 transition duration-300">devices</span>
+                            <span class="absolute right-full top-1/2 transform -translate-y-1/2 -translate-x-1 hidden group-hover:block bg-slate-800 text-white text-sm rounded px-2 py-1 whitespace-nowrap">Sessões</span>
+                        </a>
                         <a href="/admin/tenant-management/${tenant.getId()}/sms-users?editUserId=${user.getId()}" class="relative group inline-flex p-2 rounded-lg hover:bg-slate-200 cursor-pointer transition duration-300">
                             <span class="material-symbols-outlined hover:text-blue-500 transition duration-300">edit</span>
                             <span class="absolute right-full top-1/2 transform -translate-y-1/2 -translate-x-1 hidden group-hover:block bg-slate-800 text-white text-sm rounded px-2 py-1 whitespace-nowrap">Editar</span>

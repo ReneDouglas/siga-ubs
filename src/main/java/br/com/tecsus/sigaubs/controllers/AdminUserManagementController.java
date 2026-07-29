@@ -1,6 +1,7 @@
 package br.com.tecsus.sigaubs.controllers;
 
 import br.com.tecsus.sigaubs.dtos.AdminUserSearchDTO;
+import br.com.tecsus.sigaubs.dtos.AdminAccountCommandDTO;
 import br.com.tecsus.sigaubs.dtos.ResultadoOperacao;
 import br.com.tecsus.sigaubs.entities.SystemAdmin;
 import br.com.tecsus.sigaubs.security.SystemUserDetails;
@@ -23,6 +24,8 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.util.Locale;
 import java.util.Set;
+import jakarta.validation.Valid;
+import org.springframework.validation.BindingResult;
 
 @Controller
 @RequestMapping("/admin/admin-user-management")
@@ -53,10 +56,11 @@ public class AdminUserManagementController {
         Sort.Direction sortDirection = normalizeDirection(direction);
         model.addAttribute("adminsPage", adminUserManagementService.findAdmins(
                 searchAdmin,
-                PageRequest.of(currentPage, pageSize, sortDirection, sortProperty)));
+                PageRequest.of(Math.max(0, currentPage), Math.clamp(pageSize, 1, 100),
+                        sortDirection, sortProperty)));
         model.addAttribute("selectedSort", sortProperty);
         model.addAttribute("selectedDirection", sortDirection.name());
-        model.addAttribute("currentUsername", loggedUser.getUsername());
+        model.addAttribute("currentUsername", loggedUser.getLoginUsername());
 
         if (pagination) {
             return "adminUserManagement/adminUserFragments/admin_user_datatable";
@@ -67,20 +71,32 @@ public class AdminUserManagementController {
     }
 
     @PostMapping("/create")
-    public String createAdmin(@ModelAttribute SystemAdmin systemAdmin,
+    public String createAdmin(@Valid @ModelAttribute AdminAccountCommandDTO command,
+            BindingResult bindingResult,
             @AuthenticationPrincipal SystemUserDetails loggedUser,
             RedirectAttributes redirectAttributes) {
-        var resultado = adminUserManagementService.create(systemAdmin, loggedUser);
+        if (bindingResult.hasErrors()) {
+            redirectAttributes.addFlashAttribute("message", "Verifique os campos e a política de senha.");
+            redirectAttributes.addFlashAttribute("error", true);
+            return "redirect:/admin/admin-user-management";
+        }
+        var resultado = adminUserManagementService.create(command, loggedUser);
         addFlashResult(redirectAttributes, resultado, "Administrador cadastrado com sucesso.");
         logResult("cadastrar administrador", resultado);
         return "redirect:/admin/admin-user-management";
     }
 
     @PostMapping("/update")
-    public String updateAdmin(@ModelAttribute SystemAdmin systemAdmin,
+    public String updateAdmin(@Valid @ModelAttribute AdminAccountCommandDTO command,
+            BindingResult bindingResult,
             @AuthenticationPrincipal SystemUserDetails loggedUser,
             RedirectAttributes redirectAttributes) {
-        var resultado = adminUserManagementService.update(systemAdmin, loggedUser);
+        if (bindingResult.hasErrors()) {
+            redirectAttributes.addFlashAttribute("message", "Verifique os campos e a política de senha.");
+            redirectAttributes.addFlashAttribute("error", true);
+            return "redirect:/admin/admin-user-management";
+        }
+        var resultado = adminUserManagementService.update(command, loggedUser);
         addFlashResult(redirectAttributes, resultado, "Administrador atualizado com sucesso.");
         logResult("atualizar administrador", resultado);
         return "redirect:/admin/admin-user-management";

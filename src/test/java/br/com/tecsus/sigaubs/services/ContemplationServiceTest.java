@@ -9,6 +9,7 @@ import br.com.tecsus.sigaubs.enums.Priorities;
 import br.com.tecsus.sigaubs.enums.ProcedureType;
 import br.com.tecsus.sigaubs.enums.Roles;
 import br.com.tecsus.sigaubs.repositories.ContemplationRepository;
+import br.com.tecsus.sigaubs.security.AuthorizationScopeService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -47,6 +48,9 @@ class ContemplationServiceTest {
     @Mock
     private AppointmentStatusHistoryService appointmentStatusHistoryService;
 
+    @Mock
+    private AuthorizationScopeService authorizationScopeService;
+
     @InjectMocks
     private ContemplationService service;
 
@@ -66,10 +70,11 @@ class ContemplationServiceTest {
     @Test
     void deveCancelarContemplacaoEDevolverVaga() throws Exception {
         var loggedUser = userDetails("admin", "Admin", null, 1L, "afogados", Roles.ROLE_SMS);
-        Appointment appointment = appointment(1L, null, null);
-        MedicalSlot slot = slot(1L, ubs(1L, "UBS"), null, 5, 3);
+        var basicHealthUnit = ubs(1L, "UBS");
+        Appointment appointment = appointment(1L, patient(2L, "Paciente", basicHealthUnit), null);
+        MedicalSlot slot = slot(1L, basicHealthUnit, null, 5, 3);
         Contemplation contemplation = contemplation(1L, appointment, slot);
-        when(contemplationRepository.findFetchedForCancelById(1L)).thenReturn(contemplation);
+        when(contemplationRepository.findFetchedForUpdateById(1L)).thenReturn(contemplation);
         when(medicalSlotService.addSlot(slot)).thenReturn(ResultadoOperacao.sucesso(slot));
 
         var resultado = service.cancelContemplationByAdmin(1L, "Paciente avisou", loggedUser);
@@ -86,9 +91,10 @@ class ContemplationServiceTest {
     @Test
     void deveAnexarObservacaoAoCancelarContemplacaoComObservacaoExistente() throws Exception {
         var loggedUser = userDetails("admin", "Admin", null, 1L, "afogados", Roles.ROLE_SMS);
-        Contemplation contemplation = contemplation(1L, appointment(1L, null, null), slot(1L, null, null, 5, 3));
+        Appointment appointment = appointment(1L, patient(2L, "Paciente", ubs(1L, "UBS")), null);
+        Contemplation contemplation = contemplation(1L, appointment, slot(1L, null, null, 5, 3));
         contemplation.setObservation("Observação anterior");
-        when(contemplationRepository.findFetchedForCancelById(1L)).thenReturn(contemplation);
+        when(contemplationRepository.findFetchedForUpdateById(1L)).thenReturn(contemplation);
         when(medicalSlotService.addSlot(contemplation.getMedicalSlot()))
                 .thenReturn(ResultadoOperacao.sucesso(contemplation.getMedicalSlot()));
 
@@ -101,9 +107,10 @@ class ContemplationServiceTest {
     @Test
     void deveConfirmarContemplacao() throws Exception {
         var loggedUser = userDetails("admin", "Admin", null, 1L, "afogados", Roles.ROLE_SMS);
-        Appointment appointment = appointment(1L, null, null);
+        Appointment appointment = appointment(1L, patient(2L, "Paciente", ubs(1L, "UBS")), null);
+        appointment.setStatus(AppointmentStatus.PACIENTE_CONTEMPLADO);
         Contemplation contemplation = contemplation(1L, appointment, null);
-        when(contemplationRepository.findFetchedForCancelById(1L)).thenReturn(contemplation);
+        when(contemplationRepository.findFetchedForUpdateById(1L)).thenReturn(contemplation);
 
         var resultado = service.confirmContemplationByAdmin(1L, loggedUser);
 
@@ -120,7 +127,8 @@ class ContemplationServiceTest {
         var proc = procedure(10L, "Consulta", ProcedureType.CONSULTA, specialty(1L, "Cardiologia"));
         Appointment appointment = appointment(1L, patient(1L, "Paciente", ubs(1L, "UBS")), proc);
         MedicalSlot slot = slot(1L, appointment.getPatient().getBasicHealthUnit(), proc, 5, 3);
-        when(appointmentService.findReferenceById(1L)).thenReturn(appointment);
+        when(appointmentService.findForUpdateWithQueueDetails(1L)).thenReturn(appointment);
+        when(medicalSlotService.findById(1L)).thenReturn(slot);
         when(medicalSlotService.removeSlot(any(MedicalSlot.class))).thenReturn(ResultadoOperacao.sucesso(slot));
         when(appointmentService.updateAppointment(appointment)).thenReturn(appointment);
 

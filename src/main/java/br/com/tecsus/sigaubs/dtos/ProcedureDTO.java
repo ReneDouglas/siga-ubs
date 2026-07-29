@@ -1,7 +1,14 @@
 package br.com.tecsus.sigaubs.dtos;
 
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
+
 public class ProcedureDTO {
+    @NotBlank
+    @Size(max = 255)
     private String description;
+    @NotBlank
+    @Size(max = 50)
     private String procedureType;
 
     public ProcedureDTO() {

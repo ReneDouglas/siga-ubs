@@ -148,26 +148,4 @@
     </section>
 </main>
 </body>
-<script>
-    $(document).ready(function () {
-        $('#dropdown').on('click', 'div', function () {
-            var selectedText = $(this).find('span').text();
-            var selectedId = $(this).find('input').val();
-            $('#systemUserSearch').val(selectedText);
-            $('#idSystemUser').val(selectedId);
-            $('#dropdown').hide();
-        });
-
-        $(document).click(function (event) {
-            var target = $(event.target);
-            if (!target.closest('#dropdown').length && !target.closest('#systemUserSearch').length) {
-                $('#dropdown').hide();
-            }
-        });
-
-        $('#systemUserSearch').on('input', function () {
-            $('#dropdown').show();
-        });
-    });
-</script>
 </html>

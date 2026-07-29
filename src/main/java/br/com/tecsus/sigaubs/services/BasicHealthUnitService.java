@@ -2,6 +2,7 @@ package br.com.tecsus.sigaubs.services;
 
 import br.com.tecsus.sigaubs.dtos.UBSsystemUserDTO;
 import br.com.tecsus.sigaubs.dtos.ResultadoOperacao;
+import br.com.tecsus.sigaubs.dtos.BasicHealthUnitCommandDTO;
 import br.com.tecsus.sigaubs.entities.MedicalSlot;
 import br.com.tecsus.sigaubs.entities.BasicHealthUnit;
 import br.com.tecsus.sigaubs.entities.MedicalProcedure;
@@ -78,7 +79,7 @@ public class BasicHealthUnitService {
             SystemUserDetails loggedUser) {
 
         basicHealthUnit.setCreationDate(LocalDateTime.now());
-        basicHealthUnit.setCreationUser(loggedUser.getUsername());
+        basicHealthUnit.setCreationUser(loggedUser.getLoginUsername());
         basicHealthUnitRepository.save(basicHealthUnit);
         return ResultadoOperacao.sucessoSemValor();
     }
@@ -88,9 +89,41 @@ public class BasicHealthUnitService {
     public ResultadoOperacao<Void> updateBasicHealthUnit(BasicHealthUnit basicHealthUnit,
             SystemUserDetails loggedUser) {
 
-        basicHealthUnit.setUpdateUser(loggedUser.getUsername());
+        basicHealthUnit.setUpdateUser(loggedUser.getLoginUsername());
         basicHealthUnit.setUpdateDate(LocalDateTime.now());
         basicHealthUnitRepository.save(basicHealthUnit);
+        return ResultadoOperacao.sucessoSemValor();
+    }
+
+    @CacheEvict(value = "ubs", allEntries = true)
+    @Transactional
+    public ResultadoOperacao<Void> registerBasicHealthUnit(
+            BasicHealthUnitCommandDTO command, SystemUserDetails loggedUser) {
+        BasicHealthUnit basicHealthUnit = new BasicHealthUnit();
+        basicHealthUnit.setName(command.getName().trim());
+        basicHealthUnit.setNeighborhood(command.getNeighborhood().trim());
+        basicHealthUnit.setCreationDate(LocalDateTime.now());
+        basicHealthUnit.setCreationUser(loggedUser.getLoginUsername());
+        basicHealthUnitRepository.save(basicHealthUnit);
+        return ResultadoOperacao.sucessoSemValor();
+    }
+
+    @CacheEvict(value = "ubs", allEntries = true)
+    @Transactional
+    public ResultadoOperacao<Void> updateBasicHealthUnit(
+            BasicHealthUnitCommandDTO command, SystemUserDetails loggedUser) {
+        if (command.getId() == null) {
+            return ResultadoOperacao.falha("UBS não informada.");
+        }
+        BasicHealthUnit persisted = basicHealthUnitRepository.findById(command.getId()).orElse(null);
+        if (persisted == null) {
+            return ResultadoOperacao.falha("UBS não encontrada.");
+        }
+        persisted.setName(command.getName().trim());
+        persisted.setNeighborhood(command.getNeighborhood().trim());
+        persisted.setUpdateUser(loggedUser.getLoginUsername());
+        persisted.setUpdateDate(LocalDateTime.now());
+        basicHealthUnitRepository.save(persisted);
         return ResultadoOperacao.sucessoSemValor();
     }
 
@@ -108,7 +141,7 @@ public class BasicHealthUnitService {
 
         for (SystemUser su :  basicHealthUnit.getSystemUsers()) {
             su.setBasicHealthUnit(null);
-            su.setUpdateUser(loggedUser.getUsername());
+            su.setUpdateUser(loggedUser.getLoginUsername());
             su.setUpdateDate(LocalDateTime.now());
             systemUsers.add(su);
         }
@@ -143,21 +176,22 @@ public class BasicHealthUnitService {
 
     @Transactional
     public ResultadoOperacao<Void> unlinkBasicHealthUnitSystemUser(Long id, SystemUserDetails loggedUser) {
-        SystemUser systemUser = systemUserService.findSystemUserById(id);
+        SystemUser systemUser = systemUserService.findManageableSystemUserById(id, loggedUser);
         if (systemUser == null) {
             return ResultadoOperacao.falha("Usuário não encontrado.");
         }
         systemUser.setBasicHealthUnit(null);
-        systemUser.setUpdateUser(loggedUser.getUsername());
+        systemUser.setUpdateUser(loggedUser.getLoginUsername());
         systemUser.setUpdateDate(LocalDateTime.now());
         systemUserService.updateBasicHealthUnitSystemUsers(List.of(systemUser));
         return ResultadoOperacao.sucessoSemValor();
     }
 
     @Transactional
-    public ResultadoOperacao<Void> attachSystemUserToUBS(Long idSystemUser, Long idUBS) {
+    public ResultadoOperacao<Void> attachSystemUserToUBS(
+            Long idSystemUser, Long idUBS, SystemUserDetails loggedUser) {
 
-        SystemUser systemUser = systemUserService.findSystemUserById(idSystemUser);
+        SystemUser systemUser = systemUserService.findManageableSystemUserById(idSystemUser, loggedUser);
         if (systemUser == null) {
             return ResultadoOperacao.falha("Usuário não encontrado.");
         }
@@ -166,6 +200,8 @@ public class BasicHealthUnitService {
             return ResultadoOperacao.falha("UBS não encontrada.");
         }
         systemUser.setBasicHealthUnit(basicHealthUnit);
+        systemUser.setUpdateUser(loggedUser.getLoginUsername());
+        systemUser.setUpdateDate(LocalDateTime.now());
         systemUserService.updateBasicHealthUnitSystemUsers(List.of(systemUser));
         return ResultadoOperacao.sucessoSemValor();
     }

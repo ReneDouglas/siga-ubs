@@ -5,6 +5,9 @@ import br.com.tecsus.sigaubs.services.AdminUserDetailsService;
 import br.com.tecsus.sigaubs.tenancy.TenantResolutionFilter;
 import br.com.tecsus.sigaubs.tenancy.TenantResolverService;
 import br.com.tecsus.sigaubs.tenancy.TenantSessionValidationFilter;
+import br.com.tecsus.sigaubs.security.SessionAbsoluteTimeoutFilter;
+import br.com.tecsus.sigaubs.security.RoleAwareAuthenticationSuccessHandler;
+import br.com.tecsus.sigaubs.config.SecurityProperties;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -16,7 +19,6 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.crypto.factory.PasswordEncoderFactories;
 import org.springframework.security.crypto.password.DelegatingPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
@@ -24,13 +26,12 @@ import org.springframework.security.web.authentication.logout.HeaderWriterLogout
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.header.writers.ClearSiteDataHeaderWriter;
 import org.springframework.security.core.session.SessionRegistry;
-import org.springframework.security.core.session.SessionRegistryImpl;
 import org.springframework.security.web.session.HttpSessionEventPublisher;
-import org.springframework.web.cors.CorsConfiguration;
-import org.springframework.web.cors.CorsConfigurationSource;
-import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import org.springframework.session.jdbc.JdbcIndexedSessionRepository;
+import org.springframework.session.security.SpringSessionBackedSessionRegistry;
 
-import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
 
 import static br.com.tecsus.sigaubs.security.UrlPatternConfig.PRIVATE_MATCHERS;
 import static br.com.tecsus.sigaubs.security.UrlPatternConfig.PUBLIC_MATCHERS;
@@ -44,17 +45,33 @@ public class WebSecurityConfig {
     private final TenantResolutionFilter tenantResolutionFilter;
     private final TenantSessionValidationFilter tenantSessionValidationFilter;
     private final TenantResolverService tenantResolverService;
+    private final SessionAbsoluteTimeoutFilter sessionAbsoluteTimeoutFilter;
+    private final SecurityProperties securityProperties;
 
     @Autowired
     public WebSecurityConfig(TenantResolutionFilter tenantResolutionFilter,
             TenantSessionValidationFilter tenantSessionValidationFilter,
-            TenantResolverService tenantResolverService) {
+            TenantResolverService tenantResolverService,
+            SessionAbsoluteTimeoutFilter sessionAbsoluteTimeoutFilter,
+            SecurityProperties securityProperties) {
         this.tenantResolutionFilter = tenantResolutionFilter;
         this.tenantSessionValidationFilter = tenantSessionValidationFilter;
         this.tenantResolverService = tenantResolverService;
+        this.sessionAbsoluteTimeoutFilter = sessionAbsoluteTimeoutFilter;
+        this.securityProperties = securityProperties;
     }
 
     // authorization
+    @Bean
+    @Order(0)
+    public SecurityFilterChain managementSecurityFilterChain(HttpSecurity http) throws Exception {
+        http.securityMatcher("/actuator/**");
+        http.authorizeHttpRequests(authorize -> authorize.anyRequest().permitAll());
+        http.csrf(AbstractHttpConfigurer::disable);
+        http.httpBasic(AbstractHttpConfigurer::disable);
+        return http.build();
+    }
+
     @Bean
     @Order(1)
     public SecurityFilterChain adminSecurityFilterChain(HttpSecurity http,
@@ -67,6 +84,7 @@ public class WebSecurityConfig {
                     "/css/**",
                     "/images/**",
                     "/js/**",
+                    "/vendor/**",
                     "/admin/login",
                     "/admin/login-error",
                     "/error",
@@ -82,7 +100,8 @@ public class WebSecurityConfig {
             login.loginPage("/admin/login");
             login.loginProcessingUrl("/admin/login");
             login.failureUrl("/admin/login-error");
-            login.defaultSuccessUrl("/admin/tenant-management", true);
+            login.successHandler(new RoleAwareAuthenticationSuccessHandler(
+                    securityProperties, true, "/admin/tenant-management"));
         });
         http.logout(logout -> {
             logout.logoutUrl("/admin/logout");
@@ -90,12 +109,14 @@ public class WebSecurityConfig {
             logout.permitAll();
             logout.addLogoutHandler(new HeaderWriterLogoutHandler(new ClearSiteDataHeaderWriter(COOKIES)));
             logout.clearAuthentication(true);
-            logout.deleteCookies("JSESSIONID");
+            logout.deleteCookies(
+                    "JSESSIONID", "SESSION", "SIGAUBS_SESSION", "__Host-SIGAUBS_SESSION");
             logout.invalidateHttpSession(true);
         });
         http.csrf(Customizer.withDefaults());
         http.httpBasic(AbstractHttpConfigurer::disable);
         http.sessionManagement(session -> {
+            session.sessionFixation(fixation -> fixation.newSession());
             session.sessionConcurrency(concurrency -> {
                 concurrency.maximumSessions(3).expiredUrl("/expired").maxSessionsPreventsLogin(true)
                         .sessionRegistry(sessionRegistry);
@@ -105,6 +126,7 @@ public class WebSecurityConfig {
                 .frameOptions(frame -> frame.deny())
         );
         http.authenticationProvider(adminAuthenticationProvider(adminUserDetailsService));
+        http.addFilterAfter(sessionAbsoluteTimeoutFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
@@ -126,7 +148,8 @@ public class WebSecurityConfig {
         http.formLogin(login -> {
             login.loginPage("/login");
             login.failureUrl("/login-error");
-            login.defaultSuccessUrl("/", true);
+            login.successHandler(new RoleAwareAuthenticationSuccessHandler(
+                    securityProperties, false, "/"));
         });
         http.logout(logout -> {
             logout.logoutUrl("/logout");
@@ -134,12 +157,14 @@ public class WebSecurityConfig {
             logout.permitAll();
             logout.addLogoutHandler(new HeaderWriterLogoutHandler(new ClearSiteDataHeaderWriter(COOKIES)));
             logout.clearAuthentication(true);
-            logout.deleteCookies("JSESSIONID");
+            logout.deleteCookies(
+                    "JSESSIONID", "SESSION", "SIGAUBS_SESSION", "__Host-SIGAUBS_SESSION");
             logout.invalidateHttpSession(true);
         });
         http.csrf(Customizer.withDefaults());
         http.httpBasic(AbstractHttpConfigurer::disable);
         http.sessionManagement(session -> {
+            session.sessionFixation(fixation -> fixation.newSession());
             session.sessionConcurrency(concurrency -> {
                 concurrency.maximumSessions(3).expiredUrl("/expired").maxSessionsPreventsLogin(true)
                         .sessionRegistry(sessionRegistry);
@@ -151,6 +176,7 @@ public class WebSecurityConfig {
         http.authenticationProvider(tenantAuthenticationProvider(systemUserService));
         http.addFilterBefore(tenantResolutionFilter, UsernamePasswordAuthenticationFilter.class);
         http.addFilterAfter(tenantSessionValidationFilter, UsernamePasswordAuthenticationFilter.class);
+        http.addFilterAfter(sessionAbsoluteTimeoutFilter, TenantSessionValidationFilter.class);
 
         return http.build();
     }
@@ -158,9 +184,12 @@ public class WebSecurityConfig {
     // authentication
     @Bean
     public PasswordEncoder passwordEncoder() {
-        DelegatingPasswordEncoder encoder = (DelegatingPasswordEncoder) PasswordEncoderFactories.createDelegatingPasswordEncoder();
-        // Senhas legadas sem prefixo {id} são tratadas como BCrypt
-        encoder.setDefaultPasswordEncoderForMatches(new BCryptPasswordEncoder());
+        BCryptPasswordEncoder bcrypt =
+                new BCryptPasswordEncoder(securityProperties.getPassword().getBcryptStrength());
+        Map<String, org.springframework.security.crypto.password.PasswordEncoder> encoders = new HashMap<>();
+        encoders.put("bcrypt", bcrypt);
+        DelegatingPasswordEncoder encoder = new DelegatingPasswordEncoder("bcrypt", encoders);
+        encoder.setDefaultPasswordEncoderForMatches(bcrypt);
         return encoder;
     }
 
@@ -170,33 +199,22 @@ public class WebSecurityConfig {
     }
 
     @Bean
-    public SessionRegistry sessionRegistry() {
-        return new SessionRegistryImpl();
+    public SessionRegistry sessionRegistry(JdbcIndexedSessionRepository sessionRepository) {
+        return new SpringSessionBackedSessionRegistry<>(sessionRepository);
     }
 
     private DaoAuthenticationProvider tenantAuthenticationProvider(SystemUserService systemUserService) {
         DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider(systemUserService);
         authProvider.setPasswordEncoder(passwordEncoder());
+        authProvider.setUserDetailsPasswordService(systemUserService);
         return authProvider;
     }
 
     private DaoAuthenticationProvider adminAuthenticationProvider(AdminUserDetailsService adminUserDetailsService) {
         DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider(adminUserDetailsService);
         authProvider.setPasswordEncoder(passwordEncoder());
+        authProvider.setUserDetailsPasswordService(adminUserDetailsService);
         return authProvider;
-    }
-
-    @Bean
-    CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration configuration = new CorsConfiguration().applyPermitDefaultValues();
-        configuration.setAllowedMethods(List.of("POST", "GET", "PUT", "DELETE", "OPTIONS"));
-        configuration.setAllowCredentials(true);
-        configuration.setAllowedHeaders(List.of("Content-Type", "X-CSRF-TOKEN", "X-Requested-With", "X-Tenant-Slug"));
-        configuration.addExposedHeader("Authorization");
-        configuration.addExposedHeader("Content-Type");
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", configuration);
-        return source;
     }
 
 }

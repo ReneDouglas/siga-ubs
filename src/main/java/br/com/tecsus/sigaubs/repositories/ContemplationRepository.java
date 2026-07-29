@@ -3,7 +3,9 @@ package br.com.tecsus.sigaubs.repositories;
 import br.com.tecsus.sigaubs.entities.Contemplation;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.repository.query.Param;
+import jakarta.persistence.LockModeType;
 
 public interface ContemplationRepository extends JpaRepository<Contemplation, Long>, ContemplationRepositoryCustom {
 
@@ -28,5 +30,17 @@ public interface ContemplationRepository extends JpaRepository<Contemplation, Lo
             WHERE c.id = :id
     """)
     Contemplation findFetchedForCancelById(@Param("id") Long id);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+           SELECT c
+            FROM Contemplation c
+            JOIN FETCH c.appointment a
+            JOIN FETCH a.patient p
+            JOIN FETCH p.basicHealthUnit
+            JOIN FETCH c.medicalSlot ms
+            WHERE c.id = :id
+    """)
+    Contemplation findFetchedForUpdateById(@Param("id") Long id);
 
 }

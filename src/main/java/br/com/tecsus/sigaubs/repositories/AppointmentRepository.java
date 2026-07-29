@@ -6,7 +6,9 @@ import br.com.tecsus.sigaubs.dtos.ProcedureTypeTotalDTO;
 import br.com.tecsus.sigaubs.entities.Appointment;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.repository.query.Param;
+import jakarta.persistence.LockModeType;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.Optional;
@@ -24,6 +26,18 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long>,
         WHERE a.id = :id
     """)
     Optional<Appointment> findByIdWithQueueDetails(@Param("id") Long id);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+        SELECT a
+        FROM Appointment a
+        JOIN FETCH a.patient p
+        JOIN FETCH p.basicHealthUnit
+        JOIN FETCH a.medicalProcedure mp
+        LEFT JOIN FETCH a.contemplation c
+        WHERE a.id = :id
+    """)
+    Optional<Appointment> findByIdForUpdateWithQueueDetails(@Param("id") Long id);
 
     @Transactional(readOnly = true)
     @Query("""

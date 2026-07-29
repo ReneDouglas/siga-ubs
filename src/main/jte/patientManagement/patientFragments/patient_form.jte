@@ -17,7 +17,7 @@
     @if(message != null)
     <div class="border rounded-lg px-4 py-3 mx-4 mt-4 text-sm flex items-center justify-between ${error != null && error ? "bg-red-100 text-red-700 border-red-300" : "bg-emerald-100 text-emerald-700 border-emerald-300"}">
         <span>${message}</span>
-        <button type="button" class="ml-4 font-bold leading-none" onclick="this.parentElement.remove()">×</button>
+        <button type="button" class="ml-4 font-bold leading-none" data-action="remove-parent">×</button>
     </div>
     @endif
 

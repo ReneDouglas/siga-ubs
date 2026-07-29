@@ -1,31 +1,25 @@
-# =============================================================================
-# Runtime de desenvolvimento — Node.js + Maven + JDK
-# =============================================================================
-FROM eclipse-temurin:21-jdk-jammy
-
-RUN apt-get update && apt-get install -y --no-install-recommends curl \
-    && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
-    && apt-get install -y --no-install-recommends nodejs \
-    && rm -rf /var/lib/apt/lists/*
-
-WORKDIR /app
-
-COPY .mvn/ .mvn/
-COPY mvnw pom.xml ./
-RUN chmod +x mvnw
-RUN ./mvnw dependency:go-offline -B
-
+# syntax=docker/dockerfile:1.7
+FROM node:20.20.2-bookworm-slim AS assets
+WORKDIR /assets
 COPY package.json package-lock.json ./
-RUN npm ci
-
-COPY src/ src/
+RUN npm ci --ignore-scripts
 COPY tailwind.config.js postcss.config.js ./
-
+COPY src/main/jte/ src/main/jte/
+COPY src/main/resources/static/ src/main/resources/static/
 RUN mkdir -p target/classes/static/css && npm run build:postcss
-RUN mkdir -p jte-classes
 
+FROM eclipse-temurin:21.0.8_9-jdk-jammy
+RUN groupadd --gid 10001 sigaubs \
+    && useradd --uid 10001 --gid sigaubs --create-home --shell /usr/sbin/nologin sigaubs
+WORKDIR /app
+COPY --chown=sigaubs:sigaubs .mvn/ .mvn/
+COPY --chown=sigaubs:sigaubs mvnw pom.xml ./
+RUN chmod +x mvnw && mkdir -p jte-classes target \
+    && chown -R sigaubs:sigaubs /app
+USER 10001:10001
+RUN ./mvnw dependency:go-offline -B
+COPY --chown=sigaubs:sigaubs src/ src/
+COPY --chown=sigaubs:sigaubs --from=assets /assets/target/classes/static/css/ target/classes/static/css/
 ENV JAVA_OPTS="-Xms256m -Xmx512m -XX:+UseG1GC -XX:+UseContainerSupport"
-
-EXPOSE 8080
-
+EXPOSE 8080 9090
 ENTRYPOINT ["sh", "-c", "./mvnw spring-boot:run -Dspring-boot.run.jvmArguments=\"$JAVA_OPTS\""]

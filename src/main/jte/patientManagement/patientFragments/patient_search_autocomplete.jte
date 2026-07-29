@@ -5,8 +5,8 @@
      class="absolute bg-white border border-gray-300 w-full mt-1 rounded shadow-lg z-10 ${patients.isEmpty() ? "hidden" : ""}">
     <ul>
         @for(var patient : patients)
-        <li onclick="autocompleteInputSearch('${patient.getName().replace("'", "\\'")}')"
-            class="w-full p-2 hover:bg-gray-200 cursor-pointer">
+        <li data-action="autocomplete-patient"
+            class="w-full p-2 hover:bg-gray-200 cursor-pointer" tabindex="0">
             <span class="text-slate-600 font-medium">${patient.getName()}</span>
         </li>
         @endfor

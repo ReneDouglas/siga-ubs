@@ -42,6 +42,11 @@
                 </td>
                 <td class="border-b text-sm pl-4">
                     <div class="inline-flex">
+                        <a href="/systemUser-management/${user.getId()}/sessions"
+                           class="relative group inline-flex p-2 rounded-lg hover:bg-slate-100 transition duration-300">
+                            <span class="material-symbols-outlined hover:text-blue-500 transition duration-300">devices</span>
+                            <span class="absolute right-full top-1/2 transform -translate-y-1/2 -translate-x-1 hidden group-hover:block bg-slate-800 text-white text-sm rounded px-2 py-1 whitespace-nowrap">Sessões</span>
+                        </a>
                         <form action="/systemUser-management" method="post">
                             <input type="hidden" name="id" value="${user.getId()}"/>
                             <input type="hidden" name="${csrf.parameterName()}" value="${csrf.token()}"/>
@@ -79,7 +84,7 @@
 
         <div class="flex items-center" id="pagination">
             <button class="inline-flex p-2 rounded-lg bg-slate-100 hover:bg-slate-200"
-                    id="prevPage" disabled="${!systemUsersPage.hasPrevious()}" onclick="goToPreviousPage(event)">
+                    id="prevPage" disabled="${!systemUsersPage.hasPrevious()}" data-action="previous-page">
                 <span class="material-symbols-outlined">keyboard_double_arrow_left</span>
             </button>
 
@@ -87,7 +92,7 @@
                 <span>${systemUsersPage.getTotalPages()}</span></span>
 
             <button class="inline-flex p-2 rounded-lg bg-slate-100 hover:bg-slate-200"
-                    id="nextPage" disabled="${!systemUsersPage.hasNext()}" onclick="goToNextPage(event)">
+                    id="nextPage" disabled="${!systemUsersPage.hasNext()}" data-action="next-page">
                 <span class="material-symbols-outlined">keyboard_double_arrow_right</span>
             </button>
         </div>

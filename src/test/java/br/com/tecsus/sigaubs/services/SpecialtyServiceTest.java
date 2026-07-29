@@ -78,6 +78,8 @@ class SpecialtyServiceTest {
         SpecialtyDTO dto = dto();
         dto.setId(1L);
         dto.setActive(false);
+        when(specialtyRepository.findById(1L))
+                .thenReturn(java.util.Optional.of(specialty(1L, "Cardiologia")));
         when(specialtyRepository.save(any(Specialty.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         service.updateSpecialty(dto, userDetails("admin", "Admin", null, 1L, "afogados", Roles.ROLE_SMS));

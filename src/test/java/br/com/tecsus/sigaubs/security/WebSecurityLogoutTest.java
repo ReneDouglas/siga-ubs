@@ -26,10 +26,15 @@ import java.time.LocalDateTime;
 import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.containsString;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.options;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest
@@ -38,9 +43,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class WebSecurityLogoutTest {
 
     private static final String HOST = "logout-afogados.sigaubs.com.br";
+    private static final String ADMIN_HOST = "admin.localhost";
     private static final String SLUG = "logout-afogados";
     private static final String USERNAME = "logout-user";
-    private static final String PASSWORD = "123456";
+    private static final String PASSWORD = "Logout#2026";
 
     private final MockMvc mockMvc;
     private final TenantRepository tenantRepository;
@@ -95,6 +101,90 @@ class WebSecurityLogoutTest {
                 .andExpect(redirectedUrl("/login"));
 
         assertThat(session.isInvalid()).isTrue();
+    }
+
+    @Test
+    void deveImpedirCsrfECors() throws Exception {
+        mockMvc.perform(post("/systemUser-management/delete")
+                        .header("Host", HOST)
+                        .param("id", "1"))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(options("/systemUser-management/delete")
+                        .header("Host", HOST)
+                        .header("Origin", "https://evil.example")
+                        .header("Access-Control-Request-Method", "POST"))
+                .andExpect(header().doesNotExist("Access-Control-Allow-Origin"))
+                .andExpect(header().doesNotExist("Access-Control-Allow-Credentials"));
+    }
+
+    @Test
+    void deveServirMaterialSymbolsNoHostAdministrativoSemAutenticacao()
+            throws Exception {
+        mockMvc.perform(get("/vendor/material-symbols/outlined.css")
+                        .header("Host", ADMIN_HOST))
+                .andExpect(status().isOk())
+                .andExpect(content().string(
+                        containsString("Material Symbols Outlined")));
+        mockMvc.perform(get(
+                        "/vendor/material-symbols/material-symbols-outlined.woff2")
+                        .header("Host", ADMIN_HOST))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void deveTrocarIdELimparAtributoNaAutenticacao() throws Exception {
+        Tenant tenant = createTenant();
+        SystemRole roleUser = createRole();
+        createSystemUser(tenant, roleUser);
+        MockHttpSession previous = new MockHttpSession();
+        previous.setAttribute("untrusted", "must-not-survive");
+
+        MvcResult result = mockMvc.perform(post("/login")
+                        .header("Host", HOST)
+                        .header("User-Agent", "Mozilla/5.0 Chrome/126.0 Safari/537.36")
+                        .session(previous)
+                        .with(csrf())
+                        .param("username", USERNAME)
+                        .param("password", PASSWORD))
+                .andExpect(status().is3xxRedirection())
+                .andReturn();
+
+        MockHttpSession authenticated =
+                (MockHttpSession) result.getRequest().getSession(false);
+        assertThat(authenticated).isNotNull();
+        assertThat(authenticated.getId()).isNotEqualTo(previous.getId());
+        assertThat(authenticated.getAttribute("untrusted")).isNull();
+        assertThat(authenticated.getAttribute(SessionMetadata.MANAGEMENT_ID_ATTRIBUTE))
+                .asString()
+                .matches("[0-9a-f-]{36}");
+        assertThat(authenticated.getAttribute(SessionMetadata.CLIENT_DESCRIPTION_ATTRIBUTE))
+                .isEqualTo("Chrome · computador");
+        assertThat(authenticated.getAttribute(SessionMetadata.LOCATION_DESCRIPTION_ATTRIBUTE))
+                .isEqualTo(SessionMetadata.LOCAL_DEVELOPMENT_LOCATION);
+
+        mockMvc.perform(get("/session-management")
+                        .header("Host", HOST)
+                        .session(authenticated))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Minhas sessões")))
+                .andExpect(content().string(containsString(USERNAME)))
+                .andExpect(content().string(
+                        containsString("Nenhuma sessão ativa encontrada.")));
+        mockMvc.perform(get("/systemUser-management/1/sessions")
+                        .header("Host", HOST)
+                        .session(authenticated))
+                .andExpect(status().isForbidden());
+
+        String managementId = authenticated.getAttribute(
+                SessionMetadata.MANAGEMENT_ID_ATTRIBUTE).toString();
+        mockMvc.perform(post("/session-management/" + managementId + "/revoke")
+                        .header("Host", HOST)
+                        .session(authenticated)
+                        .with(csrf()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/session-management"));
+        assertThat(authenticated.isInvalid()).isTrue();
     }
 
     private Tenant createTenant() {

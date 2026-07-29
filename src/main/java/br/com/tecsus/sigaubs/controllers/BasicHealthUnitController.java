@@ -1,6 +1,7 @@
 package br.com.tecsus.sigaubs.controllers;
 
 import br.com.tecsus.sigaubs.dtos.UBSsystemUserDTO;
+import br.com.tecsus.sigaubs.dtos.BasicHealthUnitCommandDTO;
 import br.com.tecsus.sigaubs.entities.BasicHealthUnit;
 import br.com.tecsus.sigaubs.security.SystemUserDetails;
 import br.com.tecsus.sigaubs.services.BasicHealthUnitService;
@@ -21,6 +22,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.util.List;
+import jakarta.validation.Valid;
+import org.springframework.validation.BindingResult;
 
 @Controller
 public class BasicHealthUnitController {
@@ -57,12 +60,19 @@ public class BasicHealthUnitController {
 
     @PreAuthorize("hasAnyRole('ADMIN', 'SMS')")
     @PostMapping("/basicHealthUnit-management/create")
-    public String registerBasicHealthUnit(@ModelAttribute BasicHealthUnit basicHealthUnit,
+    public String registerBasicHealthUnit(
+                                          @Valid @ModelAttribute BasicHealthUnitCommandDTO command,
+                                          BindingResult bindingResult,
                                           @AuthenticationPrincipal SystemUserDetails loggedUser,
                                           RedirectAttributes redirectAttributes) {
 
+        if (bindingResult.hasErrors()) {
+            redirectAttributes.addFlashAttribute("message", "Verifique os campos da UBS.");
+            redirectAttributes.addFlashAttribute("error", true);
+            return "redirect:/basicHealthUnit-management";
+        }
         try {
-            var resultado = basicHealthUnitService.registerBasicHealthUnit(basicHealthUnit, loggedUser);
+            var resultado = basicHealthUnitService.registerBasicHealthUnit(command, loggedUser);
             if (resultado.sucesso()) {
                 redirectAttributes.addFlashAttribute("message", "UBS cadastrada com sucesso.");
                 redirectAttributes.addFlashAttribute("error", false);
@@ -75,7 +85,7 @@ public class BasicHealthUnitController {
         } catch (Exception e) {
             redirectAttributes.addFlashAttribute("message", "Erro ao cadastrar UBS.");
             redirectAttributes.addFlashAttribute("error", true);
-            log.error("Erro ao cadastrar UBS: {}", e.getMessage());
+            log.error("Erro ao cadastrar UBS [{}].", e.getClass().getSimpleName());
         }
 
         return "redirect:/basicHealthUnit-management";
@@ -100,12 +110,18 @@ public class BasicHealthUnitController {
 
     @PreAuthorize("hasAnyRole('ADMIN', 'SMS')")
     @PostMapping("/basicHealthUnit-management/update")
-    public String updateSystemUser(@ModelAttribute BasicHealthUnit basicHealthUnit,
+    public String updateSystemUser(@Valid @ModelAttribute BasicHealthUnitCommandDTO command,
+                                   BindingResult bindingResult,
                                    RedirectAttributes redirectAttributes,
                                    @AuthenticationPrincipal SystemUserDetails loggedUser) {
 
+        if (bindingResult.hasErrors()) {
+            redirectAttributes.addFlashAttribute("message", "Verifique os campos da UBS.");
+            redirectAttributes.addFlashAttribute("error", true);
+            return "redirect:/basicHealthUnit-management";
+        }
         try {
-            var resultado = basicHealthUnitService.updateBasicHealthUnit(basicHealthUnit, loggedUser);
+            var resultado = basicHealthUnitService.updateBasicHealthUnit(command, loggedUser);
             if (resultado.sucesso()) {
                 redirectAttributes.addFlashAttribute("message", "UBS atualizada com sucesso.");
                 redirectAttributes.addFlashAttribute("error", false);
@@ -118,7 +134,7 @@ public class BasicHealthUnitController {
         } catch (Exception e) {
             redirectAttributes.addFlashAttribute("message", "Erro ao atualizar UBS.");
             redirectAttributes.addFlashAttribute("error", true);
-            log.error("Erro ao atualizar UBS: {}", e.getMessage());
+            log.error("Erro ao atualizar UBS [{}].", e.getClass().getSimpleName());
         }
 
 
@@ -239,10 +255,12 @@ public class BasicHealthUnitController {
     public String appendSystemUserToBasicHealthUnit(@RequestParam("systemUserSearch") String systemUserName,
                                                     @RequestParam("basicHealthUnit") Long basicHealthUnit,
                                                     @RequestParam("idSystemUser") Long idSystemUser,
+                                                    @AuthenticationPrincipal SystemUserDetails loggedUser,
                                                     Model model) {
 
         try {
-            var resultado = basicHealthUnitService.attachSystemUserToUBS(idSystemUser, basicHealthUnit);
+            var resultado = basicHealthUnitService.attachSystemUserToUBS(
+                    idSystemUser, basicHealthUnit, loggedUser);
             model.addAttribute("basicHealthUnit", basicHealthUnit);
             model.addAttribute("attach_message", resultado.sucesso()
                     ? "Usuário vinculado com sucesso."

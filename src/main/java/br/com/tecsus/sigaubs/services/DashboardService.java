@@ -2,12 +2,14 @@ package br.com.tecsus.sigaubs.services;
 
 import br.com.tecsus.sigaubs.dtos.*;
 import br.com.tecsus.sigaubs.repositories.DashboardRepository;
-import br.com.tecsus.sigaubs.utils.ContemplationScheduleStatus;
+import br.com.tecsus.sigaubs.tenancy.TenantContextHolder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -16,14 +18,15 @@ import java.util.List;
 public class DashboardService {
 
     private final DashboardRepository dashboardRepository;
-    private final ContemplationScheduleStatus contemplationScheduleStatus;
+    private final ContemplationJobExecutionService jobExecutionService;
     private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+    private static final ZoneId BUSINESS_ZONE = ZoneId.of("America/Sao_Paulo");
 
     @Autowired
     public DashboardService(DashboardRepository dashboardRepository,
-            ContemplationScheduleStatus contemplationScheduleStatus) {
+            ContemplationJobExecutionService jobExecutionService) {
         this.dashboardRepository = dashboardRepository;
-        this.contemplationScheduleStatus = contemplationScheduleStatus;
+        this.jobExecutionService = jobExecutionService;
     }
 
     public DashboardDTO loadDashboardData() {
@@ -79,20 +82,29 @@ public class DashboardService {
     }
 
     private ContemplationStatusDTO buildContemplationStatus() {
-
-        ContemplationScheduleStatus.Status currentStatus = contemplationScheduleStatus.getStatus();
-        String status = currentStatus != null ? currentStatus.name() : null;
-
-        String startTime = contemplationScheduleStatus.getStartTime() != null
-                ? contemplationScheduleStatus.getStartTime().format(FORMATTER)
-                : null;
-
-        String endTime = contemplationScheduleStatus.getEndTime() != null
-                ? contemplationScheduleStatus.getEndTime().format(FORMATTER)
-                : null;
-
+        var latestExecution = jobExecutionService.findLatestForTenant(
+                TenantContextHolder.getRequiredTenantId());
         Long totalToday = dashboardRepository.countTodayContemplations();
+        if (latestExecution.isEmpty()) {
+            return new ContemplationStatusDTO(null, null, null, totalToday);
+        }
 
-        return new ContemplationStatusDTO(status, startTime, endTime, totalToday);
+        var execution = latestExecution.get();
+        String status = execution.getStatus();
+        String startTime = format(execution.getStartedAt());
+        String endTime = format(execution.getFinishedAt());
+        if ("RUNNING".equals(status)
+                && execution.getLeaseUntil() != null
+                && execution.getLeaseUntil().isBefore(
+                        LocalDateTime.now(BUSINESS_ZONE))) {
+            status = "INTERRUPTED";
+            endTime = format(execution.getLeaseUntil());
+        }
+        return new ContemplationStatusDTO(
+                status, startTime, endTime, totalToday);
+    }
+
+    private String format(LocalDateTime value) {
+        return value == null ? null : value.format(FORMATTER);
     }
 }

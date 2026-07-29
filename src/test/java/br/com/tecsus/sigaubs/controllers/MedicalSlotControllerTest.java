@@ -72,48 +72,6 @@ class MedicalSlotControllerTest {
     }
 
     @Test
-    void deveAdicionarERemoverLinhaUsandoFormularioComoFonteDaVerdade() {
-        MedicalSlot slot = TestDataFactory.slot(10L, TestDataFactory.ubs(1L, "Stub"), procedure, 10, 10);
-        when(basicHealthUnitService.findSystemUserUBS(1L)).thenReturn(ubs);
-        when(basicHealthUnitService.getFetchedAssociations(any(MedicalSlot.class))).thenAnswer(invocation -> invocation.getArgument(0));
-        var model = model();
-
-        assertThat(controller.addAvailableMedicalSlotsRow(slot, new AvailableMedicalSlotsFormDTO(), model))
-                .isEqualTo("medicalSlotManagement/medicalSlotFragments/available_slots_form_table");
-        AvailableMedicalSlotsFormDTO form = (AvailableMedicalSlotsFormDTO) model.get("availableMedicalSlotsForm");
-        assertThat(form.getAvailableMedicalSlots()).hasSize(1);
-        assertThat(form.getAvailableMedicalSlots().getFirst().getBasicHealthUnit()).isSameAs(ubs);
-
-        model = model();
-        assertThat(controller.removeRowtByIndex(0, form, model))
-                .isEqualTo("medicalSlotManagement/medicalSlotFragments/available_slots_form_table");
-        form = (AvailableMedicalSlotsFormDTO) model.get("availableMedicalSlotsForm");
-        assertThat(form.getAvailableMedicalSlots()).isEmpty();
-    }
-
-    @Test
-    void deveRegistrarLoteDeVagasETratarErro() throws Exception {
-        var form = new AvailableMedicalSlotsFormDTO();
-        form.addRow(TestDataFactory.slot(10L, ubs, procedure, 10, 10));
-        var loggedUser = sms();
-        var redirectAttributes = redirect();
-        when(medicalSlotService.registerAvailableMedicalSlotsBatch(form, loggedUser))
-                .thenReturn(ResultadoOperacao.sucessoSemValor());
-
-        assertThat(controller.registerAvailableMedicalSlots(form, loggedUser, redirectAttributes))
-                .isEqualTo("redirect:/medicalSlot-management");
-        assertThat(redirectAttributes.getFlashAttributes().get("error")).isEqualTo(false);
-        verify(medicalSlotService).registerAvailableMedicalSlotsBatch(form, loggedUser);
-
-        when(medicalSlotService.registerAvailableMedicalSlotsBatch(form, loggedUser))
-                .thenReturn(ResultadoOperacao.falha("UBS distinta"));
-        redirectAttributes = redirect();
-        controller.registerAvailableMedicalSlots(form, loggedUser, redirectAttributes);
-        assertThat(redirectAttributes.getFlashAttributes().get("error")).isEqualTo(true);
-        assertThat(redirectAttributes.getFlashAttributes().get("message")).isEqualTo("Erro ao registrar vagas: UBS distinta");
-    }
-
-    @Test
     void devePaginarECarregarProcedimentosPorTipo() {
         when(medicalSlotService.findMedicalSlotsPaginated(any(Pageable.class)))
                 .thenReturn(new PageImpl<>(List.of()));

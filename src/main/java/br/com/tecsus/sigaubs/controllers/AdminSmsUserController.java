@@ -2,6 +2,7 @@ package br.com.tecsus.sigaubs.controllers;
 
 import br.com.tecsus.sigaubs.dtos.SmsUserSearchDTO;
 import br.com.tecsus.sigaubs.dtos.ResultadoOperacao;
+import br.com.tecsus.sigaubs.dtos.AdminAccountCommandDTO;
 import br.com.tecsus.sigaubs.entities.SystemUser;
 import br.com.tecsus.sigaubs.security.SystemUserDetails;
 import br.com.tecsus.sigaubs.services.AdminSmsUserService;
@@ -24,6 +25,8 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.util.Locale;
 import java.util.Set;
+import jakarta.validation.Valid;
+import org.springframework.validation.BindingResult;
 
 @Controller
 @RequestMapping("/admin/tenant-management/{tenantId}/sms-users")
@@ -56,7 +59,8 @@ public class AdminSmsUserController {
         model.addAttribute("smsUsersPage", adminSmsUserService.findSmsUsers(
                 tenantId,
                 searchUser,
-                PageRequest.of(currentPage, pageSize, sortDirection, sortProperty)));
+                PageRequest.of(Math.max(0, currentPage), Math.clamp(pageSize, 1, 100),
+                        sortDirection, sortProperty)));
         model.addAttribute("selectedSort", sortProperty);
         model.addAttribute("selectedDirection", sortDirection.name());
 
@@ -72,10 +76,16 @@ public class AdminSmsUserController {
 
     @PostMapping("/create")
     public String createSmsUser(@PathVariable Long tenantId,
-            @ModelAttribute SystemUser systemUser,
+            @Valid @ModelAttribute AdminAccountCommandDTO command,
+            BindingResult bindingResult,
             @AuthenticationPrincipal SystemUserDetails loggedUser,
             RedirectAttributes redirectAttributes) {
-        var resultado = adminSmsUserService.createSmsUser(tenantId, systemUser, loggedUser);
+        if (bindingResult.hasErrors()) {
+            redirectAttributes.addFlashAttribute("message", "Verifique os campos e a política de senha.");
+            redirectAttributes.addFlashAttribute("error", true);
+            return "redirect:/admin/tenant-management/" + tenantId + "/sms-users";
+        }
+        var resultado = adminSmsUserService.createSmsUser(tenantId, command, loggedUser);
         addFlashResult(redirectAttributes, resultado, "Usuário SMS cadastrado com sucesso.");
         logResult("cadastrar usuário SMS", resultado);
         return "redirect:/admin/tenant-management/" + tenantId + "/sms-users";
@@ -83,10 +93,16 @@ public class AdminSmsUserController {
 
     @PostMapping("/update")
     public String updateSmsUser(@PathVariable Long tenantId,
-            @ModelAttribute SystemUser systemUser,
+            @Valid @ModelAttribute AdminAccountCommandDTO command,
+            BindingResult bindingResult,
             @AuthenticationPrincipal SystemUserDetails loggedUser,
             RedirectAttributes redirectAttributes) {
-        var resultado = adminSmsUserService.updateSmsUser(tenantId, systemUser, loggedUser);
+        if (bindingResult.hasErrors()) {
+            redirectAttributes.addFlashAttribute("message", "Verifique os campos e a política de senha.");
+            redirectAttributes.addFlashAttribute("error", true);
+            return "redirect:/admin/tenant-management/" + tenantId + "/sms-users";
+        }
+        var resultado = adminSmsUserService.updateSmsUser(tenantId, command, loggedUser);
         addFlashResult(redirectAttributes, resultado, "Usuário SMS atualizado com sucesso.");
         logResult("atualizar usuário SMS", resultado);
         return "redirect:/admin/tenant-management/" + tenantId + "/sms-users";

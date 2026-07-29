@@ -11,7 +11,7 @@
                     Sucesso
                 </span>
                 <button class="text-green-100 hover:text-white transition-colors focus:outline-none"
-                        onclick="this.closest('[role=alert]').style.display='none'">
+                        data-action="dismiss-alert">
                     <span class="material-symbols-outlined">close</span>
                 </button>
             </div>
@@ -29,7 +29,7 @@
                     Erro
                 </span>
                 <button class="text-red-100 hover:text-white transition-colors focus:outline-none"
-                        onclick="this.closest('[role=alert]').style.display='none'">
+                        data-action="dismiss-alert">
                     <span class="material-symbols-outlined">close</span>
                 </button>
             </div>

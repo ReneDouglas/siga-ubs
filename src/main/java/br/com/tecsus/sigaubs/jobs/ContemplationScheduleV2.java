@@ -1,7 +1,6 @@
 package br.com.tecsus.sigaubs.jobs;
 
 import br.com.tecsus.sigaubs.services.ContemplationScheduleService;
-import br.com.tecsus.sigaubs.utils.ContemplationScheduleStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,15 +17,13 @@ public class ContemplationScheduleV2 {
     private static final Logger log = LoggerFactory.getLogger(ContemplationScheduleV2.class);
 
     private final ContemplationScheduleService contemplationScheduleService;
-    private final ContemplationScheduleStatus contemplationScheduleStatus;
 
     private static final int MAX_ATTEMPTS = 4;
 
     @Autowired
-    public ContemplationScheduleV2(ContemplationScheduleService contemplationScheduleService,
-            ContemplationScheduleStatus contemplationScheduleStatus) {
+    public ContemplationScheduleV2(
+            ContemplationScheduleService contemplationScheduleService) {
         this.contemplationScheduleService = contemplationScheduleService;
-        this.contemplationScheduleStatus = contemplationScheduleStatus;
     }
 
     @Scheduled(cron = "${schedule.cron.contemplation}", zone = "${schedule.cron.contemplation.zone}")
@@ -47,9 +44,7 @@ public class ContemplationScheduleV2 {
         log.info("========================================");
         log.info(" ");
 
-        contemplationScheduleStatus.setRunning();
         contemplationScheduleService.executeContemplation();
-        contemplationScheduleStatus.setDone();
     }
 
     @Recover
@@ -60,6 +55,5 @@ public class ContemplationScheduleV2 {
         log.error("[retry] Erro: {}", e.getMessage());
         log.error("[retry] Finalizando rotina de contemplação.");
 
-        contemplationScheduleStatus.setFailed();
     }
 }

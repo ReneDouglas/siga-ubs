@@ -19,6 +19,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.util.List;
+import jakarta.validation.Valid;
+import org.springframework.validation.BindingResult;
 
 @Controller
 public class SpecialtyController {
@@ -59,12 +61,16 @@ public class SpecialtyController {
 
     @PreAuthorize("hasAnyRole('ADMIN', 'SMS')")
     @PostMapping("/specialty-management/create")
-    public String registerSpecialty(@ModelAttribute SpecialtyDTO specialtyDTO,
+    public String registerSpecialty(@Valid @ModelAttribute SpecialtyDTO specialtyDTO,
+                                    BindingResult bindingResult,
                                     @RequestParam("proceduresJson") String proceduresJson,
                                     @AuthenticationPrincipal SystemUserDetails loggedUser,
                                     RedirectAttributes redirectAttributes) {
 
         try {
+            if (bindingResult.hasErrors() || proceduresJson.length() > 50_000) {
+                throw new IllegalArgumentException("Dados da especialidade inválidos.");
+            }
             var procedures = objectMapper.readValue(proceduresJson, new TypeReference<List<ProcedureDTO>>() {});
             specialtyDTO.setProcedures(procedures);
             var resultado = specialtyService.registerSpecialty(specialtyDTO, loggedUser);
@@ -79,19 +85,23 @@ public class SpecialtyController {
         } catch (Exception e) {
             redirectAttributes.addFlashAttribute("message", "Erro ao cadastrar especialidade.");
             redirectAttributes.addFlashAttribute("error", true);
-            log.error("Erro ao cadastrar especialidade: {}", e.getMessage());
+            log.error("Erro ao cadastrar especialidade [{}].", e.getClass().getSimpleName());
         }
         return "redirect:/specialty-management";
     }
 
     @PreAuthorize("hasAnyRole('ADMIN', 'SMS')")
     @PostMapping("/specialty-management/update")
-    public String updateSpecialty(@ModelAttribute SpecialtyDTO specialtyDTO,
+    public String updateSpecialty(@Valid @ModelAttribute SpecialtyDTO specialtyDTO,
+                                  BindingResult bindingResult,
                                   @RequestParam("proceduresJson") String proceduresJson,
                                   @AuthenticationPrincipal SystemUserDetails loggedUser,
                                   RedirectAttributes redirectAttributes) {
 
         try {
+            if (bindingResult.hasErrors() || proceduresJson.length() > 50_000) {
+                throw new IllegalArgumentException("Dados da especialidade inválidos.");
+            }
             var procedures = objectMapper.readValue(proceduresJson, new TypeReference<List<ProcedureDTO>>() {});
             specialtyDTO.setProcedures(procedures);
             var resultado = specialtyService.updateSpecialty(specialtyDTO, loggedUser);
@@ -106,7 +116,7 @@ public class SpecialtyController {
         } catch (Exception e) {
             redirectAttributes.addFlashAttribute("message", "Erro ao atualizar especialidade.");
             redirectAttributes.addFlashAttribute("error", true);
-            log.error("Erro ao atualizar especialidade: {}", e.getMessage());
+            log.error("Erro ao atualizar especialidade [{}].", e.getClass().getSimpleName());
         }
         return "redirect:/specialty-management";
     }

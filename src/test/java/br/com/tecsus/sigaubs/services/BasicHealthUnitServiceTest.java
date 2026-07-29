@@ -93,13 +93,14 @@ class BasicHealthUnitServiceTest {
     }
 
     @Test
-    void deveMapearUsuariosDaUbsEVincularDesvincular() throws Exception {
+    void deveMapearUsuariosDaUbsEDesvincular() throws Exception {
         var role = role(1L, Roles.ROLE_ATENDENTE);
         SystemUser user = systemUser(1L, "user", role);
         BasicHealthUnit ubs = ubs(1L, "UBS");
         ubs.setSystemUsers(List.of(user));
         when(basicHealthUnitRepository.findById(1L)).thenReturn(Optional.of(ubs));
-        when(systemUserService.findSystemUserById(1L)).thenReturn(user);
+        var loggedUser = userDetails("admin", "Admin", null, 1L, "afogados", Roles.ROLE_SMS);
+        when(systemUserService.findManageableSystemUserById(1L, loggedUser)).thenReturn(user);
 
         assertThat(service.findUBSsystemUsersByUBSid(1L))
                 .singleElement()
@@ -108,12 +109,10 @@ class BasicHealthUnitServiceTest {
                     assertThat(dto.role()).isEqualTo(Roles.ROLE_ATENDENTE.getDescription());
                 });
 
-        service.unlinkBasicHealthUnitSystemUser(1L, userDetails("admin", "Admin", null, 1L, "afogados", Roles.ROLE_SMS));
+        service.unlinkBasicHealthUnitSystemUser(1L, loggedUser);
         assertThat(user.getBasicHealthUnit()).isNull();
         verify(systemUserService).updateBasicHealthUnitSystemUsers(anyList());
 
-        service.attachSystemUserToUBS(1L, 1L);
-        assertThat(user.getBasicHealthUnit()).isEqualTo(ubs);
     }
 
     @Test

@@ -162,7 +162,7 @@ public class ContemplationController {
                             specialty,
                             referenceMonth,
                             status,
-                            PageRequest.of(currentPage, consultasPageSize)));
+                            PageRequest.of(Math.max(0, currentPage), Math.clamp(consultasPageSize, 1, 100))));
             return "contemplationManagement/contemplationFragments/consultas_datatable";
         } else if (procedureType.equals(ProcedureType.EXAME.toString())) {
             model.addAttribute("examesPage", contemplationService
@@ -172,7 +172,7 @@ public class ContemplationController {
                             specialty,
                             referenceMonth,
                             status,
-                            PageRequest.of(currentPage, examesPageSize)));
+                            PageRequest.of(Math.max(0, currentPage), Math.clamp(examesPageSize, 1, 100))));
             return "contemplationManagement/contemplationFragments/exames_datatable";
         } else if (procedureType.equals(ProcedureType.CIRURGIA.toString())) {
             model.addAttribute("cirurgiasPage", contemplationService
@@ -182,7 +182,7 @@ public class ContemplationController {
                             specialty,
                             referenceMonth,
                             status,
-                            PageRequest.of(currentPage, cirurgiasPageSize)));
+                            PageRequest.of(Math.max(0, currentPage), Math.clamp(cirurgiasPageSize, 1, 100))));
             return "contemplationManagement/contemplationFragments/cirurgias_datatable";
 
         }

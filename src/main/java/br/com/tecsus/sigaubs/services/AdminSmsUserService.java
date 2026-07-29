@@ -2,6 +2,7 @@ package br.com.tecsus.sigaubs.services;
 
 import br.com.tecsus.sigaubs.dtos.SmsUserSearchDTO;
 import br.com.tecsus.sigaubs.dtos.ResultadoOperacao;
+import br.com.tecsus.sigaubs.dtos.AdminAccountCommandDTO;
 import br.com.tecsus.sigaubs.entities.SystemRole;
 import br.com.tecsus.sigaubs.entities.SystemUser;
 import br.com.tecsus.sigaubs.entities.Tenant;
@@ -15,6 +16,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -36,19 +38,45 @@ public class AdminSmsUserService {
     private final PasswordEncoder passwordEncoder;
     private final TransactionTemplate transactionTemplate;
     private final TenantSessionService tenantSessionService;
+    private final PasswordPolicyService passwordPolicyService;
 
+    @Autowired
     public AdminSmsUserService(TenantRepository tenantRepository,
             SystemUserRepository systemUserRepository,
             SystemRoleRepository systemRoleRepository,
             PasswordEncoder passwordEncoder,
             TransactionTemplate transactionTemplate,
-            TenantSessionService tenantSessionService) {
+            TenantSessionService tenantSessionService,
+            PasswordPolicyService passwordPolicyService) {
         this.tenantRepository = tenantRepository;
         this.systemUserRepository = systemUserRepository;
         this.systemRoleRepository = systemRoleRepository;
         this.passwordEncoder = passwordEncoder;
         this.transactionTemplate = transactionTemplate;
         this.tenantSessionService = tenantSessionService;
+        this.passwordPolicyService = passwordPolicyService;
+    }
+
+    AdminSmsUserService(TenantRepository tenantRepository,
+            SystemUserRepository systemUserRepository,
+            SystemRoleRepository systemRoleRepository,
+            PasswordEncoder passwordEncoder,
+            TransactionTemplate transactionTemplate,
+            TenantSessionService tenantSessionService) {
+        this(tenantRepository, systemUserRepository, systemRoleRepository, passwordEncoder,
+                transactionTemplate, tenantSessionService, null);
+    }
+
+    public ResultadoOperacao<Void> createSmsUser(Long tenantId,
+            AdminAccountCommandDTO command,
+            SystemUserDetails loggedUser) {
+        return createSmsUser(tenantId, toSystemUser(command), loggedUser);
+    }
+
+    public ResultadoOperacao<Void> updateSmsUser(Long tenantId,
+            AdminAccountCommandDTO command,
+            SystemUserDetails loggedUser) {
+        return updateSmsUser(tenantId, toSystemUser(command), loggedUser);
     }
 
     public Tenant findTenant(Long tenantId) {
@@ -131,7 +159,7 @@ public class AdminSmsUserService {
             systemUser.setRoles(Set.of(smsRole));
             systemUser.setTenantId(tenant.getId());
             systemUser.setCreationDate(LocalDateTime.now());
-            systemUser.setCreationUser(loggedUser.getUsername());
+            systemUser.setCreationUser(loggedUser.getLoginUsername());
             systemUserRepository.save(systemUser);
             return ResultadoOperacao.sucessoSemValor();
         }));
@@ -168,6 +196,11 @@ public class AdminSmsUserService {
                     return passwordResult;
                 }
             }
+            boolean deactivating = Boolean.TRUE.equals(persisted.getActive())
+                    && !Boolean.TRUE.equals(systemUser.getActive());
+            if (deactivating && !canDeactivateSms(tenant.getId())) {
+                return ResultadoOperacao.falha("Não é possível desativar o último SMS ativo do tenant.");
+            }
 
             persisted.setName(name);
             persisted.setEmail(email);
@@ -176,10 +209,10 @@ public class AdminSmsUserService {
                 persisted.setPassword(passwordEncoder.encode(systemUser.getPassword()));
             }
             persisted.setUpdateDate(LocalDateTime.now());
-            persisted.setUpdateUser(loggedUser.getUsername());
+            persisted.setUpdateUser(loggedUser.getLoginUsername());
             systemUserRepository.save(persisted);
-            if (!Boolean.TRUE.equals(persisted.getActive())) {
-                tenantSessionService.expireTenantUserSessions(tenant.getId(), persisted.getUsername());
+            if (!Boolean.TRUE.equals(persisted.getActive()) || passwordChanged) {
+                tenantSessionService.expireTenantUserSessions(tenant.getId(), persisted.getId());
             }
             return ResultadoOperacao.sucessoSemValor();
         }));
@@ -211,12 +244,17 @@ public class AdminSmsUserService {
             if (roleResult.falhou()) {
                 return roleResult;
             }
+            if (!active
+                    && Boolean.TRUE.equals(user.getActive())
+                    && !canDeactivateSms(tenant.getId())) {
+                return ResultadoOperacao.falha("Não é possível desativar o último SMS ativo do tenant.");
+            }
             user.setActive(active);
             user.setUpdateDate(LocalDateTime.now());
-            user.setUpdateUser(loggedUser.getUsername());
+            user.setUpdateUser(loggedUser.getLoginUsername());
             systemUserRepository.save(user);
             if (!active) {
-                tenantSessionService.expireTenantUserSessions(tenant.getId(), user.getUsername());
+                tenantSessionService.expireTenantUserSessions(tenant.getId(), user.getId());
             }
             return ResultadoOperacao.sucessoSemValor();
         }));
@@ -247,6 +285,9 @@ public class AdminSmsUserService {
     }
 
     private ResultadoOperacao<Void> validatePassword(String password, String confirmation, boolean required) {
+        if (passwordPolicyService != null) {
+            return passwordPolicyService.validate(password, confirmation, required);
+        }
         if (!required && !hasText(password)) {
             return ResultadoOperacao.sucessoSemValor();
         }
@@ -269,5 +310,23 @@ public class AdminSmsUserService {
 
     private boolean hasText(String value) {
         return value != null && !value.isBlank();
+    }
+
+    private boolean canDeactivateSms(Long tenantId) {
+        tenantRepository.findByIdForUpdate(tenantId)
+                .orElseThrow(() -> new IllegalArgumentException("Tenant não encontrado."));
+        return systemUserRepository.countActiveByRole(Roles.ROLE_SMS.toString()) > 1;
+    }
+
+    private SystemUser toSystemUser(AdminAccountCommandDTO command) {
+        SystemUser user = new SystemUser();
+        user.setId(command.getId());
+        user.setUsername(command.getUsername());
+        user.setPassword(command.getPassword());
+        user.setConfirmPassword(command.getConfirmPassword());
+        user.setName(command.getName());
+        user.setEmail(command.getEmail());
+        user.setActive(command.getActive());
+        return user;
     }
 }

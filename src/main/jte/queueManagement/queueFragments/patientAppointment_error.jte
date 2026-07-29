@@ -10,7 +10,7 @@
                 <h3 class="text-xl font-semibold text-slate-200">
                     Detalhes do paciente
                 </h3>
-                <button type="button" onclick="closeModal()"
+                <button type="button" data-action="close-modal" data-modal-id="patientAppointment-modal"
                     class="text-slate-400 bg-transparent hover:bg-slate-700 hover:text-white rounded-lg text-sm w-8 h-8 ms-auto inline-flex justify-center items-center">
                     <span class="material-symbols-outlined text-base">close</span>
                     <span class="sr-only">Fechar modal</span>
@@ -22,7 +22,7 @@
                     <span>${message}</span>
                 </div>
                 <div class="mt-4 flex justify-end">
-                    <button type="button" onclick="closeModal()"
+                    <button type="button" data-action="close-modal" data-modal-id="patientAppointment-modal"
                         class="text-sm inline-block rounded-lg bg-slate-900 py-2.5 px-6 text-white cursor-pointer active:bg-blue-400 hover:bg-blue-500 transition duration-300">
                         Fechar
                     </button>

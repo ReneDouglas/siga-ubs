@@ -1,4 +1,4 @@
-@import br.com.tecsus.sigaubs.dtos.AvailableMedicalSlotsFormDTO
+@import br.com.tecsus.sigaubs.dtos.MedicalSlotBatchCommandDTO
 @import br.com.tecsus.sigaubs.entities.BasicHealthUnit
 @import br.com.tecsus.sigaubs.entities.MedicalProcedure
 @import br.com.tecsus.sigaubs.entities.MedicalSlot
@@ -46,7 +46,7 @@
                                       hx-post="/medicalSlot-management/slots/add"
                                       hx-target="#availableMedicalSlotsFormTable"
                                       hx-include="#availableMedicalSlotsFormTable"
-                                      hx-on::after-request="if(event.detail.elt.tagName != 'SELECT') clearFormAndSetCurrentMonth()"
+                                      data-reset-after-request
                                       hx-swap="outerHTML"
                                       class="space-y-4 bg-slate-50 p-4 rounded-lg">
 
@@ -111,11 +111,11 @@
                                 </button>
                             </div>
                             <div class="p-2 bg-slate-50 overflow-auto max-h-[500px] rounded-lg w-full lg:flex-1">
-                                @template.medicalSlotManagement.medicalSlotFragments.available_slots_form_table(availableMedicalSlotsForm = new AvailableMedicalSlotsFormDTO(), csrf = csrf)
+                                @template.medicalSlotManagement.medicalSlotFragments.available_slots_form_table(availableMedicalSlotsForm = new MedicalSlotBatchCommandDTO(), csrf = csrf)
                             </div>
                         </div>
                         <div class="flex justify-start mt-4">
-                            <button id="saveButton" type="submit" form="availableMedicalSlotsFormTable"
+                            <button id="saveButton" type="button" data-action="save-medical-slots" data-form-id="availableMedicalSlotsFormTable"
                                     class="text-sm inline-block rounded-lg bg-slate-900 py-2.5 px-8 text-white cursor-pointer active:bg-blue-400 hover:bg-blue-500 transition duration-300">
                                 Salvar
                             </button>
@@ -144,54 +144,4 @@
     </section>
 </main>
 </body>
-<script>
-
-    document.getElementById('saveButton').addEventListener('click', function(event) {
-        event.preventDefault();
-
-        Swal.fire({
-            title: 'Confirmação',
-            text: "Você deseja salvar as alterações?",
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#3085d6',
-            cancelButtonColor: '#d33',
-            confirmButtonText: 'Sim',
-            cancelButtonText: 'Cancelar'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                document.getElementById('availableMedicalSlotsFormTable').submit();
-            }
-        });
-    });
-
-    window.addEventListener("DOMContentLoaded", function () {
-        const monthControl = document.querySelector('input[type="month"]');
-        if (monthControl) {
-            const date = new Date();
-            const month = ("0" + (date.getMonth() + 1)).slice(-2);
-            const year = date.getFullYear();
-            monthControl.value = year + "-" + month;
-        }
-    });
-
-    function clearFormAndSetCurrentMonth() {
-        document.getElementById('availableMedicalSlotAddRow').reset();
-        const currentDate = new Date();
-        const year = currentDate.getFullYear();
-        const month = String(currentDate.getMonth() + 1).padStart(2, '0');
-        document.getElementById('referenceMonth').value = year + "-" + month;
-    }
-
-    $(document).ready(function () {
-        $('#specialty').change(function () {
-            if ($(this).val()) {
-                $('#procedureType').prop('disabled', false).val(null);
-                $('#medicalProcedure').prop('disabled', true).empty().append('<option value="">Selecione</option>');
-            } else {
-                $('#procedureType').prop('disabled', true).val(null);
-            }
-        });
-    });
-</script>
 </html>

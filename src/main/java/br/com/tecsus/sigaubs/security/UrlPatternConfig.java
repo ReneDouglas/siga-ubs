@@ -6,6 +6,7 @@ public final class UrlPatternConfig {
             "/css/**",
             "/images/**",
             "/js/**",
+            "/vendor/**",
             "/login",
             "/login-error",
             "/logout",

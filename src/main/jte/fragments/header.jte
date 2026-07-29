@@ -3,10 +3,10 @@
 @param SecurityHelper secHelper
 @param StaticResourceHelper res
 @param Boolean adminArea = false
-<header class="top-0 left-0 justify-center items-center h-16 w-full bg-slate-200 flex sticky sm:px-4 md:relative sm:justify-between">
+<header class="top-0 left-0 justify-center items-center h-16 w-full flex-shrink-0 bg-slate-200 flex sticky sm:px-4 md:relative sm:justify-between">
 
     <div class="flex justify-center items-center">
-        <button onclick="toggleSidebar()" class="md:hidden p-2 ml-2 rounded-lg hover:bg-slate-300 transition duration-200">
+        <button type="button" data-action="toggle-sidebar" class="md:hidden p-2 ml-2 rounded-lg hover:bg-slate-300 transition duration-200">
             <span class="material-symbols-outlined text-slate-700">menu</span>
         </button>
         <img class="w-32" src="${res.url("/images/siga-ubs.svg")}" alt="logo-principal">
@@ -20,14 +20,5 @@
             <%-- Foto-User --%>
         </div>
     </div>
-    <div id="sidebar-backdrop" onclick="toggleSidebar()" class="hidden fixed inset-0 bg-black/50 z-[9998] md:hidden"></div>
-    <script>
-        function toggleSidebar() {
-            var sidebar = document.getElementById('sidebar');
-            var backdrop = document.getElementById('sidebar-backdrop');
-            sidebar.classList.toggle('hidden');
-            sidebar.classList.toggle('flex');
-            backdrop.classList.toggle('hidden');
-        }
-    </script>
+    <div id="sidebar-backdrop" data-action="toggle-sidebar" class="hidden fixed inset-0 bg-black/50 z-[9998] md:hidden"></div>
 </header>

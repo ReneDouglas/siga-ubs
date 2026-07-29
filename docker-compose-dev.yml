@@ -1,29 +1,53 @@
 services:
-
   gateway:
-    image: nginx:1.27-alpine
+    image: nginx:1.27.5-alpine
     container_name: sigaubs-gateway-dev
+    entrypoint: ["nginx", "-g", "daemon off;"]
     depends_on:
       app:
-        condition: service_started
+        condition: service_healthy
     ports:
       - "${GATEWAY_HTTP_PORT:-80}:80"
     volumes:
       - ./nginx/dev.conf:/etc/nginx/nginx.conf:ro
+    networks:
+      - edge
+      - application
+    user: "101:101"
+    read_only: true
+    tmpfs:
+      - /var/cache/nginx:rw,noexec,nosuid,uid=101,gid=101,mode=0750
+      - /run:rw,noexec,nosuid,uid=101,gid=101,mode=0750
+      - /tmp:rw,noexec,nosuid,uid=101,gid=101,mode=1770
+    cap_drop: [ALL]
+    cap_add: [NET_BIND_SERVICE]
+    security_opt:
+      - no-new-privileges:true
     restart: unless-stopped
 
   mysql:
-    image: mysql:8.0
+    image: mysql:8.0.43
     container_name: sigaubs-mysql-dev
     environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root-dev-only}
       MYSQL_DATABASE: ${MYSQL_DATABASE:-sigaubs}
-    ports:
-      - "127.0.0.1:${MYSQL_PORT:-3306}:3306"
+      MYSQL_USER: ${MYSQL_USER:-sigaubs_app}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-sigaubs_dev_only}
     volumes:
       - sigaubs_mysql_dev_data:/var/lib/mysql
       - ./docker/mysql/01-schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
       - ./docker/mysql/02-seed.sql:/docker-entrypoint-initdb.d/02-seed.sql:ro
+      - ./docker/mysql/my.cnf:/etc/mysql/conf.d/sigaubs.cnf:ro
+    networks:
+      - database
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid
+      - /var/run/mysqld:rw,noexec,nosuid,uid=999,gid=999
+    cap_drop: [ALL]
+    cap_add: [CHOWN, DAC_OVERRIDE, FOWNER, SETGID, SETUID]
+    security_opt:
+      - no-new-privileges:true
     healthcheck:
       test: ["CMD-SHELL", "mysqladmin ping -h localhost -u root -p\"$${MYSQL_ROOT_PASSWORD}\""]
       interval: 10s
@@ -42,15 +66,45 @@ services:
         condition: service_healthy
     expose:
       - "8080"
+      - "9090"
     environment:
-      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-dev}
+      SPRING_PROFILES_ACTIVE: dev
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/${MYSQL_DATABASE:-sigaubs}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=America/Sao_Paulo
-      SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME:-root}
-      SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD:-root}
+      SPRING_DATASOURCE_USERNAME: ${MYSQL_USER:-sigaubs_app}
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_PASSWORD:-sigaubs_dev_only}
       SIGAUBS_TENANCY_BASE_DOMAIN: ${SIGAUBS_TENANCY_BASE_DOMAIN:-localhost}
+      SIGAUBS_CONTEMPLATION_JOB_LEASE_DURATION: ${SIGAUBS_CONTEMPLATION_JOB_LEASE_DURATION:-30m}
     volumes:
       - ./src/main/jte:/app/src/main/jte:ro
+      - sigaubs_maven_dev_cache:/home/sigaubs/.m2
+      - sigaubs_target_dev:/app/target
+    networks:
+      - application
+      - database
+    user: "10001:10001"
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid
+      - /app/jte-classes:rw,noexec,nosuid,uid=10001,gid=10001
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:9090/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
     restart: unless-stopped
 
 volumes:
   sigaubs_mysql_dev_data:
+  sigaubs_maven_dev_cache:
+  sigaubs_target_dev:
+
+networks:
+  edge:
+  application:
+    internal: true
+  database:
+    internal: true

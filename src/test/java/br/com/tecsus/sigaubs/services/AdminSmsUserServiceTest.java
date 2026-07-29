@@ -153,7 +153,9 @@ class AdminSmsUserServiceTest {
         SystemUser update = smsUser("ignorado", " Novo ", " novo@example.com ", "nova", "nova", false);
         update.setId(10L);
         when(tenantRepository.findById(1L)).thenReturn(Optional.of(tenant));
+        when(tenantRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(tenant));
         when(systemUserRepository.findById(10L)).thenReturn(Optional.of(persisted));
+        when(systemUserRepository.countActiveByRole(Roles.ROLE_SMS.toString())).thenReturn(2L);
         when(passwordEncoder.encode("nova")).thenReturn("encoded-new");
 
         var resultado = service.updateSmsUser(1L, update, loggedUser);
@@ -166,7 +168,7 @@ class AdminSmsUserServiceTest {
         assertThat(persisted.getUpdateUser()).isEqualTo("root");
         assertThat(persisted.getUpdateDate()).isNotNull();
         verify(systemUserRepository).save(persisted);
-        verify(tenantSessionService).expireTenantUserSessions(1L, "sms");
+        verify(tenantSessionService).expireTenantUserSessions(1L, 10L);
         assertThat(TenantContextHolder.getCurrentTenantId()).isEmpty();
     }
 
@@ -228,7 +230,9 @@ class AdminSmsUserServiceTest {
         user.setId(10L);
         user.setRoles(Set.of(smsRole));
         when(tenantRepository.findById(1L)).thenReturn(Optional.of(tenant));
+        when(tenantRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(tenant));
         when(systemUserRepository.findById(10L)).thenReturn(Optional.of(user));
+        when(systemUserRepository.countActiveByRole(Roles.ROLE_SMS.toString())).thenReturn(2L);
 
         assertThat(service.activateSmsUser(1L, 10L, loggedUser).sucesso()).isTrue();
         assertThat(user.getActive()).isTrue();
@@ -236,7 +240,7 @@ class AdminSmsUserServiceTest {
 
         assertThat(service.deactivateSmsUser(1L, 10L, loggedUser).sucesso()).isTrue();
         assertThat(user.getActive()).isFalse();
-        verify(tenantSessionService).expireTenantUserSessions(1L, "sms");
+        verify(tenantSessionService).expireTenantUserSessions(1L, 10L);
 
         when(tenantRepository.findById(99L)).thenReturn(Optional.empty());
         assertThat(service.activateSmsUser(99L, 10L, loggedUser).mensagem()).isEqualTo("Tenant não encontrado.");

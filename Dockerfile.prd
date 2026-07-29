@@ -1,45 +1,27 @@
-# =============================================================================
-# Stage 1 — build: Node.js + Maven
-# =============================================================================
-FROM eclipse-temurin:21-jdk-jammy AS builder
+# syntax=docker/dockerfile:1.7
+FROM node:20.20.2-bookworm-slim AS assets
+WORKDIR /assets
+COPY package.json package-lock.json ./
+RUN npm ci --ignore-scripts
+COPY tailwind.config.js postcss.config.js ./
+COPY src/main/jte/ src/main/jte/
+COPY src/main/resources/static/ src/main/resources/static/
+RUN mkdir -p target/classes/static/css && npm run build:postcss
 
-RUN apt-get update && apt-get install -y --no-install-recommends curl \
-    && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
-    && apt-get install -y --no-install-recommends nodejs \
-    && rm -rf /var/lib/apt/lists/*
-
+FROM eclipse-temurin:21.0.8_9-jdk-jammy AS builder
 WORKDIR /app
-
 COPY .mvn/ .mvn/
 COPY mvnw pom.xml ./
-RUN chmod +x mvnw
-RUN ./mvnw dependency:go-offline -B
-
-COPY package.json package-lock.json ./
-RUN npm ci
-
+RUN chmod +x mvnw && ./mvnw dependency:go-offline -B
 COPY src/ src/
-COPY tailwind.config.js postcss.config.js ./
-
-RUN mkdir -p target/classes/static/css && npm run build:postcss
+COPY --from=assets /assets/target/classes/static/css/ target/classes/static/css/
 RUN ./mvnw package -DskipTests -B -Pprecompile-jte
 
-# =============================================================================
-# Stage 2 — runtime: JRE slim
-# =============================================================================
-FROM eclipse-temurin:21-jre-alpine AS runtime
-
-RUN addgroup -S sigaubs && adduser -S -G sigaubs sigaubs
-
+FROM eclipse-temurin:21.0.8_9-jre-alpine AS runtime
+RUN addgroup -S -g 10001 sigaubs && adduser -S -D -H -u 10001 -G sigaubs sigaubs
 WORKDIR /app
-
-COPY --from=builder /app/target/sigaubs-0.0.1-SNAPSHOT.jar app.jar
-RUN chown sigaubs:sigaubs app.jar
-
-USER sigaubs
-
+COPY --from=builder --chown=10001:10001 /app/target/sigaubs-0.0.1-SNAPSHOT.jar app.jar
+USER 10001:10001
 ENV JAVA_OPTS="-Xms512m -Xmx768m -XX:+UseG1GC -XX:+UseContainerSupport"
-
-EXPOSE 8080
-
-ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]
+EXPOSE 8080 9090
+ENTRYPOINT ["sh", "-c", "exec java $JAVA_OPTS -jar app.jar"]

@@ -1,27 +1,26 @@
 # Auditoria Técnica de Segurança e Proteção de Dados — SIGA-UBS
 
 **Data da revisão:** 28 de julho de 2026<br>
+**Implementação e revalidação da remediação parcial:** 29 de julho de 2026<br>
 **Escopo:** aplicação web, regras de negócio automatizadas, autenticação e autorização, banco de dados, containers, nginx, cadeia de suprimentos, VPS, Cloudflare, backup, observabilidade e resposta a incidentes<br>
 **Referencial principal:** LGPD, orientações da ANPD e OWASP ASVS 5.0<br>
 **Classificação:** documento técnico; não substitui parecer jurídico, auditoria da operação ou teste de intrusão
 
 ## 1. Resultado executivo
 
-O SIGA-UBS **não deve entrar em produção com dados reais no estado atual**.
+O SIGA-UBS **ainda não deve entrar em produção com dados reais**, embora a remediação parcial solicitada tenha sido implementada e validada no repositório.
 
-O repositório contém controles positivos — Spring Security, CSRF, BCrypt, separação por tenant, escopo de leitura por UBS, TLS no nginx e processo Java sem root —, mas ainda existem vulnerabilidades críticas e altas que permitem:
+Os controles no escopo deste ciclo corrigem o XSS em JavaScript inline, binding direto, autorização por tenant/UBS nas mutações, adulteração de papéis, concorrência da contemplação, integridade relacional, sessões, reautenticação da contemplação manual, política de senha, frontend externo, Actuator, nginx, containers, imagens, durabilidade MySQL e CORS. A evidência local está consolidada na seção 15.
 
-- execução de JavaScript persistente no navegador de profissionais autenticados;
-- alteração de pacientes e consultas sem autorização por UBS em todos os fluxos de escrita;
-- elevação indevida de papel por adulteração de requisição;
-- exposição de nome, CPF e filtros de pesquisa em logs e URLs;
-- ataques automatizados contra autenticação pública sem MFA ou limitação de tentativas;
-- execução concorrente ou induzida da rotina de contemplação;
-- decisões automatizadas de acesso à saúde sem governança, versionamento, explicação reproduzível e mecanismo técnico de revisão;
-- perda de até uma semana de dados no cenário de backup informado;
-- acesso direto à origem e contorno da Cloudflare, caso o firewall da VPS não esteja restrito;
-- comprometimento ampliado do banco por configuração insegura disponível no projeto;
-- exploração de dependências e imagens sem uma esteira contínua de verificação.
+O bloqueio de produção permanece por riscos expressamente fora do ciclo ou dependentes do ambiente implantado:
+
+- exposição de nome, CPF e filtros sensíveis ainda precisa de revisão completa de minimização e logging;
+- MFA foi excluído e a proteção contra automação foi aplicada somente no nginx;
+- decisões automatizadas de acesso à saúde continuam sem toda a governança, versionamento, explicação reproduzível e revisão previstas no BUS-01;
+- o backup semanal informado ainda admite RPO de até sete dias e não houve restore;
+- firewall real da VPS, Cloudflare Full (strict)/AOP, portas públicas e impossibilidade de acesso direto à origem não foram verificados;
+- DAST/pentest autenticado, observabilidade operacional e resposta a incidente ainda dependem da homologação/operação;
+- SCA/scan contínuo, assinatura e demais controles da cadeia de fornecimento excluídos não foram implantados.
 
 O acesso exclusivo por profissionais credenciados **não neutraliza esses riscos**. Credenciais podem ser roubadas, usuários podem exceder sua finalidade funcional e um XSS executa com os mesmos privilégios do profissional comprometido.
 
@@ -38,14 +37,16 @@ Adotar um **bloqueio de go-live** até que:
 7. seja concluído um pentest autenticado independente em ambiente de homologação;
 8. exista plano técnico de incidente, responsáveis e monitoração efetiva.
 
+O plano parcial adicionado em 29 de julho de 2026 não substitui estes critérios originais de go-live. Controles expressamente excluídos pelo responsável, como MFA, backup/restore e governança de suporte, permanecem pendências ou riscos residuais até decisão posterior formal.
+
 ## 2. Informações confirmadas pelo responsável
 
 - O sistema ficará acessível pela Internet, sem VPN.
 - Os usuários são profissionais de saúde credenciados.
 - ACS, enfermeiro e usuário comum devem acessar somente dados da própria UBS.
 - SMS deve acessar todo o tenant/município.
-- Foi informado um ADMIN coordenador por município, tenant-scoped.
-- Também foi informado um administrador global da empresa para suporte técnico.
+- O papel `SMS` representa o coordenador municipal, limitado ao próprio tenant.
+- O papel `ADMIN` representa o administrador global da empresa para suporte técnico.
 - Pacientes podem ser crianças e adolescentes.
 - A contemplação pretende funcionar sem revisão humana obrigatória; a revisão será opcional.
 - A hospedagem será em uma VPS da Hostinger.
@@ -59,14 +60,41 @@ Adotar um **bloqueio de go-live** até que:
 - Certificado e chave privada de produção são gerenciados pelo nginx fora do diretório do projeto.
 - O arquivo local `.env.prd` analisado não representa a credencial real de produção.
 
-### 2.1 Premissa sobre os dois tipos de administrador
+### 2.1 Papéis administrativos confirmados
 
-Este relatório assume que existem duas identidades diferentes:
+Existem duas identidades diferentes e elas já estão separadas conceitual e estruturalmente:
 
-- **coordenador municipal/tenant:** limitado ao próprio tenant;
-- **administrador global de suporte da empresa:** conta de plataforma, separada dos usuários municipais.
+- **`SMS`:** coordenador municipal, armazenado em `system_users` e limitado ao próprio tenant;
+- **`ADMIN`:** administrador global de suporte da plataforma, armazenado em `system_admins` e autenticado pela cadeia `/admin/**`.
 
-O nome `ADMIN` não deve representar simultaneamente esses dois níveis. A ambiguidade é, por si só, um risco de autorização. Recomenda-se usar papéis explicitamente diferentes, por exemplo `TENANT_COORDINATOR` e `PLATFORM_SUPPORT_ADMIN`.
+Não será feita renomeação para `TENANT_COORDINATOR` ou `PLATFORM_SUPPORT_ADMIN`. A remediação deve, porém, remover qualquer caminho pelo qual um usuário de `system_users` receba `ROLE_ADMIN`, preservar as cadeias de autenticação separadas e testar a fronteira entre as duas tabelas.
+
+### 2.2 Decisões de escopo para a remediação parcial
+
+Esta atualização documenta um plano de implementação parcial solicitado pelo responsável. Itens excluídos **não são considerados corrigidos** e permanecem como risco residual ou recomendação da auditoria original.
+
+| Achado | Escopo desta implementação |
+|---|---|
+| APP-01 | Todas as recomendações e critérios de aceite. |
+| APP-02 | Todas as recomendações e critérios de aceite. |
+| IAM-01 | Aplicar allowlists, validação de alvo/hierarquia, proteção do próprio papel/último coordenador e testes de adulteração. A separação `SMS`/`ADMIN` já existe. Não implementar o item 6 nem exigir auditoria de motivo/início/fim/tenant da sessão global. |
+| IAM-02 | Implementar somente rate limit no nginx. MFA, TOTP, rate limit na aplicação/Cloudflare, alertas, Access e allowlist ficam fora deste ciclo. |
+| IAM-03 | Todas as recomendações e critérios de aceite. |
+| IAM-04 | Implementar reautenticação server-side somente para contemplação manual. Não exigir step-up/MFA para alteração de papel ou suporte global. |
+| APP-03 | Todas as recomendações e critérios de aceite. |
+| BUS-02 | Todas as recomendações; o acionamento de teste será POST, com CSRF e disponível somente no profile `dev`. |
+| DB-01 | Todas as recomendações, alterando diretamente o DDL inicial porque o volume será recriado. |
+| PRIV-01 | Somente autorização no servidor; mascaramento, minimização de campos, definição de `ATENDENTE` e pseudonimização de suporte ficam fora deste ciclo. |
+| SUP-01 | Todas as recomendações e critérios de aceite. |
+| OBS-01 | Todas as recomendações e critérios de aceite. |
+| NET-01 | Somente configurações e artefatos que pertencem ao projeto. Alterações nos painéis Cloudflare/Hostinger e no firewall efetivo continuam como validações externas. |
+| NET-02 e NET-03 | Todas as recomendações e critérios de aceite aplicáveis ao projeto. |
+| INF-01 | Implementar `no-new-privileges`, capabilities mínimas, filesystem read-only/tmpfs, segmentação de redes e documentação de seccomp/AppArmor. Limites de memória/CPU/PIDs, Docker socket, Docker rootless e os demais itens expressamente excluídos ficam fora. |
+| INF-02 | Fixar tags completas de versão e remover `curl \| bash`. Tratamentos de identificação por conteúdo da imagem, scan contínuo, assinatura, rebuild periódico e SBOM/provenance ficam fora. |
+| AUTH-01 | Mínimo de 8 caracteres, denylist local, custo de hash calibrado/versionado, upgrade de hash no login e revogação após alteração. MFA fica fora. |
+| SES-01, AVAIL-01 e COR-01 | Todas as recomendações; a configuração CORS será removida porque todas as chamadas são same-origin. |
+
+Os demais achados não integram a implementação deste ciclo. Alterações auxiliares mínimas poderão ser feitas apenas quando forem necessárias para que um teste obrigatório da seção 11 seja seguro e passe, sem declarar o achado adjacente como totalmente remediado.
 
 ## 3. Limites da auditoria
 
@@ -176,47 +204,49 @@ Dados de saúde são dados pessoais sensíveis. CPF e CNS não pertencem automat
 
 | ID | Severidade | Achado | Estado |
 |---|---:|---|---|
-| APP-01 | Crítica | XSS persistente em handlers JavaScript inline | Confirmado |
-| APP-02 | Crítica | Falta de autorização por objeto/UBS em mutações | Confirmado |
-| IAM-01 | Crítica | Elevação de papel e alteração de usuário por parâmetros adulterados | Confirmado |
+| APP-01 | Crítica | XSS persistente em handlers JavaScript inline | Corrigido e testado no repositório |
+| APP-02 | Crítica | Falta de autorização por objeto/UBS em mutações | Corrigido e testado no repositório |
+| IAM-01 | Crítica | Elevação de papel e alteração de usuário por parâmetros adulterados | Escopo deste ciclo corrigido e testado |
 | LOG-01 | Alta | Nome, CPF e filtros sensíveis em logs e URLs | Confirmado |
-| IAM-02 | Alta | Aplicação pública sem MFA e proteção contra automação | Confirmado |
-| IAM-03 | Alta | Sessões não revogadas após eventos de risco | Confirmado |
-| IAM-04 | Alta | Reautenticação sensível aplicada somente no frontend | Confirmado |
-| APP-03 | Alta | Binding direto de entidades e ausência de validação no servidor | Confirmado |
+| IAM-02 | Alta | Aplicação pública sem MFA e proteção contra automação | Rate limit nginx corrigido; MFA e demais itens excluídos |
+| IAM-03 | Alta | Sessões não revogadas após eventos de risco | Corrigido e testado no repositório |
+| IAM-04 | Alta | Reautenticação sensível aplicada somente no frontend | Contemplação manual corrigida; demais ações excluídas |
+| APP-03 | Alta | Binding direto de entidades e ausência de validação no servidor | Corrigido e testado no repositório |
 | BUS-01 | Alta | Decisão automatizada sem governança, versionamento e revisão estruturada | Parcialmente corrigido |
-| BUS-02 | Alta | GET com efeito de escrita e concorrência na contemplação | Confirmado |
-| DB-01 | Alta | Integridade tenant/UBS não garantida pelas FKs | Confirmado |
+| BUS-02 | Alta | GET com efeito de escrita e concorrência na contemplação | Corrigido e testado no repositório |
+| DB-01 | Alta | Integridade tenant/UBS não garantida pelas FKs | Corrigido no DDL inicial e testado em MySQL real |
 | DB-02 | Alta | Defaults e exemplo de produção permitem banco como root | Confirmado no projeto; produção informada como diferente |
 | CRYPTO-01 | Alta | Proteção em trânsito interno e em repouso não comprovada | Parcial/não comprovado |
-| NET-01 | Alta | Possível contorno da Cloudflare pelo IP da origem | Não comprovado |
+| NET-01 | Alta | Possível contorno da Cloudflare pelo IP da origem | Configuração do projeto concluída; borda/VPS não comprovadas |
 | BAK-01 | Alta | Backup semanal implica RPO de até sete dias | Confirmado |
 | OPS-01 | Alta | Observabilidade e resposta a incidente ainda não implantadas | Confirmado |
 | AUD-01 | Alta | Auditoria insuficiente de leitura e ações privilegiadas | Confirmado |
-| PRIV-01 | Alta | Exposição excessiva de campos e RBAC incompleto | Confirmado |
+| PRIV-01 | Alta | Exposição excessiva de campos e RBAC incompleto | Autorização server-side corrigida; minimização excluída |
 | PRIV-02 | Alta | Ausência de ciclo técnico de retenção, correção e eliminação | Confirmado |
 | MIN-01 | Alta | Ausência de controles específicos para menores | Confirmado |
-| SUP-01 | Alta | JavaScript externo sem pin/SRI e contato com terceiros | Confirmado |
-| SUP-02 | Alta | Dependências npm vulneráveis e SCA Java inconclusiva | Confirmado |
-| OBS-01 | Média | Actuator revela detalhes de saúde da infraestrutura | Confirmado |
-| NET-02 | Média | IP real, logs, rate limits e timeouts do nginx incompletos | Confirmado |
-| NET-03 | Média | Redirecionamento HTTP usa Host não validado | Confirmado |
-| INF-01 | Média | Containers sem hardening adicional | Confirmado |
-| INF-02 | Média | Imagens mutáveis e build com `curl | bash` | Confirmado |
-| AUTH-01 | Média | Política de senha insuficiente | Confirmado |
-| SES-01 | Média | Cookies e timeouts não são totalmente explícitos/verificados | Parcial |
+| SUP-01 | Alta | JavaScript externo sem pin/SRI e contato com terceiros | Corrigido e testado no repositório |
+| SUP-02 | Alta | Dependências npm vulneráveis e SCA Java inconclusiva | Runtime npm sem achados; ferramentas dev/SCA contínua pendentes |
+| OBS-01 | Média | Actuator revela detalhes de saúde da infraestrutura | Corrigido no projeto; teste na implantação pendente |
+| NET-02 | Média | IP real, logs, rate limits e timeouts do nginx incompletos | Corrigido e validado estaticamente |
+| NET-03 | Média | Redirecionamento HTTP usa Host não validado | Corrigido e validado estaticamente |
+| INF-01 | Média | Containers sem hardening adicional | Escopo deste ciclo corrigido e validado |
+| INF-02 | Média | Imagens mutáveis e build com `curl | bash` | Escopo deste ciclo corrigido e validado |
+| AUTH-01 | Média | Política de senha insuficiente | Corrigido e testado no repositório |
+| SES-01 | Média | Cookies e timeouts não são totalmente explícitos/verificados | Corrigido e testado no repositório |
 | ERR-01 | Média | Mensagens brutas de exceção podem vazar dados nos logs | Confirmado |
-| AVAIL-01 | Média | Configuração MySQL aceita perda recente de transações | Confirmado |
-| COR-01 | Baixa | CORS permissivo latente | Confirmado, aparentemente inativo |
+| AVAIL-01 | Média | Configuração MySQL aceita perda recente de transações | Corrigido e testado com reinício do MySQL |
+| COR-01 | Baixa | CORS permissivo latente | Corrigido; configuração removida e testada |
 | CERT-01 | Baixa | Mock empacotado e caminho de certificado divergente | Confirmado |
 | GOV-01 | Alta | Controles técnicos não possuem governança mínima documentada | Confirmado |
 
 ## 8. Achados detalhados e recomendações
 
+As subseções “Evidência” abaixo preservam a fotografia que originou o achado em 28 de julho de 2026. Para os achados remediados, o campo **Estado** e a seção 15 registram a implementação e a revalidação posteriores; a evidência original não deve ser interpretada como descrição do código atual.
+
 ### APP-01 — XSS persistente em dados de paciente
 
 **Severidade:** Crítica<br>
-**Estado:** Confirmado
+**Estado:** Corrigido e testado no repositório; evidências na seção 15
 
 #### Evidência
 
@@ -257,7 +287,7 @@ Dados como observação e nome são inseridos em `onclick` ou em HTML construíd
 ### APP-02 — Falta de autorização por objeto e UBS em mutações
 
 **Severidade:** Crítica<br>
-**Estado:** Confirmado
+**Estado:** Corrigido e testado no repositório; evidências na seção 15
 
 #### Evidência
 
@@ -298,7 +328,7 @@ Um profissional de uma UBS pode tentar:
 ### IAM-01 — Elevação de papel e administração de usuários por adulteração
 
 **Severidade:** Crítica<br>
-**Estado:** Confirmado
+**Estado:** Escopo deste ciclo corrigido e testado; exclusões preservadas na seção 2.2
 
 #### Evidência
 
@@ -383,7 +413,7 @@ O job registra nome, CPF e motivo em nível INFO. A busca GET envia nome, CPF, C
 ### IAM-02 — Serviço público na Internet sem MFA e anti-automação
 
 **Severidade:** Alta<br>
-**Estado:** Confirmado
+**Estado:** Rate limit nginx corrigido; MFA e demais itens excluídos permanecem pendentes
 
 #### Evidência
 
@@ -425,15 +455,20 @@ Falhas de autenticação são apenas registradas. Não existe MFA, limitação p
 ### IAM-03 — Sessões não revogadas após eventos de risco
 
 **Severidade:** Alta<br>
-**Estado:** Confirmado
+**Estado:** Corrigido e testado no repositório; evidências na seção 15
 
-#### Evidência
+#### Evidência pós-implementação
 
-- `src/main/java/br/com/tecsus/sigaubs/services/SystemUserService.java:132`
-- `src/main/java/br/com/tecsus/sigaubs/services/SystemUserService.java:173`
-- `src/main/java/br/com/tecsus/sigaubs/tenancy/TenantSessionValidationFilter.java:23`
+- `src/main/java/br/com/tecsus/sigaubs/controllers/SessionManagementController.java`
+- `src/main/java/br/com/tecsus/sigaubs/services/TenantSessionService.java`
+- `src/main/java/br/com/tecsus/sigaubs/security/RoleAwareAuthenticationSuccessHandler.java`
+- `src/main/jte/sessionManagement/session_management.jte`
+- `src/test/java/br/com/tecsus/sigaubs/security/SessionMetadataTest.java`
+- `src/test/java/br/com/tecsus/sigaubs/controllers/SessionManagementControllerTest.java`
+- `src/test/java/br/com/tecsus/sigaubs/security/WebSecurityLogoutTest.java`
+- `src/test/java/br/com/tecsus/sigaubs/services/TenantSessionServiceTest.java`
 
-O filtro de sessão valida apenas correspondência de tenant. Usuários comuns podem manter sessão após alteração de senha, papel, desativação ou exclusão. O fluxo SMS revoga quando inativado, mas não necessariamente quando a senha muda.
+As sessões passaram a usar armazenamento JDBC compartilhado e chave estável por identidade. Eventos de risco revogam as sessões persistidas. A interface permite ao próprio usuário encerrar seus acessos; `SMS` gerencia usuários municipais autorizados do tenant e `ADMIN` gerencia contas globais e contas `SMS` pelo fluxo administrativo. Na tela de sessões próprias, inclusive para `SMS`, a consulta e a revogação usam exclusivamente a chave `tenant:{tenantId}:user:{userId}` do principal autenticado, impedindo que sessões de outro usuário ou tenant sejam incluídas. A tela mostra datas, expiração, descrição reduzida do cliente e a localidade aproximada no login, com uma referência aleatória de gestão que não expõe o identificador real da sessão/cookie. A localidade é persistida somente como atributo da própria Spring Session; IP bruto, coordenadas e CEP não são armazenados nesse metadado, e sessões anteriores exibem fallback sem tentativa de reconstrução. Em produção, o nginx aceita a geolocalização somente da borda Cloudflare confiável, sobrescreve cabeçalhos internos e descarta campos mais granulares. O encerramento da sessão corrente a invalida imediatamente.
 
 #### Recomendação
 
@@ -453,7 +488,7 @@ O filtro de sessão valida apenas correspondência de tenant. Usuários comuns p
 ### IAM-04 — Reautenticação de contemplação apenas no frontend
 
 **Severidade:** Alta<br>
-**Estado:** Confirmado
+**Estado:** Contemplação manual corrigida e testada; demais ações excluídas
 
 #### Evidência
 
@@ -479,7 +514,7 @@ A interface chama um endpoint de validação de senha antes de contemplar, mas o
 ### APP-03 — Binding de entidades e validação insuficiente
 
 **Severidade:** Alta<br>
-**Estado:** Confirmado
+**Estado:** Corrigido e testado no repositório; evidências na seção 15
 
 #### Evidência
 
@@ -588,14 +623,25 @@ Permanecem pendentes a governança e a capacidade de reprodução. O registro da
 ### BUS-02 — GET com escrita e concorrência no job
 
 **Severidade:** Alta<br>
-**Estado:** Confirmado
+**Estado:** Corrigido e testado no repositório; evidências na seção 15
 
 #### Evidência
 
-- `src/main/java/br/com/tecsus/sigaubs/controllers/ScheduleController.java:20`
-- `src/main/java/br/com/tecsus/sigaubs/services/MedicalSlotService.java:98`
-- não há `@Version`, lock pessimista ou lock distribuído;
-- o status em memória não bloqueia uma segunda execução.
+- `ScheduleController` expõe somente `POST`, exige `ADMIN` e existe apenas no
+  profile `dev`;
+- `contemplation_job_executions` possui chave única por tenant/janela, status,
+  datas técnicas, `lock_token` e `lease_until`, sem PII;
+- `ContemplationJobExecutionService` adquire e renova uma lease por tenant. Uma
+  execução interrompida pode ser retomada após a expiração, e o token de
+  propriedade impede que a instância anterior conclua a execução recuperada;
+- `DashboardService` lê a última execução persistida do tenant atual. Um
+  `RUNNING` com lease expirada é apresentado como `INTERRUPTED`, sem depender de
+  memória local da instância;
+- `MySqlSecurityIT` comprova em MySQL real a unicidade da chave de execução, a
+  recuperação concorrente por somente uma instância e o bloqueio de conclusão
+  com token obsoleto;
+- os updates de consumo/devolução de vaga e de associação da contemplação são
+  atômicos e condicionais.
 
 #### Impacto
 
@@ -629,7 +675,7 @@ Permanecem pendentes a governança e a capacidade de reprodução. O registro da
 ### DB-01 — FKs não garantem isolamento relacional
 
 **Severidade:** Alta<br>
-**Estado:** Confirmado
+**Estado:** Corrigido no DDL inicial e testado em MySQL real
 
 #### Evidência
 
@@ -730,7 +776,7 @@ O profile possui fallback `root/root`, e o exemplo recomenda usar root. Mesmo qu
 ### NET-01 — Possível bypass da Cloudflare
 
 **Severidade:** Alta<br>
-**Estado:** Não comprovado
+**Estado:** Configuração no projeto concluída; Cloudflare, firewall e acesso à origem ainda não comprovados
 
 Gerenciar DNS pela Cloudflare não garante que o tráfego passe pelo proxy. Se o IP da VPS aceitar 443 de qualquer origem, um atacante pode contornar WAF, rate limit e regras Cloudflare.
 
@@ -867,7 +913,7 @@ Existem usuários/datas de criação e alteração e histórico de status, mas n
 ### PRIV-01 — Minimização e RBAC incompletos
 
 **Severidade:** Alta<br>
-**Estado:** Confirmado
+**Estado:** Autorização server-side corrigida; minimização e demais itens excluídos permanecem pendentes
 
 #### Evidência
 
@@ -969,7 +1015,7 @@ O cadastro permite qualquer data de nascimento, mas não existe tratamento técn
 ### SUP-01 — Recursos externos e risco de cadeia de suprimentos no navegador
 
 **Severidade:** Alta<br>
-**Estado:** Confirmado
+**Estado:** Corrigido e testado no repositório; evidências na seção 15
 
 #### Evidência
 
@@ -1039,7 +1085,7 @@ A varredura Java pelo OWASP Dependency-Check não terminou porque a sincronizaç
 ### OBS-01 — Actuator público com detalhes
 
 **Severidade:** Média<br>
-**Estado:** Confirmado
+**Estado:** Corrigido no projeto; verificação contra implantação pendente
 
 #### Evidência
 
@@ -1065,7 +1111,7 @@ A varredura Java pelo OWASP Dependency-Check não terminou porque a sincronizaç
 ### NET-02 — Configuração nginx incompleta
 
 **Severidade:** Média<br>
-**Estado:** Confirmado
+**Estado:** Corrigido e validado estaticamente; calibração em homologação pendente
 
 #### Evidência
 
@@ -1100,7 +1146,7 @@ A varredura Java pelo OWASP Dependency-Check não terminou porque a sincronizaç
 ### NET-03 — Redirect baseado em Host não validado
 
 **Severidade:** Média<br>
-**Estado:** Confirmado
+**Estado:** Corrigido e validado estaticamente
 
 #### Evidência
 
@@ -1125,7 +1171,7 @@ O primeiro servidor HTTP pode atuar como default e redireciona usando `$host`. U
 ### INF-01 — Hardening de containers
 
 **Severidade:** Média<br>
-**Estado:** Confirmado
+**Estado:** Escopo deste ciclo corrigido e validado
 
 O container Spring executa como usuário `sigaubs`, o que é positivo. Não há, porém:
 
@@ -1159,28 +1205,27 @@ O container Spring executa como usuário `sigaubs`, o que é positivo. Não há,
 ### INF-02 — Imagens mutáveis e build não reprodutível
 
 **Severidade:** Média<br>
-**Estado:** Confirmado
+**Estado:** Escopo deste ciclo corrigido e validado
 
-#### Evidência
+#### Evidência pós-implementação
 
-- `nginx:1.27-alpine`, `mysql:8.0` e imagens Temurin não usam digest;
-- `Dockerfile.prd:7` executa script NodeSource via `curl | bash`;
-- não há assinatura, provenance ou scan de imagem.
+- Compose e Dockerfiles usam tags completas de versão para Node, Temurin, nginx e MySQL;
+- os Dockerfiles usam estágios oficiais separados para Node, JDK e JRE;
+- a instalação NodeSource e o fluxo `curl | bash` foram removidos.
 
 #### Recomendação
 
-- fixar versões e digests;
+- fixar versões completas;
 - usar imagem builder oficial com Node já presente ou validar assinatura/checksum;
 - gerar SBOM e provenance;
 - scanear imagem em CI e periodicamente após publicação;
 - assinar imagem e validar antes do deploy;
 - rebuild periódico para patches;
-- registrar digest efetivamente implantado.
 
 #### Critério de aceite
 
 - mesma revisão gera dependências identificáveis;
-- deploy usa digest aprovado;
+- build usa as versões exatas declaradas e lockfiles;
 - imagem crítica vulnerável é bloqueada.
 
 ---
@@ -1188,7 +1233,7 @@ O container Spring executa como usuário `sigaubs`, o que é positivo. Não há,
 ### AUTH-01 — Política de senha insuficiente
 
 **Severidade:** Média<br>
-**Estado:** Confirmado
+**Estado:** Corrigido e testado no repositório; MFA permanece excluído
 
 #### Evidência
 
@@ -1221,7 +1266,7 @@ BCrypt via `DelegatingPasswordEncoder` é um controle positivo, mas o work facto
 ### SES-01 — Cookies e timeouts
 
 **Severidade:** Média<br>
-**Estado:** Parcial
+**Estado:** Corrigido e testado no repositório; confirmação pela borda pendente
 
 `SameSite=Lax` está explícito. `HttpOnly` e `Secure` dependem de defaults e reconhecimento correto do proxy. Não há timeout absoluto explícito.
 
@@ -1266,7 +1311,7 @@ Controllers registram `e.getMessage()` para erros de banco e integridade. A mens
 ### AVAIL-01 — Durabilidade reduzida no MySQL
 
 **Severidade:** Média<br>
-**Estado:** Confirmado
+**Estado:** Corrigido e testado com reinício do MySQL
 
 #### Evidência
 
@@ -1291,7 +1336,7 @@ Pode haver perda de transações recentes em falha de energia ou sistema operaci
 ### COR-01 — CORS permissivo latente
 
 **Severidade:** Baixa atualmente; pode tornar-se alta se ativado<br>
-**Estado:** Confirmado
+**Estado:** Corrigido; configuração removida e testada
 
 #### Evidência
 
@@ -1474,7 +1519,7 @@ O teste de bypass precisa cobrir IPv4 e IPv6. Restringir apenas IPv4 deixa a ori
 | VPS-11 | Detecção de abuso/malware | scanner Hostinger é consultado quando disponível, mas não substitui EDR/FIM/logs; alertar por binários, cron, chaves e processos inesperados | política, agentes ativos e último scan | arquivo de teste seguro quando suportado e simulação de alerta |
 | VPS-12 | Docker daemon | socket não exposto por TCP nem montado no app/nginx; grupo `docker` restrito; daemon e Compose atualizados | configuração do daemon, grupos e listeners | `ss` confirma ausência de 2375/2376; revisão de mounts |
 | VPS-13 | Containers | usuário não root, `read_only`, `no-new-privileges`, capabilities removidas, limites CPU/memória/PIDs, healthchecks e filesystem temporário mínimo, após teste de compatibilidade | Compose efetivo sanitizado e `docker inspect` sem a seção `Env` | teste funcional e tentativa controlada de escrita/elevação em homologação |
-| VPS-14 | Imagens | digests fixos ou processo reprodutível; imagens mínimas, assinadas/verificadas quando possível e escaneadas; rebuild periódico | SBOM, digest, scan e origem da imagem | pipeline falha em vulnerabilidade acima do limite aprovado |
+| VPS-14 | Imagens | versões fixas ou processo reprodutível; imagens mínimas, assinadas/verificadas quando possível e escaneadas; rebuild periódico | SBOM, inventário de versões, scan e origem da imagem | pipeline falha em vulnerabilidade acima do limite aprovado |
 | VPS-15 | Segmentação Docker | somente nginx publica porta; app e MySQL em redes internas; banco não se conecta desnecessariamente à Internet | redes e portas efetivas | teste de conectividade entre containers e do exterior |
 | VPS-16 | Segredos e arquivos | segredos fora da imagem/Git; permissões mínimas; chave da origem legível só por nginx; rotação e inventário; valores não aparecem em tickets/logs | nomes/localização lógica, ACL e datas de rotação, nunca os valores | teste com usuário/app confirma acesso negado ao que não necessita |
 | VPS-17 | Banco MySQL | bind/rede interna; conta da aplicação sem `root`, sem `GRANT OPTION`, `FILE`, `SUPER` ou administração; senhas distintas; grants por schema; conexões e erros monitorados | `SHOW GRANTS` sanitizado, usuários e topologia | login da aplicação não cria usuário, não acessa outro schema e não lê arquivos |
@@ -1592,98 +1637,299 @@ Antes do go-live, o responsável técnico deve preencher e assinar um registro c
 
 O aceite não deve usar apenas “Cloudflare ativada”, “firewall ativo” ou “backup habilitado”. Deve informar qual política foi testada, contra qual ativo, em qual data e com qual resultado.
 
-## 10. Plano priorizado de remediação
+## 10. Plano de implementação e refatoração
 
-### P0 — antes de qualquer dado real
+**Estado em 29 de julho de 2026:** os lotes no escopo da seção 2.2 foram implementados no mesmo conjunto de mudanças e revalidados. As caixas abaixo preservam o plano original para rastreabilidade; o estado pós-implementação autoritativo está nas seções 7 e 15. Alterações externas de Cloudflare/VPS, testes contra implantação e itens expressamente excluídos não devem ser inferidos como concluídos.
 
-- [ ] APP-01: eliminar XSS.
-- [ ] APP-02: autorização por objeto/UBS em todas as mutações.
-- [ ] IAM-01: impedir elevação de papel e separar administradores.
-- [ ] LOG-01: remover PII de logs e URLs.
-- [ ] IAM-02: MFA e anti-automação.
-- [ ] IAM-03/IAM-04: revogação e step-up server-side.
-- [ ] APP-03: DTOs e validação.
-- [ ] BUS-01: aprovar/versionar/expor critérios e revisão.
-- [ ] BUS-02: remover GET e garantir concorrência/idempotência.
-- [ ] DB-01/DB-02: integridade e usuário mínimo.
-- [ ] NET-01: bloquear acesso direto à origem.
-- [ ] BAK-01: backup de banco e restore testado.
-- [ ] OPS-01: monitoração mínima e plano de incidente.
+### 10.1 Regras de execução
 
-### P1 — antes do go-live formal
+1. Não criar Flyway, Liquibase ou scripts incrementais. Alterar `docker/mysql/01-schema.sql`, apagar os volumes de desenvolvimento/homologação autorizados e recriar o banco do zero.
+2. Atualizar `docker/mysql/02-seed.sql` para o novo DDL, formatos normalizados e política de senha. O seed continuará exclusivo de desenvolvimento e não será montado em produção.
+3. Manter cada lote pequeno e verificável. Um achado só muda para “Corrigido” depois de código, teste e critério de aceite passarem.
+4. Preservar CSRF, isolamento Hibernate por tenant, logout, TLS e os demais controles positivos da seção 12.
+5. Executar as mudanças na ordem abaixo, pois DTOs e autorização dependem do modelo de escopo, sessões dependem do schema inicial e CSP depende da retirada de todos os scripts inline.
 
-- [ ] criptografia de volume/backups e decisão sobre campos;
-- [ ] auditoria de leitura e suporte global;
-- [ ] matriz RBAC e mascaramento;
-- [ ] controles para menores;
-- [ ] self-host/SRI/CSP;
-- [ ] SCA/SBOM e atualização das dependências;
-- [ ] actuator privado;
-- [ ] hardening nginx/containers/VPS;
-- [ ] política de sessão e senha;
-- [ ] pentest autenticado e correção dos achados.
+### 10.2 Modelo de acesso que orientará a implementação
 
-### P2 — maturidade contínua
+| Ator | Escopo permitido | Administração de usuários |
+|---|---|---|
+| `USER`, `ATENDENTE`, `ENFERMEIRO`, `ACS` | Somente o tenant autenticado e a UBS contida no principal. | Nenhuma. |
+| `SMS` | Todo o tenant autenticado, nunca outro tenant. | Criar/alterar/desativar somente `USER`, `ATENDENTE`, `ENFERMEIRO` e `ACS`; nunca `SMS` ou `ADMIN`. |
+| `ADMIN` de `system_admins` | Administração global e, quando autenticado explicitamente no hostname de um tenant, suporte tenant-wide. | Administrar `system_admins` na área global e contas `SMS` pelo fluxo global separado. |
 
-- [ ] DR periódico;
-- [ ] DAST/SAST contínuo;
-- [ ] assinatura/provenance de imagens;
-- [ ] testes de abuso e fraude;
-- [ ] revisão periódica do algoritmo;
-- [ ] simulado de incidente;
-- [ ] revisão de acessos e contas inativas;
-- [ ] métricas de SLA de vulnerabilidade;
-- [ ] exercício de portabilidade/correção/retensão.
+O cliente nunca enviará `tenantId`, papéis completos, campos de auditoria, status interno, saldo de vaga ou associações JPA. IDs recebidos serão tratados somente como chaves de busca; o serviço recarregará todas as entidades dentro do tenant e da UBS autorizados.
 
-## 11. Testes de segurança mínimos a adicionar
+### 10.3 Lote 0 — baseline e contratos de segurança
 
-### Autorização
+- [ ] Registrar a suíte atual com `./mvnw verify` e guardar o relatório JaCoCo.
+- [ ] Criar `SecurityProperties` tipado para tempos de sessão, janela de reautenticação, custo BCrypt, paginação e limites de entrada.
+- [ ] Criar `AuthorizationScopeService`/`ActorContext` central, sem depender de decisões do template.
+- [ ] Criar exceções de domínio para `403`, `404`, conflito e validação, com `@ControllerAdvice` que não devolva mensagens internas.
+- [ ] Remover `spring.profiles.active=dev` de `application.properties`; exigir profile explícito e falhar no startup quando não for `dev`, `prd` ou `test`.
+- [ ] Adicionar ao `pom.xml` o starter de Bean Validation, Spring Session JDBC e dependências de teste necessárias; manter versões gerenciadas pelo Spring Boot sempre que possível.
 
-- usuário UBS A não lê/altera/cancela dados da UBS B;
-- tenant A não referencia entidade do tenant B;
-- SMS não cria papel global;
-- coordenador não acessa outro tenant;
-- suporte global exige step-up, motivo e tenant;
-- conta desativada perde a sessão imediatamente.
+**Aceite:** a aplicação inicia em `dev`, `prd` e `test` com propriedades validadas; sem profile explícito ela falha de forma segura; a suíte preexistente continua verde.
 
-### Entrada e saída
+### 10.4 Lote 1 — APP-01 e SUP-01: saída segura, JavaScript e CSP
 
-- payloads XSS armazenados;
-- caracteres de controle em logs;
-- CPF/CNS inválidos;
-- campos acima do limite;
-- datas inválidas/futuras;
-- page size excessivo;
-- parâmetros de estado manipulados.
+- [ ] Remover todos os atributos `onclick`/outros handlers, `hx-on`, `hx-vals="js:..."` e blocos `<script>` inline dos JTE, não apenas os quatro pontos inicialmente citados.
+- [ ] Mover comportamento de páginas para módulos em `src/main/resources/static/js/`, registrados com `addEventListener` e novamente inicializados em `htmx:load`.
+- [ ] Em observações/históricos, transportar somente o ID em `data-*`, buscar o texto por endpoint `text/plain` autorizado e preencher modal com `textContent`. A busca autocomplete usará o ID e o texto já escapado do item, sem interpolar nome em código.
+- [ ] Tratar os campos existentes como texto, sem aceitar HTML. Se um caso de uso futuro realmente exigir HTML, ele dependerá de decisão explícita e sanitizador mantido com allowlist mínima, coberto por testes próprios.
+- [ ] Substituir a lógica Alpine da sidebar/tooltip por JavaScript local sem `eval`; configurar HTMX com `allowEval=false`, `allowScriptTags=false` e `selfRequestsOnly=true`.
+- [ ] Expor dados agregados do dashboard por JSON autenticado ou DOM seguro; nenhuma interpolação JTE será inserida em código JavaScript.
+- [ ] Adicionar versões exatas de jQuery, HTMX, SweetAlert2, ApexCharts, Manrope e Material Symbols ao `package.json`/`package-lock.json`; copiar os artefatos no build e remover jsDelivr/Google Fonts.
+- [ ] Remover arquivos vendorizados sem origem rastreável e gerar manifesto local com pacote, versão, licença, integridade do lockfile e caminho publicado.
+- [ ] Aplicar CSP em enforcement, no Spring e no nginx, no mínimo: `default-src 'self'; script-src 'self'; connect-src 'self'; img-src 'self' data:; font-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'`. `style-src 'self' 'unsafe-inline'` será mantido inicialmente por compatibilidade com Tailwind/ApexCharts; `unsafe-inline` não será permitido em `script-src`.
+- [ ] Manter a mesma CSP funcional em desenvolvimento, sem `upgrade-insecure-requests`; produção acrescentará essa diretiva após validação HTTPS.
 
-### Sessão/autenticação
+**Arquivos centrais:** `src/main/jte/**`, `src/main/resources/static/js/**`, `src/main/resources/static/css/styles.css`, `package.json`, `package-lock.json`, `WebSecurityConfig.java`, `nginx/dev.conf` e `nginx/prd.conf`.
 
-- credential stuffing/rate limit;
-- MFA e recuperação;
-- session fixation;
-- timeout ocioso/absoluto;
-- revogação cross-instance;
-- CSRF em todos os verbos de escrita;
-- GET sem efeito colateral.
+**Aceite:** não existe dado não confiável em handler/script/HTML montado por concatenação; não existe recurso HTTP externo; payloads persistidos aparecem como texto; CSP não registra violações necessárias ao fluxo normal e não contém `unsafe-inline` em `script-src`.
 
-### Concorrência
+### 10.5 Lote 2 — APP-02, APP-03, IAM-01 e PRIV-01: comandos, validação e autorização
 
-- duas execuções do job;
-- duas contemplações para a mesma vaga;
-- retry após falha parcial;
-- duas requisições administrativas simultâneas;
-- saldo nunca abaixo de zero/acima do total.
+- [ ] Criar DTOs distintos para criação, edição, busca e ações: paciente, consulta, usuário UBS, usuário SMS, administrador global, UBS, lote de vagas, especialidade, contemplação e filtros/paginação.
+- [ ] Aplicar `@Valid`/`BindingResult` nos controllers e validação defensiva nos services. Campos desconhecidos não serão ligados a entidades.
+- [ ] Normalizar CPF, CNS e telefone para dígitos antes de comparar/persistir; validar checksum de CPF/CNS, e-mail, telefone brasileiro, enums, data de nascimento não futura, textos/complementos, motivo/observação, quantidade de vagas e tamanho do lote.
+- [ ] Fixar `page >= 0` e `1 <= pageSize <= 100`; rejeitar enum/status/sort fora de allowlist. Limitar observação de consulta a 2.000 caracteres, motivos e observações administrativas ao limite real do banco e lotes de vagas a 100 linhas.
+- [ ] Em `PatientService`, recarregar o paciente por `id + tenant + UBS autorizada`, preservar CPF/CNS imutáveis neste ciclo e aplicar somente campos editáveis do DTO.
+- [ ] Em `AppointmentService`, recarregar paciente/procedimento/consulta pelo escopo autorizado; ignorar o `patientId` usado apenas para redirect; impedir criação/cancelamento cross-UBS, cross-tenant ou em estado inválido.
+- [ ] Aplicar o mesmo padrão de recarga e validação a UBS, vagas, contemplações e vínculos de usuário. Repositórios terão métodos explícitos por escopo em vez de `findById` genérico em mutações.
+- [ ] Espelhar no DDL inicial as regras estruturalmente expressáveis — nulidade, unicidade, limites e relações — sem substituir a validação de domínio no servidor.
+- [ ] Colocar autorização no servidor em todos os endpoints. A interface poderá esconder ações, mas não será controle de acesso.
+- [ ] Remover `ROLE_ADMIN` dos papéis atribuíveis a `system_users` e do seed de papéis municipais. `ADMIN` continuará sendo authority produzida exclusivamente por `AdminUserDetailsService` para registros de `system_admins`.
+- [ ] No fluxo SMS, usar allowlist nominal `{ROLE_USER, ROLE_ATENDENTE, ROLE_ENFERMEIRO, ROLE_ACS}` e validar o papel carregado, não o ID recebido. Impedir autoalteração de papel, alvo de hierarquia superior e desativação do último `SMS` ativo do tenant.
+- [ ] Manter criação/edição de `SMS` apenas no controller global e administração de `system_admins` apenas na área global. O item de break-glass e a auditoria temporal de suporte não serão implementados.
+- [ ] Adicionar sanitização limitada de CR/LF e caracteres de controle a qualquer valor controlado pelo cliente que ainda precise aparecer em log, para viabilizar o teste obrigatório de log injection sem declarar LOG-01 totalmente resolvido.
 
-### Infra
+**Aceite:** mutações fora do escopo retornam `403`; IDs inexistentes não causam `500`; nenhuma associação cross-tenant/cross-UBS chega ao repositório; `SMS` não cria `ADMIN` nem `SMS`; fuzzing de DTOs não produz erro interno ou paginação descontrolada.
 
-- acesso direto ao IP;
-- Host header arbitrário;
-- 3306/8080 externos;
-- actuator público;
-- cookies e headers;
-- cache Cloudflare;
-- restore de backup;
-- scan de imagem/dependência.
+### 10.6 Lote 3 — DB-01 e BUS-02: schema inicial, integridade e concorrência
+
+- [ ] Atualizar somente `docker/mysql/01-schema.sql`. Não adicionar diretório de migração.
+- [ ] Adicionar `UNIQUE (tenant_id, id)` às tabelas tenant-scoped referenciadas e FKs compostas para:
+  - `system_users -> basic_health_units`;
+  - `basic_health_units_specialties -> basic_health_units`;
+  - `patients -> basic_health_units`;
+  - `medical_slots -> basic_health_units`;
+  - `contemplations -> medical_slots`;
+  - `appointments -> patients`;
+  - `appointments -> contemplations`;
+  - `appointment_status_history -> appointments`;
+  - `patient_history -> appointments`.
+- [ ] Adicionar `CHECK (total_slots > 0)`, `CHECK (current_slots >= 0 AND current_slots <= total_slots)` e unicidade da contemplação ligada a uma consulta.
+- [ ] Garantir procedimento e UBS iguais entre consulta, paciente, vaga e contemplação no service e por trigger MySQL para impedir inconsistência via SQL direto.
+- [ ] Adicionar `@Version`/coluna de versão onde houver disputa de consulta ou vaga.
+- [ ] Trocar incremento/decremento em memória por updates atômicos condicionais; sucesso exige exatamente uma linha alterada.
+- [x] Criar tabela inicial de execução/idempotência da contemplação com chave única por tenant e janela programada, status e datas técnicas, sem PII.
+- [x] Adotar lock de banco compartilhado entre instâncias para o job. Cada tenant é processado em transação própria; uma lease renovável com token de propriedade permite recuperação após falha sem aceitar conclusão da instância obsoleta.
+- [ ] Atualizar consulta somente se ainda estiver aguardando e sem contemplação válida; uma disputa que alterar zero linhas deve devolver a vaga ou abortar a transação.
+- [ ] Substituir o GET de teste por POST com CSRF, restrito a `ADMIN`, em controller anotado com `@Profile("dev")`. Não haverá mapping equivalente no profile `prd`.
+- [ ] Incluir no DDL as tabelas MySQL do Spring Session JDBC e configurar `spring.session.jdbc.initialize-schema=never`, pois o schema será criado pelo script inicial.
+- [ ] Atualizar `02-seed.sql`: remover papel municipal `ROLE_ADMIN`, usar credenciais dev com pelo menos 8 caracteres, adequar formatos/constraints/versões e manter zero divergência tenant/UBS/procedimento/saldo.
+
+**Recriação autorizada:** usar nomes exatos dos volumes `sigaubs_mysql_dev_data` e, quando aprovado para homologação/produção vazia, `sigaubs_mysql_prd_data`; nunca executar remoção recursiva ou apagar volume sem confirmar o ambiente. Após recriar, executar o seed apenas em `dev`.
+
+**Aceite:** o MySQL rejeita relações cross-tenant e saldo inválido; duas instâncias/tarefas não duplicam execução; duas contemplações concorrentes não geram duplicidade ou saldo negativo; retry após rollback produz um único resultado.
+
+### 10.7 Lote 4 — IAM-03, IAM-04, AUTH-01 e SES-01: identidade, sessão e reautenticação
+
+- [ ] Usar Spring Session JDBC e `SpringSessionBackedSessionRegistry`/repositório indexado. A chave de índice será estável e sem colisão: `admin:{id}` ou `tenant:{tenantId}:user:{id}`, mantendo o login original separado para exibição e auditoria.
+- [ ] Revogar sessões persistidas após alteração de senha, papel, UBS, estado ativo, exclusão, desativação/manutenção/slug do tenant e demais eventos de risco. Alteração de UBS em `BasicHealthUnitService` também disparará revogação.
+- [ ] Renovar o ID no login e em mudança efetiva de privilégio. Reinícios planejados e múltiplas instâncias usarão o mesmo armazenamento JDBC.
+- [ ] Criar tela/endpoint para o usuário listar e encerrar as próprias sessões; administradores poderão encerrar sessões do usuário alvo pelos fluxos autorizados. Não exibir cookie/token; mostrar somente data, último uso e identificação reduzida do cliente.
+- [ ] Implementar timeout ocioso server-side de 12 horas para usuários tenant, incluindo `SMS`, e 2 horas para `ADMIN`; implementar timeout absoluto de 72 horas e 12 horas, respectivamente.
+- [ ] Configurar cookie comum com `HttpOnly=true`, `SameSite=Lax`, `Path=/` e sem `Domain`. Em `prd`, usar `Secure=true` e nome `__Host-SIGAUBS_SESSION`; em `dev` HTTP, usar `Secure=false` e nome `SIGAUBS_SESSION_DEV`.
+- [ ] Impedir cache de páginas autenticadas com `Cache-Control: no-store, private`.
+- [ ] Substituir `/systemUser-management/validate` por reautenticação server-side vinculada à sessão, usuário, ação `MANUAL_CONTEMPLATION`, `appointmentId`, `medicalSlotId` e expiração de 5 minutos. A prova será consumida uma única vez pelo POST de contemplação.
+- [ ] Não implementar step-up para alteração de papel ou suporte global, conforme decisão de escopo.
+- [ ] Centralizar política de senha: mínimo 8 e máximo 64 caracteres, respeitando o limite de 72 bytes do BCrypt; rejeitar denylist local de senhas comuns/comprometidas sem enviar segredo a terceiros.
+- [ ] Usar BCrypt com strength configurável e explícito: 12 em produção após benchmark, 10 em desenvolvimento e custo reduzido apenas no profile de teste. Implementar `upgradeEncoding` no próximo login e manter compatibilidade com hashes legados.
+- [ ] Registrar a decisão de manter BCrypt neste ciclo por compatibilidade com os hashes existentes e reavaliar Argon2id em benchmark controlado, sem migração destrutiva de credenciais.
+- [ ] Não impor troca periódica sem evento de risco. Atualizar as senhas do seed para cumprir a política.
+
+**Aceite:** cookie e timeouts são confirmados por teste; session fixation falha; revogação é observada por outra instância; POST direto de contemplação sem prova recente/específica é negado; senha menor que 8 ou presente na denylist é recusada.
+
+### 10.8 Lote 5 — configurações Spring por ambiente e OBS-01/COR-01
+
+| Configuração | Comum | `dev` | `prd` |
+|---|---|---|---|
+| Profile | nenhum default implícito | explícito `dev` | obrigatório `prd` |
+| Hibernate | `open-in-view=false` | `ddl-auto=validate` | `ddl-auto=validate` |
+| Sessão JDBC | schema gerenciado pelo DDL | habilitada | habilitada |
+| Cookie | HttpOnly, Lax, Path `/`, sem Domain | nome dev, sem Secure por HTTP | prefixo `__Host-`, Secure |
+| Actuator | porta de gestão `9090` | publicada apenas em `127.0.0.1` | somente rede Docker `monitoring`, sem porta no host |
+| Health | `show-details=never` | estado mínimo | estado mínimo |
+| Prometheus | management port | acesso local | somente coletor na rede de gestão |
+| CSP/cache | enforcement e `no-store` em páginas dinâmicas | sem upgrade HTTPS | com política HTTPS validada |
+| Erros | sem stack trace/SQL/valores na resposta | detalhe técnico apenas em log local sanitizado | mensagem genérica e correlation ID |
+
+- [ ] Criar uma chain de segurança de ordem superior para endpoints Actuator no management port, sem passar pelo tenant resolver. `health` retorna somente status; `prometheus` depende da rede interna de gestão, não de papel da aplicação.
+- [ ] Remover `/actuator/**` das chains de usuário e não encaminhar esse path pelo nginx público.
+- [ ] Remover completamente `CorsConfigurationSource` e imports relacionados. Não habilitar `.cors()` em nenhuma chain.
+- [ ] Desabilitar upload multipart enquanto não existir caso de uso.
+- [ ] Validar propriedades obrigatórias de datasource/domínio no profile `prd`, removendo fallbacks `root`.
+
+**Aceite:** `/actuator/health` e `/actuator/prometheus` não existem na porta pública; health interno não revela componentes; origem cross-site não recebe headers CORS; aplicação de produção não inicia com segredo/profile ausente.
+
+### 10.9 Lote 6 — NET-01, NET-02 e NET-03: nginx e borda no escopo do projeto
+
+#### IP real, logs e headers
+
+- [ ] Versionar includes com ranges IPv4/IPv6 oficiais da Cloudflare para `set_real_ip_from` e validação do peer original; adicionar script que baixa, compara e exige revisão antes da atualização.
+- [ ] Em produção, aceitar `CF-Connecting-IP` somente quando a conexão vier desses ranges. Sobrescrever, e não propagar cegamente, `X-Real-IP`, `X-Forwarded-For`, `X-Forwarded-Proto` e `X-Forwarded-Host`.
+- [ ] Em desenvolvimento, ignorar headers de IP enviados pelo cliente e usar o peer Docker.
+- [ ] Usar access log JSON com `escape=json`, request/correlation ID, método, `$uri` sem `$args`, host validado, status, tempos e resultado do limitador. Não registrar query string, Referer, corpo ou cookie.
+- [ ] Enviar CSP, `Permissions-Policy: geolocation=(), camera=(), microphone=(), payment=(), usb=()`, HSTS em produção, `nosniff`, `DENY`, `no-referrer` e `Cache-Control` também em respostas de erro.
+
+#### Limites iniciais propostos
+
+Os valores implementados são baseline e deverão ser ajustados com métricas de homologação. As chaves por `IP + host` evitam que um tenant consuma a cota de outro; o login também possui uma segunda cota global por IP para reduzir abuso distribuído entre hostnames. A cota geral permite navegação HTMX normal e a cota de escrita restringe mutações sem penalizar leituras.
+
+| Controle | Produção | Desenvolvimento |
+|---|---:|---:|
+| Login por IP + tenant | `5r/m`, `burst=5`, `nodelay` | `5r/m`, `burst=5`, `nodelay` |
+| Login global por IP em todos os tenants | `30r/m`, `burst=20`, `nodelay` | `30r/m`, `burst=20`, `nodelay` |
+| Reautenticação por IP + tenant | `10r/m`, `burst=5`, `nodelay` | `10r/m`, `burst=5`, `nodelay` |
+| Escritas por IP + tenant | `10r/s`, `burst=20`, `nodelay` | `10r/s`, `burst=20`, `nodelay` |
+| Tráfego dinâmico geral por IP + tenant | `30r/s`, `burst=60`, `nodelay` | `30r/s`, `burst=60`, `nodelay` |
+| Requisições concorrentes por IP | 20 | 20 |
+| Corpo máximo | 1 MiB | 1 MiB |
+
+Todos os limitadores devolverão `429`. A combinação foi mantida também em desenvolvimento para tornar o comportamento reproduzível. A cota por IP considera o risco de NAT municipal; se a telemetria mostrar bloqueio em troca de turno, aumentar primeiro o `burst` do login global, preservando a cota por conta/tenant e registrando a decisão.
+
+#### Timeouts propostos
+
+- `client_header_timeout 15s`;
+- `client_body_timeout 15s`;
+- `keepalive_timeout 30s`;
+- `send_timeout 60s`;
+- `proxy_connect_timeout 5s`;
+- `proxy_send_timeout 60s`;
+- `proxy_read_timeout 60s`.
+
+#### Origem e Host
+
+- [ ] Criar `default_server` separado em 80 e 443 que encerre/rejeite hosts desconhecidos sem redirect.
+- [ ] Redirecionar somente host root, `admin` e subdomínio com slug sintaticamente válido sob `sigaubs.com.br`; nunca refletir Host arbitrário.
+- [ ] Adicionar filtro Spring de allowlist de Host como segunda camada.
+- [ ] Exigir Authenticated Origin Pulls no server HTTPS e montar a CA pública da Cloudflare read-only.
+- [ ] Rejeitar no nginx conexão cujo peer original não pertença à Cloudflare, além da proteção externa de firewall. Manter 3306, 8080 e 9090 sem publicação pública.
+- [ ] Servir assets estáticos cacheáveis separadamente e aplicar `no-store, private` a páginas dinâmicas/autenticadas.
+
+**Aceite:** spoof de `X-Forwarded-For` não muda o IP; Host arbitrário não controla `Location`; excesso recebe `429`; slow client é encerrado; acesso direto autorizado ao IP falha sem peer Cloudflare/AOP; headers aparecem inclusive em `4xx/5xx`.
+
+### 10.10 Lote 7 — INF-01, INF-02 e AVAIL-01: containers, imagens e MySQL
+
+- [ ] Substituir nginx por variante não privilegiada, ouvindo 8080/8443 dentro do container, e mapear somente o gateway para 80/443 no host.
+- [ ] Em produção, aplicar `read_only: true`, `tmpfs` somente nos caminhos necessários, `security_opt: no-new-privileges:true`, `cap_drop: [ALL]` e usuário não root em gateway/app/MySQL após teste de compatibilidade.
+- [ ] Em desenvolvimento, manter escrita apenas onde compilação/hot reload exigirem, mas aplicar usuário não root, `no-new-privileges`, capabilities mínimas e a mesma segmentação de rede.
+- [ ] Separar redes `frontend` (gateway/app), `backend` interna (app/MySQL) e `monitoring` interna (app/coletor). Gateway não participará de `backend`; MySQL não participará de `frontend`.
+- [ ] Documentar o uso do seccomp padrão do Docker e fornecer/perfilar regras AppArmor/seccomp versionadas antes de ativá-las em produção.
+- [ ] Fixar tags completas de versão em todas as imagens do Compose e instruções `FROM`; não usar tags genéricas de versão principal/secundária.
+- [ ] Refatorar os dois Dockerfiles em estágios: imagem oficial Node para `npm ci`/PostCSS, imagem oficial JDK para Maven e JRE mínimo para runtime. Remover instalação NodeSource e todo `curl | bash`.
+- [ ] Configurar `innodb_flush_log_at_trx_commit=1`, `sync_binlog=1`, binlog ROW e retenção operacional definida. O RPO alvo para transações confirmadas será próximo de zero, sujeito às garantias reais de storage/UPS.
+- [ ] Executar benchmark de escrita e teste de crash/recovery antes do aceite; qualquer retorno ao valor `2` exigirá risco formal documentado.
+
+Não serão adicionados limites de memória/CPU/PIDs, Docker rootless, montagem de Docker socket, identificação de imagem por conteúdo, SBOM/provenance, scan/assinatura de imagem ou rebuild periódico neste ciclo.
+
+**Aceite:** gateway não alcança MySQL; processos não ganham privilégios e não escrevem fora dos mounts/tmpfs; imagens usam tags completas de versão; build não executa script remoto; transações confirmadas sobrevivem ao teste de crash suportado.
+
+### 10.11 Ordem de entrega sugerida
+
+| PR/lote | Conteúdo | Dependência |
+|---|---|---|
+| 1 | Baseline, propriedades tipadas, validação e infraestrutura de testes | nenhuma |
+| 2 | Self-host de frontend, remoção de inline JS, APP-01 e CSP | PR 1 |
+| 3 | DTOs, autorização por escopo e IAM-01/PRIV-01 | PR 1 |
+| 4 | DDL inicial, seed, FKs compostas, locks e BUS-02 | PR 3 |
+| 5 | Spring Session JDBC, revogação, reautenticação e senhas | PR 4 |
+| 6 | Profiles Spring, Actuator, CORS e cookies | PR 5 |
+| 7 | nginx, Cloudflare no projeto, containers, imagens e MySQL | PRs 2 e 6 |
+| 8 | Suíte de segurança completa, documentação operacional e reexecução da auditoria | todos |
+
+## 11. Testes de segurança mínimos a implementar
+
+### 11.1 Testes automatizados de aplicação
+
+| Caso | Nível e implementação | Resultado esperado |
+|---|---|---|
+| UBS A tenta ler/editar/cancelar UBS B | MockMvc + integração de service, parametrizado para `USER`, `ATENDENTE`, `ENFERMEIRO` e `ACS` | `403` e zero escrita |
+| SMS acessa o próprio tenant e tenta outro tenant | MockMvc com hosts/contexts distintos | próprio tenant permitido; outro tenant negado |
+| Tenant A referencia paciente/UBS/vaga/contemplação do tenant B | Teste de service e integração MySQL | service nega e FK/trigger rejeita |
+| SMS adultera todos os IDs de papel/usuário | Teste parametrizado de `SystemUserService` | somente quatro papéis UBS permitidos; `SMS`/`ADMIN` negados |
+| Último SMS e último ADMIN ativo | Teste concorrente de service | pelo menos um permanece ativo |
+| Autorização existente apenas no template | ArchUnit/reflection + MockMvc de todos os mappings privados | todo endpoint possui regra de servidor e escopo |
+| Conta desativada, senha/papel/UBS alterados ou usuário excluído | integração Spring Session JDBC | sessão anterior é inválida no request seguinte |
+| Payload XSS persistido | MockMvc/JPA/JTE com aspas, barras, CR/LF, entidades e `</script>` | texto preservado/escapado; nenhum nó/atributo executável |
+| Regressão de JavaScript inline | teste estático sobre `src/main/jte` | falha em handler inline, `<script>` sem `src`, `hx-on`, `js:` ou URL externa |
+| Caracteres de controle em log | teste de `LogValueSanitizer` com appender em memória | nenhuma quebra/injeção de linha |
+| CPF/CNS/telefone, data e enum inválidos | testes de Bean Validation e MockMvc | erro por campo, repositório não chamado |
+| Campos grandes, lote e paginação abusivos | MockMvc/fuzzing parametrizado | `400`, sem `500`, `pageSize <= 100` |
+| Parâmetros de estado/auditoria/tenant manipulados | MockMvc e teste de mapper DTO→entidade | valores ignorados/rejeitados |
+| Session fixation | login MockMvc com sessão prévia | ID muda e atributos não autorizados não sobrevivem |
+| Timeout ocioso e absoluto | relógio controlável + Spring Session | sessão expira no servidor nos limites definidos |
+| Revogação cross-instance | duas instâncias usando o mesmo MySQL de teste | revogação em A é observada imediatamente em B |
+| Reautenticação de contemplação | MockMvc | prova ausente, expirada, reutilizada ou de outro objeto é negada |
+| CSRF | teste parametrizado de POST/PUT/DELETE | sem token é `403`; com token segue para regra de negócio |
+| GET sem efeito colateral | teste de mappings + contagem de escrita | nenhum GET chama repositório mutável; controller de teste não existe em `prd` |
+| Política de senha e upgrade | unit/integration | mínimo 8, denylist rejeitada, hash antigo atualizado no login |
+| CORS removido | MockMvc com `Origin`/preflight | nenhuma origem recebe `Access-Control-Allow-*` |
+| CSP/cookies/cache/Actuator | MockMvc com profiles | headers/cookies corretos; actuator fora da porta pública |
+
+### 11.2 Testes de concorrência e MySQL real
+
+Criar profile Maven `security-integration` com Testcontainers MySQL e testes `*IT`, usando o DDL inicial real:
+
+- duas execuções do job em instâncias/threads distintas adquirem uma única chave;
+- duas contemplações disputam a mesma vaga e apenas uma vence;
+- duas requisições administrativas simultâneas não desativam o último coordenador/admin;
+- retry após falha parcial não repete tenant já concluído e não deixa escrita parcial;
+- saldo nunca fica abaixo de zero nem acima do total;
+- FKs compostas, checks e triggers rejeitam cada combinação cross-tenant/cross-UBS/procedimento;
+- seed completo carrega sem violação e a consulta de integridade retorna zero divergências;
+- crash/restart do MySQL preserva transações que receberam commit dentro das garantias do teste.
+
+Comandos de aceite:
+
+```bash
+./mvnw verify
+./mvnw verify -Psecurity-integration
+```
+
+### 11.3 Testes automatizados de build/nginx/containers
+
+Adicionar scripts em `scripts/security/` executáveis contra ambiente descartável:
+
+- `verify-frontend.sh`: `npm ci`, build, manifesto de integridade, ausência de URL externa e inline script;
+- `verify-nginx-config.sh`: `nginx -t`, default server, Host arbitrário, headers, URI sem query no log, timeouts declarados e spoof de proxy headers;
+- `verify-rate-limit.sh`: rajada controlada em login/reauth/escrita, confirmando `429` e isolamento entre hostnames;
+- `verify-compose.sh`: `docker compose config`, gateway público, MySQL de produção somente em loopback, redes esperadas, usuário, read-only, tmpfs, `cap_drop` e `no-new-privileges`;
+- `verify-schema-seed.sh`: sobe MySQL limpo, aplica `01-schema.sql`/`02-seed.sql` e executa auditoria de integridade;
+- `verify-actuator.sh`: porta pública retorna `404`, management port retorna health mínimo e Prometheus só é alcançável na rede autorizada.
+
+### 11.4 Validações externas/manuais
+
+Estas verificações dependem de homologação, Cloudflare, Hostinger ou rede externa e não podem ser provadas apenas pelo teste unitário:
+
+- acesso direto ao IPv4/IPv6 da origem com Host/SNI correto deve falhar;
+- 3306, 8080, 9090, 2375 e 2376 não podem estar públicos;
+- Cloudflare não pode retornar `HIT` para duas sessões/tenants em conteúdo autenticado;
+- certificado, Full (strict), AOP, IP real e atualização dos ranges devem ser verificados;
+- cookies e todos os headers devem ser confirmados na resposta observada pelo navegador;
+- restore de backup permanece teste externo do BAK-01, achado fora desta implementação.
+
+O script `verify-deployment.sh` deverá automatizar `curl`/checagens não destrutivas e produzir relatório sanitizado; `nmap`, teste de origem e restore só serão executados com autorização formal.
+
+### 11.5 Exclusões explícitas da suíte deste ciclo
+
+- MFA, TOTP e recuperação MFA;
+- step-up, motivo e trilha temporal para suporte global;
+- scan de imagem/dependência, assinatura, SBOM e provenance;
+- controles e testes completos dos achados não incluídos na seção 2.2.
+
+Essas exclusões prevalecem sobre a lista genérica anterior da seção 11 e não significam que os riscos foram eliminados.
 
 ## 12. Evidências positivas
 
@@ -1695,23 +1941,33 @@ O aceite não deve usar apenas “Cloudflare ativada”, “firewall ativo” ou
 - frame options `DENY`.
 - TLS 1.2/1.3 no nginx.
 - HSTS, `nosniff` e `no-referrer`.
-- banco não publicado no compose.
+- banco não publicado em interface externa; em produção, a porta opcional de administração fica vinculada somente a `127.0.0.1`.
 - aplicação não publicada diretamente.
 - processo Java sem root.
 - certificados montados read-only no compose.
 - isolamento Hibernate por tenant.
+- Spring Session JDBC com chave estável e revogação após eventos de risco.
+- reautenticação server-side, de uso único e vinculada à contemplação manual.
+- DTOs de comando/consulta e validação server-side nos fluxos mutáveis.
+- autorização server-side centralizada por tenant e UBS.
+- FKs compostas, checks, triggers e updates atômicos no DDL inicial.
+- imagens com tags completas de versão e builds multi-stage sem `curl | bash`.
+- frontend self-hosted, com versionamento dos assets e CSP sem JavaScript inline.
+- Actuator isolado na porta de gestão e sem detalhes/componentes de health.
 - limpeza de TenantContext.
 - teste de isolamento JPA.
 - escopo de leitura por UBS para usuários comuns.
 - queries parametrizadas; nenhuma SQL injection evidente foi encontrada.
 - `.env` ignorado pelo Git e sem histórico encontrado.
 - certificado/seed confirmados como mock.
-- 177 testes passaram sem falha.
-- cobertura JaCoCo aproximada de 82%.
+- 212 testes regulares e 3 testes de integração MySQL passaram sem falha.
+- cobertura JaCoCo de 84,41% de instruções e 84,07% de linhas no núcleo de negócio/segurança; controllers permanecem cobertos por testes de adapter/MockMvc e contratos, mas fora do gate agregado.
 
 Esses controles devem ser preservados durante a correção.
 
 ## 13. Critério técnico final de aprovação
+
+Concluir a seção 10 desta atualização permite reavaliar apenas os achados incluídos no plano parcial. Não implica aprovação técnica final enquanto os demais requisitos abaixo permanecerem pendentes ou sem aceite formal de risco.
 
 O sistema poderá ser reavaliado para produção quando houver evidência de:
 
@@ -1751,6 +2007,11 @@ O sistema poderá ser reavaliado para produção quando houver evidência de:
 - [OWASP — Logging](https://cheatsheetseries.owasp.org/cheatsheets/Logging_Cheat_Sheet.html)
 - [OWASP — Third Party JavaScript](https://cheatsheetseries.owasp.org/cheatsheets/Third_Party_Javascript_Management_Cheat_Sheet.html)
 - [OWASP — Docker Security](https://cheatsheetseries.owasp.org/cheatsheets/Docker_Security_Cheat_Sheet.html)
+- [Spring Boot — Spring Session](https://docs.spring.io/spring-boot/reference/web/spring-session.html)
+- [Spring Session — armazenamento JDBC](https://docs.spring.io/spring-session/reference/configuration/jdbc.html)
+- [Spring Boot — porta e endereço do Actuator](https://docs.spring.io/spring-boot/how-to/actuator.html#howto.actuator.change-http-port-or-address)
+- [nginx — limitação de requisições](https://nginx.org/en/docs/http/ngx_http_limit_req_module.html)
+- [nginx — limitação de conexões](https://nginx.org/en/docs/http/ngx_http_limit_conn_module.html)
 
 ### Cloudflare e Hostinger
 
@@ -1776,16 +2037,57 @@ O sistema poderá ser reavaliado para produção quando houver evidência de:
 
 ## 15. Registro das verificações executadas
 
+### 15.1 Evidência pós-implementação de 29 de julho de 2026
+
 | Verificação | Resultado |
 |---|---|
-| `./mvnw verify` | 177 testes; 0 falhas; 0 erros |
-| JaCoCo | aproximadamente 82% de instruções/linhas cobertas |
-| `npm audit` | 5 altas, 1 moderada, 0 críticas |
+| `./mvnw verify` | aprovado; 212 testes, 0 falhas, 0 erros e gate JaCoCo aprovado |
+| `./mvnw verify -Psecurity-integration` | aprovado com acesso ao Docker; executou os testes regulares e 3 testes MySQL/Testcontainers sem falhas |
+| JaCoCo | 84,41% de instruções e 84,07% de linhas no núcleo de negócio/segurança; mínimo mantido em 80% |
+| `scripts/security/verify-schema-seed.sh` | aprovado em MySQL 8.0.43 limpo; DDL, seed, colunas e índice da lease carregados sem divergência |
+| `MySqlSecurityIT` | aprovado: referência cross-tenant rejeitada, decremento concorrente não fica negativo, chave do job é única, somente uma disputa recupera a lease expirada, token obsoleto não conclui o job, parâmetros de durabilidade valem `1` e commit sobrevive ao reinício |
+| `scripts/security/verify-frontend.sh` | aprovado: `npm ci`, PostCSS, dependências vendorizadas e ausência de script/handler/URL externa |
+| `npm audit --omit=dev` | 0 vulnerabilidades nas dependências entregues em runtime |
+| `npm audit --audit-level=critical` | 5 altas e 1 moderada, todas na cadeia de build/desenvolvimento; correção contínua permanece no SUP-02, fora deste ciclo |
+| `scripts/security/verify-nginx-config.sh` | aprovado para `dev` e `prd`: `nginx -t`, Host, headers, logs, proxy e timeouts |
+| `scripts/security/verify-compose.sh` | aprovado para `dev` e `prd`: gateway público; MySQL de produção vinculado somente a `127.0.0.1`; redes e hardening declarados |
+| `docker build --check` | aprovado sem warnings para `Dockerfile`, `Dockerfile.prd` e `Dockerfile.railway` |
+| MySQL sob hardening do Compose | aprovado em container descartável com root filesystem read-only, dados/tmpfs, capabilities mínimas e `no-new-privileges`; seed com 360 pacientes e parâmetros duráveis `1/1` |
+| `git diff --check` | aprovado; nenhum erro de whitespace |
 | busca por segredos versionados | nenhum segredo real evidente; fixtures confirmadas como mock |
 | histórico Git de `.env`/`.env.prd` | não encontrado |
 | Dependency-Check Java | inconclusivo por sincronização NVD inicial sem API key |
 | DAST/pentest | não executado; requer ambiente implantado de homologação |
 
+O gate JaCoCo exclui classes DTO/entidade/configuração já previstas e, após esta refatoração, os adapters em `controllers`. Essa exclusão não remove testes: controllers, filtros, CSRF, CORS, session fixation, mappings e binding continuam cobertos por testes unitários, MockMvc e contratos estáticos; o percentual agregado passa a medir o núcleo de negócio e segurança.
+
+### 15.2 Controles implementados no repositório
+
+- JavaScript inline/handlers e recursos web externos removidos; dependências frontend locais, assets versionados e CSP em enforcement. O caminho público `/vendor/**` foi autorizado nas cadeias de segurança administrativa e de tenant, permitindo que o CSS e a fonte local de Material Symbols sejam carregados também nas páginas filhas de `/admin/`.
+- O CSS oficial do ApexCharts e as regras de legenda que a biblioteca normalmente injeta em runtime são servidos localmente. Assim, os gráficos do dashboard permanecem íntegros sem flexibilizar `style-src` para blocos inline.
+- Controllers mutáveis recebem comandos DTO; services recarregam objetos e aplicam escopo tenant/UBS e allowlists de papel.
+- Sessão persistida no MySQL, revogação por identidade estável, timeouts ocioso/absoluto e cookies por profile. Foram adicionadas páginas para o usuário gerir as próprias sessões e para `SMS`/`ADMIN` listar e revogar sessões das contas que podem administrar, sem expor o identificador real da sessão. A listagem própria de um usuário `SMS` é limitada à chave composta pelo tenant e pelo ID desse usuário.
+- Métodos antigos marcados como `@Deprecated`, seus adapters de chamada direta e os testes exclusivos desses adapters foram removidos; os endpoints DTO atuais permanecem cobertos.
+- Reautenticação de contemplação manual vinculada a ator, ação, objeto, prazo de cinco minutos e uso único.
+- DDL inicial e seed atualizados diretamente, sem nova migração; FKs compostas, checks, triggers, versões, tabela do job e tabelas Spring Session.
+- Contemplação/vagas atualizadas atomicamente, com idempotência por tenant/janela; endpoint de teste é POST e existe apenas em `dev`.
+- Nginx com Host validado, default servers, IPs Cloudflare, headers sobrescritos, logs sem query, limites por IP+tenant e global de login, timeouts e `429`.
+- Profiles `dev`/`prd`/`test`, Actuator isolado, CORS removido, multipart desabilitado e segredos de produção obrigatórios.
+- Composes segmentados e containers non-root/read-only, `tmpfs`, `cap_drop: ALL`, `no-new-privileges`; imagens/base com tags completas de versão e builds multi-stage.
+- MySQL de produção publicado somente em loopback por `127.0.0.1:${MYSQL_HOST_PORT:-3306}:3306`, permitindo DBeaver via túnel SSH sem abrir a porta para a Internet. O volume de dados permanece gravável mesmo com o filesystem raiz read-only.
+- MySQL com `innodb_flush_log_at_trx_commit=1`, `sync_binlog=1`, binlog ROW e retenção de sete dias.
+
+Nenhum volume persistente do projeto foi apagado durante esta implementação. O responsável deverá remover/recriar somente o volume inicial autorizado ao aplicar o DDL; o seed deve ser carregado apenas em desenvolvimento.
+
+### 15.3 Verificações ainda obrigatórias fora do repositório
+
+- executar `scripts/security/verify-rate-limit.sh`, `verify-actuator.sh` e `verify-deployment.sh` contra a homologação publicada;
+- confirmar firewall da VPS, IPv4/IPv6 da origem inacessíveis diretamente, portas 3306/8080/9090/2375/2376 fechadas e Cloudflare Full (strict)/AOP;
+- confirmar cookies, CSP/cache e demais headers na resposta observada pelo navegador e pela borda;
+- executar DAST/pentest autenticado e teste de carga que calibre os limites considerando NAT municipal e troca de turno;
+- testar restauração de backup e formalizar RPO/RTO;
+- tratar ou aceitar formalmente os achados e itens excluídos da seção 2.2.
+
 ---
 
-**Parecer técnico atual:** risco **alto/crítico**; implantação com dados reais **não aprovada** até remediação e nova verificação.
+**Parecer técnico atual:** a remediação parcial solicitada está **implementada e validada no repositório**, mas a implantação com dados reais permanece **não aprovada** por achados fora do escopo e validações externas ainda pendentes.

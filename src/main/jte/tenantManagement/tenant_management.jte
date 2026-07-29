@@ -21,14 +21,14 @@
 <!DOCTYPE html>
 <html lang="pt-br">
 @template.fragments.head(title = "Gestão de Tenants", res = res)
-<body class="flex w-full flex-1 h-dvh justify-between items-center bg-slate-300">
+<body class="flex w-full flex-1 h-dvh justify-between items-center overflow-hidden bg-slate-300">
 @template.fragments.sidebar(secHelper = secHelper, res = res, csrf = csrf, adminArea = true)
-<main class="flex flex-col h-full w-full overflow-hidden">
+<main class="flex flex-col h-full min-h-0 min-w-0 w-full overflow-hidden">
     @template.fragments.header(secHelper = secHelper, res = res, adminArea = true)
     @template.fragments.dialogs(error = error, message = message)
 
-    <section class="flex flex-col flex-1 overflow-auto">
-        <div class="flex flex-col mx-4 justify-start items-center">
+    <section class="flex flex-col flex-1 min-h-0 overflow-y-auto overflow-x-hidden overscroll-contain">
+        <div class="flex flex-col flex-shrink-0 mx-4 justify-start items-center">
 
             <div class="w-full bg-white rounded-lg mt-4">
                 <input type="checkbox" id="panelGlobalMaintenance" class="peer hidden" checked>
@@ -141,7 +141,7 @@
                         <span class="material-symbols-outlined mr-4">manage_search</span> Tenants
                     </div>
                 </label>
-                <div class="flex flex-col justify-center peer-checked:max-h-full max-h-0 overflow-hidden overscroll-contain transition-max-height duration-500 ease-in-out">
+                <div class="flex flex-col justify-center peer-checked:max-h-[3000px] max-h-0 overflow-hidden overscroll-contain transition-max-height duration-500 ease-in-out">
                     <form id="tenantSearchForm" action="/admin/tenant-management" method="get"
                           class="grid grid-flow-row grid-cols-1 sm:grid-cols-4 md:grid-cols-12 gap-2 rounded-lg gap-x-4 py-4 px-4 w-full"
                           hx-get="/admin/tenant-management?pagination=true"
@@ -188,8 +188,8 @@
             </div>
 
         </div>
+        @template.fragments.footer()
     </section>
-    @template.fragments.footer()
 </main>
 <form id="tenantSlugForm" action="/admin/tenant-management/slug" method="post" class="hidden">
     <input type="hidden" id="slugTenantId" name="id">
@@ -207,150 +207,5 @@
     <input type="hidden" id="maintenanceMessage" name="maintenanceMessage">
     <input type="hidden" name="${csrf.parameterName()}" value="${csrf.token()}"/>
 </form>
-<script>
-    function submitSlugChange(id, currentSlug) {
-        const currentSlugSafe = escapeHtml(currentSlug);
-        Swal.fire({
-            title: 'Alterar slug do tenant',
-            icon: 'warning',
-            width: '42rem',
-            buttonsStyling: false,
-            showCancelButton: true,
-            confirmButtonText: 'Alterar slug',
-            cancelButtonText: 'Cancelar',
-            customClass: tenantSwalClasses(),
-            html:
-                '<div class="text-left text-sm text-slate-700">' +
-                    '<div class="mb-4 rounded-lg bg-slate-100 px-4 py-3">' +
-                        '<span class="block text-xs font-semibold uppercase tracking-wide text-slate-500">Slug atual</span>' +
-                        '<span class="mt-1 inline-flex rounded-lg bg-white px-3 py-1 font-mono text-sm text-slate-900">' + currentSlugSafe + '</span>' +
-                    '</div>' +
-
-                    '<div class="mb-4 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-amber-800">' +
-                        '<span class="mb-1 block font-semibold">Atenção antes de alterar</span>' +
-                        '<span class="block">A URL do tenant será alterada imediatamente, as sessões ativas serão encerradas e o cache será invalidado. A URL antiga deixará de funcionar.</span>' +
-                    '</div>' +
-
-                    '<label for="swalNewSlug" class="mb-1 block font-semibold text-slate-700">Novo slug</label>' +
-                    '<input id="swalNewSlug" class="swal2-input !mx-0 !mt-0 !mb-3 !h-auto !w-full rounded-lg border border-stroke px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" placeholder="exemplo-tenant">' +
-
-                    '<label for="swalSlugConfirmation" class="mb-1 block font-semibold text-slate-700">Confirme digitando o novo slug</label>' +
-                    '<input id="swalSlugConfirmation" class="swal2-input !mx-0 !mt-0 !mb-0 !h-auto !w-full rounded-lg border border-stroke px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" placeholder="repita o novo slug">' +
-                '</div>',
-            focusConfirm: false,
-            preConfirm: () => {
-                const newSlug = document.getElementById('swalNewSlug').value.trim();
-                const confirmation = document.getElementById('swalSlugConfirmation').value.trim();
-                const slugPattern = /^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/;
-
-                if (!newSlug || !confirmation) {
-                    Swal.showValidationMessage('Informe e confirme o novo slug.');
-                    return false;
-                }
-                if (!slugPattern.test(newSlug)) {
-                    Swal.showValidationMessage('Use apenas letras minúsculas, números e hífen. O slug deve iniciar e terminar com letra ou número.');
-                    return false;
-                }
-                if (newSlug !== confirmation) {
-                    Swal.showValidationMessage('A confirmação precisa ser igual ao novo slug.');
-                    return false;
-                }
-                if (newSlug === currentSlug) {
-                    Swal.showValidationMessage('O novo slug precisa ser diferente do slug atual.');
-                    return false;
-                }
-                return { newSlug, confirmation };
-            }
-        }).then((result) => {
-            if (!result.isConfirmed) return;
-            document.getElementById('slugTenantId').value = id;
-            document.getElementById('newSlug').value = result.value.newSlug;
-            document.getElementById('slugConfirmation').value = result.value.confirmation;
-            document.getElementById('tenantSlugForm').submit();
-        });
-    }
-
-    function escapeHtml(value) {
-        return String(value)
-            .replaceAll('&', '&amp;')
-            .replaceAll('<', '&lt;')
-            .replaceAll('>', '&gt;')
-            .replaceAll('"', '&quot;')
-            .replaceAll("'", '&#039;');
-    }
-
-    function tenantSwalClasses(confirmButtonClass) {
-        return {
-            popup: 'rounded-lg',
-            title: 'text-slate-800',
-            confirmButton: confirmButtonClass || 'text-sm inline-block rounded-lg bg-slate-900 py-2.5 px-6 text-white cursor-pointer active:bg-blue-400 hover:bg-blue-500 transition duration-300',
-            cancelButton: 'text-sm inline-block rounded-lg bg-slate-100 py-2.5 px-6 text-slate-700 cursor-pointer hover:bg-slate-200 transition duration-300 ml-2'
-        };
-    }
-
-    function submitTenantDisable(id) {
-        Swal.fire({
-            title: 'Desabilitar tenant',
-            icon: 'warning',
-            width: '40rem',
-            buttonsStyling: false,
-            showCancelButton: true,
-            confirmButtonText: 'Desabilitar',
-            cancelButtonText: 'Cancelar',
-            customClass: tenantSwalClasses('text-sm inline-block rounded-lg bg-red-600 py-2.5 px-6 text-white cursor-pointer active:bg-red-700 hover:bg-red-500 transition duration-300'),
-            html:
-                '<div class="text-left text-sm text-slate-700">' +
-                    '<div class="mb-4 rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-red-800">' +
-                        '<span class="mb-1 block font-semibold">Acesso será bloqueado</span>' +
-                        '<span class="block">O tenant será marcado como desabilitado, deixará de responder no subdomínio e as sessões ativas serão encerradas.</span>' +
-                    '</div>' +
-
-                    '<label for="swalDisabledReason" class="mb-1 block font-semibold text-slate-700">Motivo da desabilitação</label>' +
-                    '<textarea id="swalDisabledReason" class="swal2-textarea !mx-0 !mt-0 !mb-0 !h-28 !w-full rounded-lg border border-stroke px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" placeholder="Opcional"></textarea>' +
-                '</div>',
-            focusConfirm: false,
-            preConfirm: () => {
-                return document.getElementById('swalDisabledReason').value.trim();
-            }
-        }).then((result) => {
-            if (!result.isConfirmed) return;
-            document.getElementById('disableTenantId').value = id;
-            document.getElementById('disabledReason').value = result.value;
-            document.getElementById('tenantDisableForm').submit();
-        });
-    }
-
-    function submitTenantMaintenance(id) {
-        Swal.fire({
-            title: 'Colocar tenant em manutenção',
-            icon: 'warning',
-            width: '40rem',
-            buttonsStyling: false,
-            showCancelButton: true,
-            confirmButtonText: 'Ativar manutenção',
-            cancelButtonText: 'Cancelar',
-            customClass: tenantSwalClasses(),
-            html:
-                '<div class="text-left text-sm text-slate-700">' +
-                    '<div class="mb-4 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-amber-800">' +
-                        '<span class="mb-1 block font-semibold">Acesso temporariamente travado</span>' +
-                        '<span class="block">O tenant exibirá a página de manutenção, novas requisições serão bloqueadas e as sessões ativas serão encerradas.</span>' +
-                    '</div>' +
-
-                    '<label for="swalMaintenanceMessage" class="mb-1 block font-semibold text-slate-700">Mensagem de manutenção</label>' +
-                    '<textarea id="swalMaintenanceMessage" class="swal2-textarea !mx-0 !mt-0 !mb-0 !h-28 !w-full rounded-lg border border-stroke px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" placeholder="Opcional"></textarea>' +
-                '</div>',
-            focusConfirm: false,
-            preConfirm: () => {
-                return document.getElementById('swalMaintenanceMessage').value.trim();
-            }
-        }).then((result) => {
-            if (!result.isConfirmed) return;
-            document.getElementById('maintenanceTenantId').value = id;
-            document.getElementById('maintenanceMessage').value = result.value;
-            document.getElementById('tenantMaintenanceForm').submit();
-        });
-    }
-</script>
 </body>
 </html>

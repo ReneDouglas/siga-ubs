@@ -1,5 +1,6 @@
 package br.com.tecsus.sigaubs.controllers;
 
+import br.com.tecsus.sigaubs.dtos.AppointmentCommandDTO;
 import br.com.tecsus.sigaubs.entities.Appointment;
 import br.com.tecsus.sigaubs.entities.MedicalProcedure;
 import br.com.tecsus.sigaubs.entities.Patient;
@@ -9,6 +10,8 @@ import br.com.tecsus.sigaubs.security.SystemUserDetails;
 import br.com.tecsus.sigaubs.services.AppointmentService;
 import br.com.tecsus.sigaubs.services.PatientService;
 import br.com.tecsus.sigaubs.services.SpecialtyService;
+import jakarta.validation.Valid;
+import org.springframework.validation.BindingResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.MediaType;
@@ -58,7 +61,7 @@ public class AppointmentController {
                               @AuthenticationPrincipal SystemUserDetails loggedUser) {
 
         Appointment appointment = new Appointment();
-        var patientResult = patientService.findByIdAndUBS(idPatient, loggedUser.getBasicHealthUnitId());
+        var patientResult = patientService.findPatientToEdit(idPatient, loggedUser);
         if (patientResult.falhou()) {
             appointment.setPatient(new Patient());
             model.addAttribute("message", patientResult.mensagem());
@@ -106,11 +109,22 @@ public class AppointmentController {
     }
 
     @PostMapping("/appointment-management/create")
-    public String registerAppointmentSolicitation(@ModelAttribute Appointment appointment,
+    public String registerAppointmentSolicitation(
+                                            @Valid @ModelAttribute AppointmentCommandDTO command,
+                                            BindingResult bindingResult,
                                             @AuthenticationPrincipal SystemUserDetails loggedUser,
                                             RedirectAttributes redirectAttributes) {
 
-        var resultado = appointmentService.registerAppointment(appointment, loggedUser);
+        if (bindingResult.hasErrors()) {
+            redirectAttributes.addFlashAttribute("message", "Verifique os campos da marcação.");
+            redirectAttributes.addFlashAttribute("error", true);
+            Long patientId = command.getPatient() != null ? command.getPatient().getId() : null;
+            return patientId == null
+                    ? "redirect:/appointment-management"
+                    : "redirect:/appointment-management/load?id=" + patientId;
+        }
+
+        var resultado = appointmentService.registerAppointment(command, loggedUser);
         if (resultado.sucesso()) {
             redirectAttributes.addFlashAttribute("message", "Marcação agendada com sucesso.");
             redirectAttributes.addFlashAttribute("error", false);
@@ -121,7 +135,7 @@ public class AppointmentController {
             redirectAttributes.addFlashAttribute("error", true);
         }
 
-        return "redirect:/appointment-management/load?id=" + appointment.getPatient().getId();
+        return "redirect:/appointment-management/load?id=" + command.getPatient().getId();
     }
 
     @PutMapping("/appointment-management/{id}/cancel")
@@ -130,7 +144,13 @@ public class AppointmentController {
                                                 @AuthenticationPrincipal SystemUserDetails loggedUser,
                                                 RedirectAttributes redirectAttributes) {
 
-        var resultado = appointmentService.cancelSolicitation(apptSolicitationId, loggedUser);
+        var appointmentResult = appointmentService.findByIdWithQueueDetails(apptSolicitationId, loggedUser);
+        Long authorizedPatientId = appointmentResult.sucesso()
+                ? appointmentResult.valor().getPatient().getId()
+                : null;
+        var resultado = appointmentResult.sucesso()
+                ? appointmentService.cancelSolicitation(apptSolicitationId, loggedUser)
+                : br.com.tecsus.sigaubs.dtos.ResultadoOperacao.<Void>falha("Marcação não encontrada.");
         if (resultado.sucesso()) {
             redirectAttributes.addFlashAttribute("message", "Marcação cancelada com sucesso.");
             redirectAttributes.addFlashAttribute("error", false);
@@ -140,7 +160,9 @@ public class AppointmentController {
             redirectAttributes.addFlashAttribute("message", "Não foi possível cancelar a marcação. Contate o TI.");
             redirectAttributes.addFlashAttribute("error", true);
         }
-        return "redirect:/appointment-management/load?id=" + patientId;
+        return authorizedPatientId == null
+                ? "redirect:/appointment-management"
+                : "redirect:/appointment-management/load?id=" + authorizedPatientId;
     }
 
 }

@@ -79,7 +79,7 @@
                             </form>
                             <div id="statistics-panel"
                                  class="border border-black w-1/2 grid grid-cols-2 ${totalProceduresType == null || totalProceduresType.isEmpty() ? "hidden" : ""}"
-                                 onmouseenter="showStatics(event)" onmouseleave="hideStatics()">
+                                 data-statistics-panel>
                                 @if(totalProceduresType != null)
                                 @for(var type : totalProceduresType)
                                 <span class="font-semibold text-gray-700 text-right">${type.procedureType().getDescription()}</span>
@@ -91,15 +91,15 @@
                         <%-- Abas --%>
                         <div class="flex space-x-4 border-b border-gray-300 mb-4 shadow-xl">
                             <button class="tab-btn w-1/3 py-2 text-center bg-gray-300 hover:bg-gray-300 focus:outline-none"
-                                    onclick="showTab('consultas', this)">
+                                    data-action="show-tab" data-tab-target="consultas">
                                 Consultas
                             </button>
                             <button class="tab-btn w-1/3 py-2 text-center bg-gray-200 hover:bg-gray-300 focus:outline-none"
-                                    onclick="showTab('exames', this)">
+                                    data-action="show-tab" data-tab-target="exames">
                                 Exames
                             </button>
                             <button class="tab-btn w-1/3 py-2 text-center bg-gray-200 hover:bg-gray-300 focus:outline-none"
-                                    onclick="showTab('cirurgias', this)">
+                                    data-action="show-tab" data-tab-target="cirurgias">
                                 Cirurgias
                             </button>
                         </div>
@@ -134,7 +134,7 @@
                     <div class="flex items-center justify-between p-4 md:p-5 border-b rounded-t dark:border-gray-600">
                         <h3 class="text-xl font-semibold text-gray-900 dark:text-white">Observações</h3>
                         <button type="button"
-                                onclick="this.parentElement.parentElement.parentElement.parentElement.classList.add('hidden')"
+                                data-action="close-modal" data-modal-id="default-modal"
                                 class="text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm w-8 h-8 ms-auto inline-flex justify-center items-center dark:hover:bg-gray-600 dark:hover:text-white"
                                 data-modal-hide="default-modal">
                             <svg class="w-3 h-3" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 14 14">
@@ -184,175 +184,4 @@
     </section>
 </main>
 </body>
-<script>
-    function showStatics(event) {
-        const panel = document.getElementById('statistics-panel');
-        if (panel.classList.contains('hidden')) return;
-        const modal = document.getElementById('marcacoes-stats');
-        modal.classList.remove('hidden');
-        let left = event.clientX;
-        let top = event.clientY;
-        const modalWidth = modal.offsetWidth;
-        const modalHeight = modal.offsetHeight;
-        if (left + modalWidth > window.innerWidth) left = window.innerWidth - modalWidth - 10;
-        if (top + modalHeight > window.innerHeight) top = window.innerHeight - modalHeight - 10;
-        modal.style.left = left + "px";
-        modal.style.top = top + "px";
-    }
-
-    function hideStatics() {
-        document.getElementById('marcacoes-stats').classList.add('hidden');
-    }
-
-    document.addEventListener('mousemove', function (e) {
-        const modal = document.getElementById('marcacoes-stats');
-        if (!modal.classList.contains('hidden')) {
-            const panel = document.getElementById('statistics-panel');
-            if (panel.classList.contains('hidden')) { hideStatics(); return; }
-            const panelRect = panel.getBoundingClientRect();
-            if (e.clientX < panelRect.left || e.clientX > panelRect.right ||
-                e.clientY < panelRect.top || e.clientY > panelRect.bottom) {
-                hideStatics();
-            }
-        }
-    });
-
-    function showTab(tabId, clickedBtn) {
-        document.querySelectorAll('.tab-content').forEach(function (content) {
-            content.classList.add('hidden');
-        });
-        document.getElementById(tabId).classList.remove('hidden');
-        clickedBtn.closest('.flex').querySelectorAll('.tab-btn').forEach(function (btn) {
-            btn.classList.remove('bg-gray-300');
-            btn.classList.add('bg-gray-200');
-        });
-        clickedBtn.classList.remove('bg-gray-200');
-        clickedBtn.classList.add('bg-gray-300');
-    }
-
-    function showModalTab(tabId, clickedBtn) {
-        document.getElementById('patient-details').classList.add('hidden');
-        document.getElementById('appointment-details').classList.add('hidden');
-        document.getElementById('patientHistory-details').classList.add('hidden');
-        document.getElementById(tabId).classList.remove('hidden');
-        clickedBtn.closest('.flex').querySelectorAll('.modal-tab-btn').forEach(function (btn) {
-            btn.classList.remove('bg-slate-300');
-            btn.classList.add('bg-slate-200');
-        });
-        clickedBtn.classList.remove('bg-slate-200');
-        clickedBtn.classList.add('bg-slate-300');
-    }
-
-    function openModal(observacoes) {
-        let modal = document.getElementById("default-modal");
-        modal.querySelector("#modal-observacoes").innerText = observacoes;
-        modal.classList.remove("hidden");
-        modal.classList.add("flex");
-        modal.classList.add("opacity-100");
-    }
-
-    function closeModal() {
-        let modal = document.getElementById("patientAppointment-modal");
-        modal.classList.add("opacity-0");
-        modal.classList.add("hidden");
-        modal.classList.remove("flex");
-    }
-
-    function handleContemplation() {
-        let reasonText = "";
-        Swal.fire({
-            title: "Digite o motivo da contemplação",
-            input: "textarea",
-            inputPlaceholder: "Motivo...",
-            showCancelButton: true,
-            confirmButtonText: "Enviar",
-            cancelButtonText: "Cancelar",
-            inputAttributes: { maxlength: "255" },
-            inputValidator: (value) => {
-                if (!value) return "Você precisa digitar um motivo.";
-                reasonText = value;
-            }
-        }).then(function (result) {
-            if (result.isConfirmed) {
-                Swal.fire({
-                    title: "Digite a sua senha",
-                    input: "password",
-                    showCancelButton: true,
-                    confirmButtonText: "Enviar",
-                    cancelButtonText: "Cancelar",
-                    inputValidator: (value) => {
-                        if (!value) return "Você precisa digitar a senha.";
-                        return new Promise((resolve) => {
-                            const formData = new URLSearchParams();
-                            formData.append('password', value);
-                            formData.append(document.getElementById('csrfToken').name, document.getElementById('csrfToken').value);
-                            fetch('/systemUser-management/validate', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                                body: formData
-                            }).then(response => {
-                                if (response.ok) resolve();
-                                else response.text().then(errorText => resolve(errorText));
-                            }).catch(error => resolve('Erro ao validar a senha. Tente novamente.'));
-                        });
-                    }
-                }).then(function (passwordResult) {
-                    if (passwordResult.isConfirmed) {
-                        document.getElementById("reason").value = reasonText;
-                        document.getElementById("contemplationForm").submit();
-                    }
-                });
-            }
-        });
-    }
-
-    function handleConfirmation() {
-        Swal.fire({
-            title: "Confirmar contemplação",
-            text: "Tem certeza que deseja continuar?",
-            icon: "warning",
-            showCancelButton: true,
-            confirmButtonColor: "#3085d6",
-            cancelButtonColor: "#d33",
-            confirmButtonText: "Sim",
-            cancelButtonText: "Cancelar"
-        }).then(function (result) {
-            if (result.isConfirmed) {
-                document.getElementById("confirmForm").submit();
-            }
-        });
-    }
-
-    document.addEventListener("htmx:confirm", function (evt) {
-        if (!evt.detail.target.hasAttribute('hx-confirm')) return;
-        evt.preventDefault();
-        Swal.fire({
-            title: "Cancelar contemplação",
-            text: evt.detail.question,
-            icon: "warning",
-            showCancelButton: true,
-            confirmButtonColor: "#3085d6",
-            cancelButtonColor: "#d33",
-            confirmButtonText: "Sim",
-            cancelButtonText: "Cancelar"
-        }).then(function (result) {
-            if (result.isConfirmed) {
-                Swal.fire({
-                    title: "Digite o motivo do cancelamento",
-                    input: "textarea",
-                    inputPlaceholder: "Motivo...",
-                    showCancelButton: true,
-                    confirmButtonText: "Enviar",
-                    cancelButtonText: "Cancelar",
-                    inputAttributes: { maxlength: "255" },
-                    inputValidator: (value) => { if (!value) return "Você precisa digitar um motivo!" }
-                }).then(function (textResult) {
-                    if (textResult.isConfirmed && textResult.value) {
-                        evt.detail.issueRequest(true);
-                    }
-                });
-            }
-        });
-    });
-</script>
 </html>

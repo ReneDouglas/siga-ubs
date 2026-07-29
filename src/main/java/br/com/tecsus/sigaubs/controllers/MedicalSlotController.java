@@ -1,8 +1,8 @@
 package br.com.tecsus.sigaubs.controllers;
 
-import br.com.tecsus.sigaubs.dtos.AvailableMedicalSlotsFormDTO;
+import br.com.tecsus.sigaubs.dtos.MedicalSlotBatchCommandDTO;
+import br.com.tecsus.sigaubs.dtos.MedicalSlotCommandDTO;
 import br.com.tecsus.sigaubs.entities.MedicalProcedure;
-import br.com.tecsus.sigaubs.entities.MedicalSlot;
 import br.com.tecsus.sigaubs.entities.BasicHealthUnit;
 import br.com.tecsus.sigaubs.enums.ProcedureType;
 import br.com.tecsus.sigaubs.security.SystemUserDetails;
@@ -24,6 +24,8 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.util.ArrayList;
 import java.util.List;
+import jakarta.validation.Valid;
+import org.springframework.validation.BindingResult;
 
 @Controller
 public class MedicalSlotController {
@@ -57,10 +59,17 @@ public class MedicalSlotController {
 
     @PreAuthorize("hasAnyRole('ADMIN', 'SMS')")
     @PostMapping("/medicalSlot-management/slots/add")
-    public String addAvailableMedicalSlotsRow(@ModelAttribute MedicalSlot availableMedicalSlot,
-            @ModelAttribute AvailableMedicalSlotsFormDTO availableMedicalSlotsFormDTO,
+    public String addAvailableMedicalSlotsRow(
+            @Valid @ModelAttribute MedicalSlotCommandDTO availableMedicalSlot,
+            BindingResult rowBindingResult,
+            @Valid @ModelAttribute MedicalSlotBatchCommandDTO availableMedicalSlotsFormDTO,
+            BindingResult batchBindingResult,
             Model model) {
 
+        if (rowBindingResult.hasErrors() || batchBindingResult.hasErrors()) {
+            model.addAttribute("availableMedicalSlotsForm", hydrateForm(availableMedicalSlotsFormDTO));
+            return "medicalSlotManagement/medicalSlotFragments/available_slots_form_table";
+        }
         availableMedicalSlotsFormDTO = hydrateForm(availableMedicalSlotsFormDTO);
         availableMedicalSlotsFormDTO.addRow(hydrateSlot(availableMedicalSlot));
         model.addAttribute("availableMedicalSlotsForm", availableMedicalSlotsFormDTO);
@@ -72,11 +81,14 @@ public class MedicalSlotController {
     @PreAuthorize("hasAnyRole('ADMIN', 'SMS')")
     @PostMapping("/medicalSlot-management/slots/create")
     public String registerAvailableMedicalSlots(
-            @ModelAttribute AvailableMedicalSlotsFormDTO availableMedicalSlotsFormDTO,
+            @Valid @ModelAttribute MedicalSlotBatchCommandDTO availableMedicalSlotsFormDTO,
+            BindingResult bindingResult,
             @AuthenticationPrincipal SystemUserDetails loggedUser,
             RedirectAttributes redirectAttributes) {
 
-        var resultado = medicalSlotService.registerAvailableMedicalSlotsBatch(availableMedicalSlotsFormDTO, loggedUser);
+        var resultado = bindingResult.hasErrors()
+                ? br.com.tecsus.sigaubs.dtos.ResultadoOperacao.<Void>falha("Lote de vagas inválido.")
+                : medicalSlotService.registerAvailableMedicalSlotsBatch(availableMedicalSlotsFormDTO, loggedUser);
         if (resultado.sucesso()) {
             redirectAttributes.addFlashAttribute("message", "Vagas registradas com sucesso.");
             redirectAttributes.addFlashAttribute("error", false);
@@ -91,9 +103,10 @@ public class MedicalSlotController {
     }
 
     @PreAuthorize("hasAnyRole('ADMIN', 'SMS')")
-    @GetMapping("/medicalSlot-management/slots/{index}/remove")
+    @PostMapping("/medicalSlot-management/slots/{index}/remove")
     public String removeRowtByIndex(@PathVariable int index,
-            @ModelAttribute AvailableMedicalSlotsFormDTO availableMedicalSlotsFormDTO,
+            @Valid @ModelAttribute MedicalSlotBatchCommandDTO availableMedicalSlotsFormDTO,
+            BindingResult bindingResult,
             Model model) {
         availableMedicalSlotsFormDTO = hydrateForm(availableMedicalSlotsFormDTO);
         if (index >= 0 && index < availableMedicalSlotsFormDTO.getAvailableMedicalSlots().size()) {
@@ -111,7 +124,8 @@ public class MedicalSlotController {
                     + DefaultValues.PAGE_SIZE, required = false) int pageSize) {
 
         model.addAttribute("medicalSlotsPage",
-                medicalSlotService.findMedicalSlotsPaginated(PageRequest.of(currentPage, pageSize)));
+                medicalSlotService.findMedicalSlotsPaginated(
+                        PageRequest.of(Math.max(0, currentPage), Math.clamp(pageSize, 1, 100))));
         return "medicalSlotManagement/medicalSlotFragments/medicalSlot_datatable";
     }
 
@@ -137,11 +151,11 @@ public class MedicalSlotController {
         return "medicalSlotManagement/medicalSlotFragments/medicalProcedures";
     }
 
-    private AvailableMedicalSlotsFormDTO hydrateForm(AvailableMedicalSlotsFormDTO form) {
-        AvailableMedicalSlotsFormDTO hydratedForm = form != null ? form : new AvailableMedicalSlotsFormDTO();
-        List<MedicalSlot> hydratedSlots = new ArrayList<>();
+    private MedicalSlotBatchCommandDTO hydrateForm(MedicalSlotBatchCommandDTO form) {
+        MedicalSlotBatchCommandDTO hydratedForm = form != null ? form : new MedicalSlotBatchCommandDTO();
+        List<MedicalSlotCommandDTO> hydratedSlots = new ArrayList<>();
         if (hydratedForm.getAvailableMedicalSlots() != null) {
-            for (MedicalSlot slot : hydratedForm.getAvailableMedicalSlots()) {
+            for (MedicalSlotCommandDTO slot : hydratedForm.getAvailableMedicalSlots()) {
                 hydratedSlots.add(hydrateSlot(slot));
             }
         }
@@ -149,16 +163,22 @@ public class MedicalSlotController {
         return hydratedForm;
     }
 
-    private MedicalSlot hydrateSlot(MedicalSlot slot) {
+    private MedicalSlotCommandDTO hydrateSlot(MedicalSlotCommandDTO slot) {
         if (slot == null) {
-            return new MedicalSlot();
+            return new MedicalSlotCommandDTO();
         }
         if (slot.getBasicHealthUnit() != null && slot.getBasicHealthUnit().getId() != null) {
             BasicHealthUnit bhu = basicHealthUnitService.findSystemUserUBS(slot.getBasicHealthUnit().getId());
-            slot.setBasicHealthUnit(bhu);
+            slot.setBasicHealthUnitName(bhu.getName());
         }
         if (slot.getMedicalProcedure() != null && slot.getMedicalProcedure().getId() != null) {
-            slot = basicHealthUnitService.getFetchedAssociations(slot);
+            MedicalProcedure procedure = basicHealthUnitService.fetchMedicalProcedure(
+                    slot.getMedicalProcedure().getId());
+            if (procedure != null) {
+                slot.setProcedureDescription(procedure.getDescription());
+                slot.setProcedureTypeDescription(procedure.getProcedureType().getDescription());
+                slot.setSpecialtyTitle(procedure.getSpecialty().getTitle());
+            }
         }
         return slot;
     }

@@ -54,7 +54,7 @@
                             <span class="material-symbols-outlined hover:text-blue-500 transition duration-300">edit</span>
                             <span class="absolute right-full top-1/2 transform -translate-y-1/2 -translate-x-1 hidden group-hover:block bg-slate-800 text-white text-sm rounded px-2 py-1 whitespace-nowrap">Editar</span>
                         </a>
-                        <button type="button" onclick="submitSlugChange('${tenant.getId()}', '${tenant.getSlug()}')" class="relative group inline-flex p-2 rounded-lg hover:bg-slate-200 cursor-pointer transition duration-300">
+                        <button type="button" data-action="tenant-slug" data-tenant-id="${tenant.getId()}" data-tenant-slug="${tenant.getSlug()}" class="relative group inline-flex p-2 rounded-lg hover:bg-slate-200 cursor-pointer transition duration-300">
                             <span class="material-symbols-outlined hover:text-blue-500 transition duration-300">link</span>
                             <span class="absolute right-full top-1/2 transform -translate-y-1/2 -translate-x-1 hidden group-hover:block bg-slate-800 text-white text-sm rounded px-2 py-1 whitespace-nowrap">Alterar slug</span>
                         </button>
@@ -72,7 +72,7 @@
                             </button>
                         </form>
                         @elseif(tenant.isActive())
-                        <button type="button" onclick="submitTenantMaintenance('${tenant.getId()}')" class="relative group inline-flex p-2 rounded-lg hover:bg-slate-200 cursor-pointer transition duration-300">
+                        <button type="button" data-action="tenant-maintenance" data-tenant-id="${tenant.getId()}" class="relative group inline-flex p-2 rounded-lg hover:bg-slate-200 cursor-pointer transition duration-300">
                             <span class="material-symbols-outlined hover:text-amber-500 transition duration-300">construction</span>
                             <span class="absolute right-full top-1/2 transform -translate-y-1/2 -translate-x-1 hidden group-hover:block bg-slate-800 text-white text-sm rounded px-2 py-1 whitespace-nowrap">Manutenção</span>
                         </button>
@@ -87,7 +87,7 @@
                             </button>
                         </form>
                         @else
-                        <button type="button" onclick="submitTenantDisable('${tenant.getId()}')" class="relative group inline-flex p-2 rounded-lg hover:bg-slate-200 cursor-pointer transition duration-300">
+                        <button type="button" data-action="tenant-disable" data-tenant-id="${tenant.getId()}" class="relative group inline-flex p-2 rounded-lg hover:bg-slate-200 cursor-pointer transition duration-300">
                             <span class="material-symbols-outlined hover:text-red-500 transition duration-300">block</span>
                             <span class="absolute right-full top-1/2 transform -translate-y-1/2 -translate-x-1 hidden group-hover:block bg-slate-800 text-white text-sm rounded px-2 py-1 whitespace-nowrap">Desabilitar</span>
                         </button>

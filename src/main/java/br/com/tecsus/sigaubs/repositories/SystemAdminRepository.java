@@ -5,10 +5,13 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.repository.query.Param;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Optional;
+import java.util.List;
+import jakarta.persistence.LockModeType;
 
 public interface SystemAdminRepository extends JpaRepository<SystemAdmin, Long> {
 
@@ -18,6 +21,10 @@ public interface SystemAdminRepository extends JpaRepository<SystemAdmin, Long> 
     boolean existsByUsername(String username);
 
     long countByActiveTrue();
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT admin FROM SystemAdmin admin WHERE admin.active = true ORDER BY admin.id")
+    List<SystemAdmin> findAllActiveForUpdate();
 
     @Transactional(readOnly = true)
     @Query(value = """

@@ -1,13 +1,14 @@
 @import br.com.tecsus.sigaubs.entities.BasicHealthUnit
 @import br.com.tecsus.sigaubs.entities.SystemRole
 @import br.com.tecsus.sigaubs.entities.SystemUser
+@import br.com.tecsus.sigaubs.dtos.SystemUserSearchDTO
 @import br.com.tecsus.sigaubs.security.CsrfHelper
 @import br.com.tecsus.sigaubs.security.SecurityHelper
 @import br.com.tecsus.sigaubs.security.StaticResourceHelper
 @import org.springframework.data.domain.Page
 @import java.util.List
 @param SystemUser systemUser
-@param SystemUser searchUser = null
+@param SystemUserSearchDTO searchUser = null
 @param Page<SystemUser> systemUsersPage
 @param List<SystemRole> rolesList
 @param List<BasicHealthUnit> basicHealthUnits

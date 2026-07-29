@@ -4,6 +4,7 @@ import br.com.tecsus.sigaubs.entities.BasicHealthUnit;
 import br.com.tecsus.sigaubs.entities.Patient;
 import br.com.tecsus.sigaubs.enums.Roles;
 import br.com.tecsus.sigaubs.repositories.PatientRepository;
+import br.com.tecsus.sigaubs.security.AuthorizationScopeService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -29,6 +30,9 @@ class PatientServiceTest {
 
     @Mock
     private BasicHealthUnitService basicHealthUnitService;
+
+    @Mock
+    private AuthorizationScopeService authorizationScopeService;
 
     @InjectMocks
     private PatientService patientService;
@@ -56,6 +60,8 @@ class PatientServiceTest {
         BasicHealthUnit ubs = ubs(1L, "UBS");
         var loggedUser = userDetails("atendente", "Atendente", 1L, 1L, "afogados", Roles.ROLE_ATENDENTE);
         when(basicHealthUnitService.findSystemUserUBSOptional(1L)).thenReturn(Optional.of(ubs));
+        when(basicHealthUnitService.findReferenceById(1L)).thenReturn(ubs);
+        when(patientRepository.findByIdAndBasicHealthUnit(1L, ubs)).thenReturn(patient);
         when(patientRepository.save(patient)).thenReturn(patient);
 
         var resultado = patientService.updatePatient(patient, loggedUser);
@@ -87,6 +93,10 @@ class PatientServiceTest {
     void deveDelegarBuscasPaginadasComUbsDoUsuario() {
         Patient filter = new Patient();
         var loggedUser = userDetails("atendente", "Atendente", 9L, 1L, "afogados", Roles.ROLE_ATENDENTE);
+        BasicHealthUnit ubs = ubs(9L, "UBS");
+        when(basicHealthUnitService.findReferenceById(9L)).thenReturn(ubs);
+        when(patientRepository.findByIdAndBasicHealthUnit(1L, ubs))
+                .thenReturn(patient(1L, "Paciente", ubs));
 
         patientService.findPatientsPage(filter, PageRequest.of(0, 10), loggedUser);
         patientService.findPatientAppointmentsHistoryPage(1L, PageRequest.of(0, 10), loggedUser);

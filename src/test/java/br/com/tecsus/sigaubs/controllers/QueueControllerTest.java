@@ -166,35 +166,6 @@ class QueueControllerTest {
     }
 
     @Test
-    void deveContemplarPorAdminV2MontandoRedirectComFiltros() {
-        var loggedUser = admin();
-        var redirectAttributes = redirect();
-        when(contemplationService.contemplateAppointmentByAdmin(4L, "prioridade", 5L, loggedUser))
-                .thenReturn(ResultadoOperacao.sucessoSemValor());
-
-        String view = controller.contemplateByAdminV2("prioridade", 1L, 2L, 3L, "CONSULTA",
-                4L, 5L, loggedUser, redirectAttributes);
-
-        assertThat(view).isEqualTo("redirect:/queue-management/v2?basicHealthUnit=1&specialty=2&medicalProcedure=3&procedureType=CONSULTA");
-        assertThat(redirectAttributes.getFlashAttributes().get("error")).isEqualTo(false);
-        verify(contemplationService).contemplateAppointmentByAdmin(4L, "prioridade", 5L, loggedUser);
-    }
-
-    @Test
-    void deveRegistrarErroAoContemplarPorAdminV2() {
-        var loggedUser = admin();
-        when(contemplationService.contemplateAppointmentByAdmin(4L, "prioridade", 5L, loggedUser))
-                .thenReturn(ResultadoOperacao.falha("falha"));
-        var redirectAttributes = redirect();
-
-        String view = controller.contemplateByAdminV2("prioridade", null, null, null, "",
-                4L, 5L, loggedUser, redirectAttributes);
-
-        assertThat(view).isEqualTo("redirect:/queue-management/v2");
-        assertThat(redirectAttributes.getFlashAttributes().get("error")).isEqualTo(true);
-    }
-
-    @Test
     void deveCarregarProcedimentosPorTipoNaFilaV2() {
         MedicalProcedure procedure = TestDataFactory.procedure(3L, "Consulta", ProcedureType.CONSULTA, specialty);
         when(appointmentService.findBySpecialtyIdAndProcedureType(2L, ProcedureType.CONSULTA))

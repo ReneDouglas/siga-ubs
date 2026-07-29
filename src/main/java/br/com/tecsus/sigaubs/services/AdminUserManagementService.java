@@ -1,6 +1,7 @@
 package br.com.tecsus.sigaubs.services;
 
 import br.com.tecsus.sigaubs.dtos.AdminUserSearchDTO;
+import br.com.tecsus.sigaubs.dtos.AdminAccountCommandDTO;
 import br.com.tecsus.sigaubs.dtos.ResultadoOperacao;
 import br.com.tecsus.sigaubs.entities.SystemAdmin;
 import br.com.tecsus.sigaubs.repositories.SystemAdminRepository;
@@ -9,6 +10,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
@@ -21,13 +23,35 @@ public class AdminUserManagementService {
     private final SystemAdminRepository systemAdminRepository;
     private final PasswordEncoder passwordEncoder;
     private final TenantSessionService tenantSessionService;
+    private final PasswordPolicyService passwordPolicyService;
 
+    @Autowired
     public AdminUserManagementService(SystemAdminRepository systemAdminRepository,
             PasswordEncoder passwordEncoder,
-            TenantSessionService tenantSessionService) {
+            TenantSessionService tenantSessionService,
+            PasswordPolicyService passwordPolicyService) {
         this.systemAdminRepository = systemAdminRepository;
         this.passwordEncoder = passwordEncoder;
         this.tenantSessionService = tenantSessionService;
+        this.passwordPolicyService = passwordPolicyService;
+    }
+
+    AdminUserManagementService(SystemAdminRepository systemAdminRepository,
+            PasswordEncoder passwordEncoder,
+            TenantSessionService tenantSessionService) {
+        this(systemAdminRepository, passwordEncoder, tenantSessionService, null);
+    }
+
+    @Transactional
+    public ResultadoOperacao<Void> create(
+            AdminAccountCommandDTO command, SystemUserDetails loggedUser) {
+        return create(toSystemAdmin(command), loggedUser);
+    }
+
+    @Transactional
+    public ResultadoOperacao<Void> update(
+            AdminAccountCommandDTO command, SystemUserDetails loggedUser) {
+        return update(toSystemAdmin(command), loggedUser);
     }
 
     @Transactional(readOnly = true)
@@ -76,7 +100,7 @@ public class AdminUserManagementService {
         admin.setEmail(email);
         admin.setActive(true);
         admin.setCreationDate(LocalDateTime.now());
-        admin.setCreationUser(loggedUser.getUsername());
+        admin.setCreationUser(loggedUser.getLoginUsername());
         systemAdminRepository.save(admin);
         return ResultadoOperacao.sucessoSemValor();
     }
@@ -117,11 +141,11 @@ public class AdminUserManagementService {
         persisted.setEmail(email);
         persisted.setActive(active);
         persisted.setUpdateDate(LocalDateTime.now());
-        persisted.setUpdateUser(loggedUser.getUsername());
+        persisted.setUpdateUser(loggedUser.getLoginUsername());
         systemAdminRepository.save(persisted);
 
         if (!active || passwordChanged) {
-            tenantSessionService.expireAdminUserSessions(persisted.getUsername());
+            tenantSessionService.expireAdminUserSessions(persisted.getId());
         }
         return ResultadoOperacao.sucessoSemValor();
     }
@@ -147,10 +171,10 @@ public class AdminUserManagementService {
         }
         admin.setActive(active);
         admin.setUpdateDate(LocalDateTime.now());
-        admin.setUpdateUser(loggedUser.getUsername());
+        admin.setUpdateUser(loggedUser.getLoginUsername());
         systemAdminRepository.save(admin);
         if (!active) {
-            tenantSessionService.expireAdminUserSessions(admin.getUsername());
+            tenantSessionService.expireAdminUserSessions(admin.getId());
         }
         return ResultadoOperacao.sucessoSemValor();
     }
@@ -160,16 +184,20 @@ public class AdminUserManagementService {
         if (active) {
             return ResultadoOperacao.sucessoSemValor();
         }
-        if (Objects.equals(admin.getUsername(), loggedUser.getUsername())) {
+        if (Objects.equals(admin.getUsername(), loggedUser.getLoginUsername())) {
             return ResultadoOperacao.falha("Não é possível desativar o próprio administrador logado.");
         }
-        if (Boolean.TRUE.equals(admin.getActive()) && systemAdminRepository.countByActiveTrue() <= 1) {
+        if (Boolean.TRUE.equals(admin.getActive())
+                && systemAdminRepository.findAllActiveForUpdate().size() <= 1) {
             return ResultadoOperacao.falha("Não é possível desativar o último administrador ativo.");
         }
         return ResultadoOperacao.sucessoSemValor();
     }
 
     private ResultadoOperacao<Void> validatePassword(String password, String confirmation, boolean required) {
+        if (passwordPolicyService != null) {
+            return passwordPolicyService.validate(password, confirmation, required);
+        }
         if (!required && !hasText(password)) {
             return ResultadoOperacao.sucessoSemValor();
         }
@@ -185,5 +213,17 @@ public class AdminUserManagementService {
 
     private boolean hasText(String value) {
         return value != null && !value.isBlank();
+    }
+
+    private SystemAdmin toSystemAdmin(AdminAccountCommandDTO command) {
+        SystemAdmin admin = new SystemAdmin();
+        admin.setId(command.getId());
+        admin.setUsername(command.getUsername());
+        admin.setPassword(command.getPassword());
+        admin.setConfirmPassword(command.getConfirmPassword());
+        admin.setName(command.getName());
+        admin.setEmail(command.getEmail());
+        admin.setActive(command.getActive());
+        return admin;
     }
 }

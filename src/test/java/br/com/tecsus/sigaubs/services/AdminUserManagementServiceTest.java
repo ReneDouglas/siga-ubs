@@ -93,7 +93,8 @@ class AdminUserManagementServiceTest {
         SystemAdmin update = admin("ignorado", " Novo Nome ", " novo@example.com ", "nova", "nova", false);
         update.setId(1L);
         when(systemAdminRepository.findById(1L)).thenReturn(Optional.of(persisted));
-        when(systemAdminRepository.countByActiveTrue()).thenReturn(2L);
+        when(systemAdminRepository.findAllActiveForUpdate())
+                .thenReturn(List.of(persisted, systemAdmin("other", "hash")));
         when(passwordEncoder.encode("nova")).thenReturn("encoded-new");
 
         var resultado = service.update(update, loggedUser);
@@ -106,7 +107,7 @@ class AdminUserManagementServiceTest {
         assertThat(persisted.getUpdateUser()).isEqualTo("root");
         assertThat(persisted.getUpdateDate()).isNotNull();
         verify(systemAdminRepository).save(persisted);
-        verify(tenantSessionService).expireAdminUserSessions("admin");
+        verify(tenantSessionService).expireAdminUserSessions(1L);
     }
 
     @Test
@@ -142,7 +143,7 @@ class AdminUserManagementServiceTest {
                 .isEqualTo("Não é possível desativar o próprio administrador logado.");
 
         persisted.setUsername("outro");
-        when(systemAdminRepository.countByActiveTrue()).thenReturn(1L);
+        when(systemAdminRepository.findAllActiveForUpdate()).thenReturn(List.of(persisted));
         assertThat(service.update(update, loggedUser).mensagem())
                 .isEqualTo("Não é possível desativar o último administrador ativo.");
 
@@ -173,10 +174,11 @@ class AdminUserManagementServiceTest {
         verify(systemAdminRepository).save(admin);
 
         admin.setActive(true);
-        when(systemAdminRepository.countByActiveTrue()).thenReturn(2L);
+        when(systemAdminRepository.findAllActiveForUpdate())
+                .thenReturn(List.of(admin, systemAdmin("other", "hash")));
         assertThat(service.deactivate(1L, loggedUser).sucesso()).isTrue();
         assertThat(admin.getActive()).isFalse();
-        verify(tenantSessionService).expireAdminUserSessions("admin");
+        verify(tenantSessionService).expireAdminUserSessions(1L);
 
         when(systemAdminRepository.findById(99L)).thenReturn(Optional.empty());
         assertThat(service.activate(99L, loggedUser).mensagem()).isEqualTo("Administrador não encontrado.");

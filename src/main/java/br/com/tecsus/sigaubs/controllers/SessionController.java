@@ -1,13 +1,18 @@
 package br.com.tecsus.sigaubs.controllers;
 
+import br.com.tecsus.sigaubs.dtos.SystemUserCommandDTO;
+import br.com.tecsus.sigaubs.dtos.SystemUserSearchDTO;
+import br.com.tecsus.sigaubs.dtos.DashboardDTO;
 import br.com.tecsus.sigaubs.entities.SystemUser;
 import br.com.tecsus.sigaubs.security.SystemUserDetails;
+import br.com.tecsus.sigaubs.security.ReauthenticationService;
 import br.com.tecsus.sigaubs.services.BasicHealthUnitService;
 import br.com.tecsus.sigaubs.services.DashboardService;
 import br.com.tecsus.sigaubs.services.SystemUserService;
 import br.com.tecsus.sigaubs.utils.DefaultValues;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,6 +30,8 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.time.LocalDateTime;
+import jakarta.validation.Valid;
+import org.springframework.validation.BindingResult;
 
 @Controller
 public class SessionController {
@@ -34,13 +41,21 @@ public class SessionController {
     private final SystemUserService systemUserService;
     private final BasicHealthUnitService basicHealthUnitService;
     private final DashboardService dashboardService;
+    private final ReauthenticationService reauthenticationService;
 
     @Autowired
     public SessionController(SystemUserService systemUserService, BasicHealthUnitService basicHealthUnitService,
-            DashboardService dashboardService) {
+            DashboardService dashboardService,
+            ReauthenticationService reauthenticationService) {
         this.systemUserService = systemUserService;
         this.basicHealthUnitService = basicHealthUnitService;
         this.dashboardService = dashboardService;
+        this.reauthenticationService = reauthenticationService;
+    }
+
+    SessionController(SystemUserService systemUserService, BasicHealthUnitService basicHealthUnitService,
+            DashboardService dashboardService) {
+        this(systemUserService, basicHealthUnitService, dashboardService, null);
     }
 
     @GetMapping("/")
@@ -57,6 +72,13 @@ public class SessionController {
             }
         }
         return "home";
+    }
+
+    @PreAuthorize("hasAnyRole('ADMIN', 'SMS')")
+    @GetMapping("/dashboard/data")
+    @ResponseBody
+    public DashboardDTO getDashboardData() {
+        return dashboardService.loadDashboardData();
     }
 
     @GetMapping("/login")
@@ -95,7 +117,8 @@ public class SessionController {
     @PreAuthorize("hasAnyRole('ADMIN', 'SMS')")
     @GetMapping("/systemUser-management")
     public String getSystemUserInsertPage(Model model,
-            @ModelAttribute("searchUser") SystemUser systemUser,
+            @Valid @ModelAttribute("searchUser") SystemUserSearchDTO searchUser,
+            BindingResult bindingResult,
             @RequestParam(value = "page", defaultValue = "0", required = false) int currentPage,
             @RequestParam(value = "size", defaultValue = "" + DefaultValues.PAGE_SIZE, required = false) int pageSize,
             HttpServletRequest request) {
@@ -107,14 +130,11 @@ public class SessionController {
         model.addAttribute("basicHealthUnits", basicHealthUnitService
                 .findAllUBS());
 
-        systemUser
-                .setName(systemUser.getName() == null || systemUser.getName().isEmpty() ? null : systemUser.getName());
-        systemUser.setUsername(systemUser.getUsername() == null || systemUser.getUsername().isEmpty() ? null
-                : systemUser.getUsername());
-
+        SystemUser systemUser = searchUser.toFilterEntity();
         systemUsersPage = systemUserService
                 .findAllUsersByCreationUserPaginated(systemUser,
-                        PageRequest.of(currentPage, pageSize, Sort.Direction.valueOf("DESC"), "creationDate"));
+                        PageRequest.of(Math.max(0, currentPage), Math.clamp(pageSize, 1, 100),
+                                Sort.Direction.DESC, "creationDate"));
         model.addAttribute("systemUsersPage", systemUsersPage);
 
         if ("searchRequest".equals(request.getHeader("X-Requested-With"))) {
@@ -127,12 +147,18 @@ public class SessionController {
 
     @PreAuthorize("hasAnyRole('ADMIN', 'SMS')")
     @PostMapping("/systemUser-management/create")
-    public String registerSystemUser(@ModelAttribute SystemUser systemUser,
+    public String registerSystemUser(@Valid @ModelAttribute SystemUserCommandDTO command,
+            BindingResult bindingResult,
             @AuthenticationPrincipal SystemUserDetails loggedUser,
             RedirectAttributes redirectAttributes) {
 
+        if (bindingResult.hasErrors()) {
+            redirectAttributes.addFlashAttribute("message", "Verifique os campos e a política de senha.");
+            redirectAttributes.addFlashAttribute("error", true);
+            return "redirect:/systemUser-management";
+        }
         try {
-            var resultado = systemUserService.registerNotAdminSystemUser(systemUser, loggedUser);
+            var resultado = systemUserService.registerSystemUser(command, loggedUser);
             if (resultado.sucesso()) {
                 redirectAttributes.addFlashAttribute("message", "Usuário cadastrado com sucesso.");
                 redirectAttributes.addFlashAttribute("error", false);
@@ -145,11 +171,11 @@ public class SessionController {
         } catch (DataIntegrityViolationException e) {
             redirectAttributes.addFlashAttribute("message", "Usuário já cadastrado no sistema.");
             redirectAttributes.addFlashAttribute("error", true);
-            log.error("Usuário já cadastrado: {}", e.getMessage());
+            log.warn("Tentativa de cadastrar usuário duplicado.");
         } catch (Exception e) {
             redirectAttributes.addFlashAttribute("message", "Erro ao cadastrar usuário.");
             redirectAttributes.addFlashAttribute("error", true);
-            log.error("Erro ao cadastrar usuário: {}", e.getMessage());
+            log.error("Erro ao cadastrar usuário [{}].", e.getClass().getSimpleName());
         }
         return "redirect:/systemUser-management";
     }
@@ -160,8 +186,8 @@ public class SessionController {
             Model model,
             @AuthenticationPrincipal SystemUserDetails loggedUser) {
 
-        model.addAttribute("systemUser", systemUserService.findSystemUserById(id));
-        model.addAttribute("searchUser", new SystemUser());
+        model.addAttribute("systemUser", systemUserService.findManageableSystemUserById(id, loggedUser));
+        model.addAttribute("searchUser", new SystemUserSearchDTO());
         model.addAttribute("rolesList", systemUserService.getRolesNotAdminAndNotManagement());
         model.addAttribute("basicHealthUnits", basicHealthUnitService
                 .findAllUBS());
@@ -178,11 +204,18 @@ public class SessionController {
 
     @PreAuthorize("hasAnyRole('ADMIN', 'SMS')")
     @PostMapping("/systemUser-management/update")
-    public String updateSystemUser(@ModelAttribute SystemUser systemUser,
+    public String updateSystemUser(@Valid @ModelAttribute SystemUserCommandDTO command,
+            BindingResult bindingResult,
+            @AuthenticationPrincipal SystemUserDetails loggedUser,
             RedirectAttributes redirectAttributes) {
 
+        if (bindingResult.hasErrors()) {
+            redirectAttributes.addFlashAttribute("message", "Verifique os campos e a política de senha.");
+            redirectAttributes.addFlashAttribute("error", true);
+            return "redirect:/systemUser-management";
+        }
         try {
-            var resultado = systemUserService.updateNotAdminSystemUser(systemUser);
+            var resultado = systemUserService.updateSystemUser(command, loggedUser);
             if (resultado.sucesso()) {
                 redirectAttributes.addFlashAttribute("message", "Usuário atualizado com sucesso.");
                 redirectAttributes.addFlashAttribute("error", false);
@@ -195,7 +228,7 @@ public class SessionController {
         } catch (Exception e) {
             redirectAttributes.addFlashAttribute("message", "Erro ao atualizar usuário.");
             redirectAttributes.addFlashAttribute("error", true);
-            log.error("Erro ao atualizar usuário: {}", e.getMessage());
+            log.error("Erro ao atualizar usuário [{}].", e.getClass().getSimpleName());
         }
         // return new RedirectView("/user");
         return "redirect:/systemUser-management";
@@ -203,10 +236,12 @@ public class SessionController {
 
     @PreAuthorize("hasAnyRole('ADMIN', 'SMS')")
     @PostMapping("/systemUser-management/delete")
-    public String deleteSystemUser(@RequestParam("id") Long id, RedirectAttributes redirectAttributes) {
+    public String deleteSystemUser(@RequestParam("id") Long id,
+            @AuthenticationPrincipal SystemUserDetails loggedUser,
+            RedirectAttributes redirectAttributes) {
 
         try {
-            var resultado = systemUserService.deleteNotAdminSystemUser(id);
+            var resultado = systemUserService.deleteSystemUser(id, loggedUser);
             if (resultado.sucesso()) {
                 redirectAttributes.addFlashAttribute("message", "Usuário deletado com sucesso.");
                 redirectAttributes.addFlashAttribute("error", false);
@@ -219,7 +254,7 @@ public class SessionController {
         } catch (Exception e) {
             redirectAttributes.addFlashAttribute("message", "Erro ao deletar usuário.");
             redirectAttributes.addFlashAttribute("error", true);
-            log.error("Erro ao deletar usuário: {}", e.getMessage());
+            log.error("Erro ao deletar usuário [{}].", e.getClass().getSimpleName());
         }
 
         return "redirect:/systemUser-management";
@@ -228,19 +263,30 @@ public class SessionController {
     @PreAuthorize("hasAnyRole('ADMIN', 'SMS')")
     @PostMapping("/systemUser-management/validate")
     public ResponseEntity<String> validateSystemUserByPassword(@RequestParam String password,
-            @AuthenticationPrincipal SystemUserDetails loggedUser) {
+            @RequestParam String action,
+            @RequestParam Long objectId,
+            @AuthenticationPrincipal SystemUserDetails loggedUser,
+            HttpSession session) {
 
         try {
-            log.info("Validando senha do usuário: {}", loggedUser.getName());
+            if (password == null || password.length() > 64
+                    || !ReauthenticationService.MANUAL_CONTEMPLATION.equals(action)
+                    || objectId == null) {
+                return ResponseEntity.badRequest().body("Solicitação de reautenticação inválida.");
+            }
             boolean isValid = systemUserService.validateSystemUserByPassword(password, loggedUser);
             if (isValid) {
+                if (reauthenticationService == null) {
+                    return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).build();
+                }
+                reauthenticationService.issue(session, loggedUser, action, objectId);
                 return ResponseEntity.ok().build();
             } else {
                 return ResponseEntity.badRequest()
                         .body("Senha inválida");
             }
         } catch (Exception e) {
-            log.error("Erro ao validar senha: {}", e.getMessage());
+            log.error("Erro ao validar senha [{}].", e.getClass().getSimpleName());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Erro ao validar senha.");
         }

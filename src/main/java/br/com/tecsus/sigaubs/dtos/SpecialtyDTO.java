@@ -2,12 +2,22 @@ package br.com.tecsus.sigaubs.dtos;
 
 import java.util.ArrayList;
 import java.util.List;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.Size;
 
 public class SpecialtyDTO {
+    @Positive
     private Long id;
+    @NotBlank
+    @Size(max = 255)
     private String title;
+    @Size(max = 1_000)
     private String description;
     private Boolean active;
+    @Valid
+    @Size(max = 100)
     private List<ProcedureDTO> procedures = new ArrayList<>();
 
     public Long getId() {

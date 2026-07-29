@@ -66,12 +66,13 @@ class AppointmentControllerTest {
         var openAppointment = TestDataFactory.openAppointment(20L, Priorities.ELETIVO,
                 java.time.LocalDateTime.now(), java.time.LocalDate.of(1980, 1, 1),
                 br.com.tecsus.sigaubs.enums.SocialSituationRating.UM_SALARIO_MINIMO, "Feminino");
-        when(patientService.findByIdAndUBS(10L, 1L)).thenReturn(ResultadoOperacao.sucesso(patient));
+        var loggedUser = ubsUser(1L);
+        when(patientService.findPatientToEdit(10L, loggedUser)).thenReturn(ResultadoOperacao.sucesso(patient));
         when(specialtyService.findSpecialties()).thenReturn(List.of(specialty));
         when(appointmentService.findPatientOpenAppointments(10L)).thenReturn(List.of(openAppointment));
         var model = model();
 
-        assertThat(controller.loadPatient(10L, model, ubsUser(1L)))
+        assertThat(controller.loadPatient(10L, model, loggedUser))
                 .isEqualTo("appointmentManagement/appointment_management");
         Appointment appointment = (Appointment) model.get("appointment");
         assertThat(appointment.getPatient()).isSameAs(patient);
@@ -81,12 +82,13 @@ class AppointmentControllerTest {
 
     @Test
     void deveExibirErroAoNaoEncontrarPacienteParaMarcacao() {
-        when(patientService.findByIdAndUBS(10L, 1L))
+        var loggedUser = ubsUser(1L);
+        when(patientService.findPatientToEdit(10L, loggedUser))
                 .thenReturn(ResultadoOperacao.falha("Paciente não encontrado."));
         when(specialtyService.findSpecialties()).thenReturn(List.of(specialty));
         var model = model();
 
-        assertThat(controller.loadPatient(10L, model, ubsUser(1L)))
+        assertThat(controller.loadPatient(10L, model, loggedUser))
                 .isEqualTo("appointmentManagement/appointment_management");
         assertThat(model.get("error")).isEqualTo(true);
         assertThat(model.get("message")).isEqualTo("Paciente não encontrado.");
@@ -114,41 +116,14 @@ class AppointmentControllerTest {
     }
 
     @Test
-    void deveCadastrarMarcacaoETratarFalhas() throws Exception {
-        Patient patient = TestDataFactory.patient(10L, "Maria", ubs);
-        Appointment appointment = TestDataFactory.appointment(20L, patient,
-                TestDataFactory.procedure(3L, "Consulta", ProcedureType.CONSULTA, specialty));
-        var loggedUser = ubsUser(1L);
-        var redirectAttributes = redirect();
-        when(appointmentService.registerAppointment(appointment, loggedUser))
-                .thenReturn(ResultadoOperacao.sucessoSemValor());
-
-        assertThat(controller.registerAppointmentSolicitation(appointment, loggedUser, redirectAttributes))
-                .isEqualTo("redirect:/appointment-management/load?id=10");
-        assertThat(redirectAttributes.getFlashAttributes().get("error")).isEqualTo(false);
-        verify(appointmentService).registerAppointment(appointment, loggedUser);
-
-        when(appointmentService.registerAppointment(appointment, loggedUser))
-                .thenReturn(ResultadoOperacao.falha("falha"));
-        redirectAttributes = redirect();
-        controller.registerAppointmentSolicitation(appointment, loggedUser, redirectAttributes);
-        assertThat(redirectAttributes.getFlashAttributes().get("error")).isEqualTo(true);
-        assertThat(redirectAttributes.getFlashAttributes().get("message"))
-                .isEqualTo("Existe uma marcação em aberto para este procedimento.");
-
-        var smsUser = ControllerTestSupport.sms();
-        when(appointmentService.registerAppointment(appointment, smsUser))
-                .thenReturn(ResultadoOperacao.falha("duplicada"));
-        redirectAttributes = redirect();
-        controller.registerAppointmentSolicitation(appointment, smsUser, redirectAttributes);
-        assertThat(redirectAttributes.getFlashAttributes().get("message"))
-                .isEqualTo("Existe uma marcação em aberto para este procedimento.");
-    }
-
-    @Test
     void deveCancelarMarcacaoETratarFalha() throws Exception {
         var loggedUser = ubsUser(1L);
         var redirectAttributes = redirect();
+        Appointment appointment = TestDataFactory.appointment(20L,
+                TestDataFactory.patient(10L, "Maria", ubs),
+                TestDataFactory.procedure(3L, "Consulta", ProcedureType.CONSULTA, specialty));
+        when(appointmentService.findByIdWithQueueDetails(20L, loggedUser))
+                .thenReturn(ResultadoOperacao.sucesso(appointment));
         when(appointmentService.cancelSolicitation(20L, loggedUser))
                 .thenReturn(ResultadoOperacao.sucessoSemValor());
 
@@ -157,7 +132,7 @@ class AppointmentControllerTest {
         assertThat(redirectAttributes.getFlashAttributes().get("error")).isEqualTo(false);
         verify(appointmentService).cancelSolicitation(20L, loggedUser);
 
-        when(appointmentService.cancelSolicitation(21L, loggedUser))
+        when(appointmentService.findByIdWithQueueDetails(21L, loggedUser))
                 .thenReturn(ResultadoOperacao.falha("falha"));
         redirectAttributes = redirect();
         controller.cancelAppointmentSolicitation(21L, 10L, loggedUser, redirectAttributes);

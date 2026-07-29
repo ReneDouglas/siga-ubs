@@ -20,6 +20,12 @@ public class SecurityHelper {
 
     public String username() {
         var auth = SecurityContextHolder.getContext().getAuthentication();
-        return auth != null ? auth.getName() : "";
+        if (auth == null) {
+            return "";
+        }
+        if (auth.getPrincipal() instanceof SystemUserDetails userDetails) {
+            return userDetails.getLoginUsername();
+        }
+        return auth.getName();
     }
 }

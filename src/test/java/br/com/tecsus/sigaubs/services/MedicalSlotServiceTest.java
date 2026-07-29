@@ -13,6 +13,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
+import java.util.Optional;
 
 import static br.com.tecsus.sigaubs.support.TestDataFactory.procedure;
 import static br.com.tecsus.sigaubs.support.TestDataFactory.slot;
@@ -76,8 +77,21 @@ class MedicalSlotServiceTest {
     @Test
     void deveAdicionarRemoverVagaERespeitarLimites() {
         var stored = slot(1L, ubs(1L, "UBS"), null, 5, 4);
-        when(medicalSlotRepository.getReferenceById(1L)).thenReturn(stored);
-        when(medicalSlotRepository.save(stored)).thenReturn(stored);
+        when(medicalSlotRepository.incrementIfBelowTotal(1L)).thenAnswer(invocation -> {
+            if (stored.getCurrentSlots() >= stored.getTotalSlots()) {
+                return 0;
+            }
+            stored.setCurrentSlots(stored.getCurrentSlots() + 1);
+            return 1;
+        });
+        when(medicalSlotRepository.decrementIfAvailable(1L)).thenAnswer(invocation -> {
+            if (stored.getCurrentSlots() <= 0) {
+                return 0;
+            }
+            stored.setCurrentSlots(stored.getCurrentSlots() - 1);
+            return 1;
+        });
+        when(medicalSlotRepository.findById(1L)).thenReturn(Optional.of(stored));
 
         var addResult = medicalSlotService.addSlot(stored);
         assertThat(addResult.sucesso()).isTrue();

@@ -34,10 +34,11 @@
                 <td class="border-b text-sm py-2 px-4">
                     <div class="relative group">
                         <button type="button"
-                                onclick="openModal('${openAppt.observations() != null ? openAppt.observations().replace("'", "\\'") : ""}')"
+                                data-action="show-observation"
                                 class="inline-flex p-2 rounded-lg hover:bg-slate-200 cursor-pointer transition duration-300">
                             <span class="material-symbols-outlined hover:text-blue-500">description</span>
                         </button>
+                        <span data-observation-source class="hidden">${openAppt.observations() != null ? openAppt.observations() : ""}</span>
                         <div class="absolute right-full top-1/2 transform -translate-y-1/2 -translate-x-1 hidden group-hover:block bg-slate-800 text-white text-sm rounded px-2 py-1 whitespace-nowrap">
                             Observações
                         </div>

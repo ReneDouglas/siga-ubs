@@ -1,6 +1,7 @@
 package br.com.tecsus.sigaubs.controllers;
 
 import br.com.tecsus.sigaubs.dtos.TenantSearchDTO;
+import br.com.tecsus.sigaubs.dtos.TenantCommandDTO;
 import br.com.tecsus.sigaubs.entities.Tenant;
 import br.com.tecsus.sigaubs.dtos.ResultadoOperacao;
 import br.com.tecsus.sigaubs.security.SystemUserDetails;
@@ -27,6 +28,8 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import java.time.LocalDateTime;
 import java.util.Locale;
 import java.util.Set;
+import jakarta.validation.Valid;
+import org.springframework.validation.BindingResult;
 
 @Controller
 @RequestMapping("/admin/tenant-management")
@@ -62,7 +65,8 @@ public class TenantManagementController {
         Sort.Direction sortDirection = normalizeDirection(direction);
         model.addAttribute("tenantsPage", tenantManagementService.findTenantsPaginated(
                 searchTenant,
-                PageRequest.of(currentPage, pageSize, sortDirection, sortProperty)));
+                PageRequest.of(Math.max(0, currentPage), Math.clamp(pageSize, 1, 100),
+                        sortDirection, sortProperty)));
         model.addAttribute("selectedSort", sortProperty);
         model.addAttribute("selectedDirection", sortDirection.name());
         model.addAttribute("tenantStatuses", tenantManagementService.getStatuses());
@@ -77,20 +81,32 @@ public class TenantManagementController {
     }
 
     @PostMapping("/create")
-    public String createTenant(@ModelAttribute Tenant tenant,
+    public String createTenant(@Valid @ModelAttribute TenantCommandDTO command,
+            BindingResult bindingResult,
             @AuthenticationPrincipal SystemUserDetails loggedUser,
             RedirectAttributes redirectAttributes) {
-        var resultado = tenantManagementService.create(tenant, loggedUser);
+        if (bindingResult.hasErrors()) {
+            redirectAttributes.addFlashAttribute("message", "Verifique os campos do tenant.");
+            redirectAttributes.addFlashAttribute("error", true);
+            return "redirect:/admin/tenant-management";
+        }
+        var resultado = tenantManagementService.create(command, loggedUser);
         addFlashResult(redirectAttributes, resultado, "Tenant cadastrado com sucesso.");
         logResult("cadastrar tenant", resultado);
         return "redirect:/admin/tenant-management";
     }
 
     @PostMapping("/update")
-    public String updateTenant(@ModelAttribute Tenant tenant,
+    public String updateTenant(@Valid @ModelAttribute TenantCommandDTO command,
+            BindingResult bindingResult,
             @AuthenticationPrincipal SystemUserDetails loggedUser,
             RedirectAttributes redirectAttributes) {
-        var resultado = tenantManagementService.update(tenant, loggedUser);
+        if (bindingResult.hasErrors()) {
+            redirectAttributes.addFlashAttribute("message", "Verifique os campos do tenant.");
+            redirectAttributes.addFlashAttribute("error", true);
+            return "redirect:/admin/tenant-management";
+        }
+        var resultado = tenantManagementService.update(command, loggedUser);
         addFlashResult(redirectAttributes, resultado, "Tenant atualizado com sucesso.");
         logResult("atualizar tenant", resultado);
         return "redirect:/admin/tenant-management";

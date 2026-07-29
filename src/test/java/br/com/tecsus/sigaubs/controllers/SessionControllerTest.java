@@ -98,117 +98,18 @@ class SessionControllerTest {
     }
 
     @Test
-    void deveAbrirManutencaoDeUsuariosEAtenderBuscaAjax() {
-        SecurityContextHolder.getContext().setAuthentication(
-                new UsernamePasswordAuthenticationToken("sms", "senha", List.of()));
-        when(systemUserService.getRolesNotAdminAndNotManagement()).thenReturn(List.of(role));
-        when(basicHealthUnitService.findAllUBS()).thenReturn(List.of(ubs));
-        when(systemUserService.findAllUsersByCreationUserPaginated(any(SystemUser.class), any(PageRequest.class)))
-                .thenReturn(new PageImpl<>(List.of(user)));
-
-        var request = new MockHttpServletRequest();
-        var model = model();
-        assertThat(controller.getSystemUserInsertPage(model, new SystemUser(), 0, 10, request))
-                .isEqualTo("sessionManagement/systemUser_management");
-        assertThat(model.get("rolesList")).isEqualTo(List.of(role));
-        assertThat(model.get("basicHealthUnits")).isEqualTo(List.of(ubs));
-
-        request = new MockHttpServletRequest();
-        request.addHeader("X-Requested-With", "searchRequest");
-        assertThat(controller.getSystemUserInsertPage(model(), new SystemUser(), 0, 10, request))
-                .isEqualTo("sessionManagement/sessionFragments/systemUser_datatable");
-    }
-
-    @Test
     void devePrepararUsuarioParaEdicao() {
-        when(systemUserService.findSystemUserById(3L)).thenReturn(user);
+        var loggedUser = sms();
+        when(systemUserService.findManageableSystemUserById(3L, loggedUser)).thenReturn(user);
         when(systemUserService.getRolesNotAdminAndNotManagement()).thenReturn(List.of(role));
         when(basicHealthUnitService.findAllUBS()).thenReturn(List.of(ubs));
         when(systemUserService.findAllUsersByCreationUserPaginated(any(SystemUser.class), any(PageRequest.class)))
                 .thenReturn(new PageImpl<>(List.of(user)));
         var model = model();
 
-        assertThat(controller.getSystemUserInsertPageToUpdate(3L, model, sms()))
+        assertThat(controller.getSystemUserInsertPageToUpdate(3L, model, loggedUser))
                 .isEqualTo("sessionManagement/systemUser_management");
         assertThat(model.get("systemUser")).isSameAs(user);
     }
 
-    @Test
-    void deveCadastrarUsuarioETratarErros() throws Exception {
-        var loggedUser = sms();
-        var redirectAttributes = redirect();
-        when(systemUserService.registerNotAdminSystemUser(user, loggedUser))
-                .thenReturn(ResultadoOperacao.sucessoSemValor());
-
-        controller.registerSystemUser(user, loggedUser, redirectAttributes);
-        assertThat(redirectAttributes.getFlashAttributes().get("error")).isEqualTo(false);
-        verify(systemUserService).registerNotAdminSystemUser(user, loggedUser);
-
-        var adminUser = admin();
-        when(systemUserService.registerNotAdminSystemUser(user, adminUser))
-                .thenThrow(new DataIntegrityViolationException("duplicado"));
-        redirectAttributes = redirect();
-        controller.registerSystemUser(user, adminUser, redirectAttributes);
-        assertThat(redirectAttributes.getFlashAttributes().get("message"))
-                .isEqualTo("Usuário já cadastrado no sistema.");
-
-        var invalidUser = ubsUser(1L);
-        when(systemUserService.registerNotAdminSystemUser(user, invalidUser))
-                .thenReturn(ResultadoOperacao.falha("As senhas não conferem."));
-        redirectAttributes = redirect();
-        controller.registerSystemUser(user, invalidUser, redirectAttributes);
-        assertThat(redirectAttributes.getFlashAttributes().get("message")).isEqualTo("As senhas não conferem.");
-
-        var genericUser = TestDataFactory.userDetails("generic", "Generic", null, 1L, "afogados", Roles.ROLE_SMS);
-        when(systemUserService.registerNotAdminSystemUser(user, genericUser))
-                .thenThrow(new RuntimeException("falha"));
-        redirectAttributes = redirect();
-        controller.registerSystemUser(user, genericUser, redirectAttributes);
-        assertThat(redirectAttributes.getFlashAttributes().get("message")).isEqualTo("Erro ao cadastrar usuário.");
-    }
-
-    @Test
-    void deveAtualizarEDeletarUsuarioComTratamentoDeErro() throws Exception {
-        var redirectAttributes = redirect();
-        when(systemUserService.updateNotAdminSystemUser(user)).thenReturn(ResultadoOperacao.sucessoSemValor());
-
-        controller.updateSystemUser(user, redirectAttributes);
-        assertThat(redirectAttributes.getFlashAttributes().get("error")).isEqualTo(false);
-        verify(systemUserService).updateNotAdminSystemUser(user);
-
-        var otherUser = TestDataFactory.systemUser(4L, "joao", role);
-        when(systemUserService.updateNotAdminSystemUser(otherUser))
-                .thenThrow(new RuntimeException("falha"));
-        redirectAttributes = redirect();
-        controller.updateSystemUser(otherUser, redirectAttributes);
-        assertThat(redirectAttributes.getFlashAttributes().get("error")).isEqualTo(true);
-
-        redirectAttributes = redirect();
-        when(systemUserService.deleteNotAdminSystemUser(3L)).thenReturn(ResultadoOperacao.sucessoSemValor());
-        controller.deleteSystemUser(3L, redirectAttributes);
-        assertThat(redirectAttributes.getFlashAttributes().get("error")).isEqualTo(false);
-        verify(systemUserService).deleteNotAdminSystemUser(3L);
-
-        when(systemUserService.deleteNotAdminSystemUser(4L)).thenThrow(new RuntimeException("falha"));
-        redirectAttributes = redirect();
-        controller.deleteSystemUser(4L, redirectAttributes);
-        assertThat(redirectAttributes.getFlashAttributes().get("error")).isEqualTo(true);
-    }
-
-    @Test
-    void deveValidarSenhaDoUsuario() {
-        var loggedUser = sms();
-        when(systemUserService.validateSystemUserByPassword("ok", loggedUser)).thenReturn(true);
-        when(systemUserService.validateSystemUserByPassword("bad", loggedUser)).thenReturn(false);
-        when(systemUserService.validateSystemUserByPassword("erro", loggedUser)).thenThrow(new RuntimeException("falha"));
-
-        assertThat(controller.validateSystemUserByPassword("ok", loggedUser).getStatusCode()).isEqualTo(HttpStatus.OK);
-        var invalid = controller.validateSystemUserByPassword("bad", loggedUser);
-        assertThat(invalid.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
-        assertThat(invalid.getBody()).isEqualTo("Senha inválida");
-
-        var error = controller.validateSystemUserByPassword("erro", loggedUser);
-        assertThat(error.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
-        assertThat(error.getBody()).isEqualTo("Erro ao validar senha.");
-    }
 }

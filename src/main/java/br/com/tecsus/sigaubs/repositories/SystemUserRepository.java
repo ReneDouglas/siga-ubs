@@ -83,4 +83,14 @@ public interface SystemUserRepository extends JpaRepository<SystemUser, Long>, S
     @Transactional(readOnly = true)
     List<SystemUser> findAllByIdIn(List<Long> ids);
 
+    @Transactional(readOnly = true)
+    @Query("""
+            SELECT COUNT(DISTINCT su.id)
+            FROM SystemUser su
+            JOIN su.roles r
+            WHERE r.role = :role
+              AND su.active = true
+            """)
+    long countActiveByRole(@Param("role") String role);
+
 }

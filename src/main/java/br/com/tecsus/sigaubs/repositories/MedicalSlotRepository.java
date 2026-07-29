@@ -5,6 +5,7 @@ import br.com.tecsus.sigaubs.entities.MedicalProcedure;
 import br.com.tecsus.sigaubs.entities.MedicalSlot;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.repository.query.Param;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,9 +25,29 @@ public interface MedicalSlotRepository extends JpaRepository<MedicalSlot, Long>,
                 FROM MedicalSlot ms
                 WHERE ms.medicalProcedure.id = :medicalProcedureId
                 AND ms.basicHealthUnit.id = :ubsId
-                AND ms.currentSlots < ms.totalSlots
+                AND ms.currentSlots > 0
             """)
     Optional<MedicalSlot> findAvailableSlotsByMedicalProcedureAndUBS(Long medicalProcedureId, Long ubsId);
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("""
+            UPDATE MedicalSlot ms
+               SET ms.currentSlots = ms.currentSlots - 1,
+                   ms.version = ms.version + 1
+             WHERE ms.id = :id
+               AND ms.currentSlots > 0
+            """)
+    int decrementIfAvailable(@Param("id") Long id);
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("""
+            UPDATE MedicalSlot ms
+               SET ms.currentSlots = ms.currentSlots + 1,
+                   ms.version = ms.version + 1
+             WHERE ms.id = :id
+               AND ms.currentSlots < ms.totalSlots
+            """)
+    int incrementIfBelowTotal(@Param("id") Long id);
 
     @Transactional(readOnly = true)
     @Query("""

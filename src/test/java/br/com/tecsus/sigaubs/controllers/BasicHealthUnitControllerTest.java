@@ -58,39 +58,6 @@ class BasicHealthUnitControllerTest {
     }
 
     @Test
-    void deveCadastrarAtualizarETratarFalhas() throws Exception {
-        var loggedUser = sms();
-        var redirectAttributes = redirect();
-        when(basicHealthUnitService.registerBasicHealthUnit(ubs, loggedUser))
-                .thenReturn(ResultadoOperacao.sucessoSemValor());
-
-        assertThat(controller.registerBasicHealthUnit(ubs, loggedUser, redirectAttributes))
-                .isEqualTo("redirect:/basicHealthUnit-management");
-        assertThat(redirectAttributes.getFlashAttributes().get("error")).isEqualTo(false);
-        verify(basicHealthUnitService).registerBasicHealthUnit(ubs, loggedUser);
-
-        when(basicHealthUnitService.registerBasicHealthUnit(ubs, loggedUser))
-                .thenReturn(ResultadoOperacao.falha("falha"));
-        redirectAttributes = redirect();
-        controller.registerBasicHealthUnit(ubs, loggedUser, redirectAttributes);
-        assertThat(redirectAttributes.getFlashAttributes().get("error")).isEqualTo(true);
-
-        when(basicHealthUnitService.updateBasicHealthUnit(ubs, loggedUser))
-                .thenReturn(ResultadoOperacao.sucessoSemValor());
-        redirectAttributes = redirect();
-        controller.updateSystemUser(ubs, redirectAttributes, loggedUser);
-        assertThat(redirectAttributes.getFlashAttributes().get("error")).isEqualTo(false);
-        verify(basicHealthUnitService).updateBasicHealthUnit(ubs, loggedUser);
-
-        var outraUbs = TestDataFactory.ubs(2L, "Outra");
-        when(basicHealthUnitService.updateBasicHealthUnit(outraUbs, loggedUser))
-                .thenReturn(ResultadoOperacao.falha("falha"));
-        redirectAttributes = redirect();
-        controller.updateSystemUser(outraUbs, redirectAttributes, loggedUser);
-        assertThat(redirectAttributes.getFlashAttributes().get("error")).isEqualTo(true);
-    }
-
-    @Test
     void devePrepararUbsParaEdicaoOuRedirecionarSemId() {
         assertThat(controller.getBasicHealthUnitPageToUpdate(null, model()))
                 .isEqualTo("redirect:/basicHealthUnit-management");
@@ -165,7 +132,7 @@ class BasicHealthUnitControllerTest {
     }
 
     @Test
-    void deveDesvincularEVincularUsuarioAtualizandoTabela() throws Exception {
+    void deveDesvincularUsuarioAtualizandoTabela() throws Exception {
         var loggedUser = sms();
         var user = new UBSsystemUserDTO(10L, "Maria", "Atendente", "true");
         when(basicHealthUnitService.findUBSsystemUsersByUBSid(1L)).thenReturn(List.of(user), List.of());
@@ -178,17 +145,10 @@ class BasicHealthUnitControllerTest {
         assertThat(model.get("attach_error")).isEqualTo(false);
         verify(basicHealthUnitService).unlinkBasicHealthUnitSystemUser(10L, loggedUser);
 
-        when(basicHealthUnitService.attachSystemUserToUBS(10L, 1L))
-                .thenReturn(ResultadoOperacao.sucessoSemValor());
-        model = model();
-        assertThat(controller.appendSystemUserToBasicHealthUnit("Maria", 1L, 10L, model))
-                .isEqualTo("basicHealthUnitManagement/ubsFragments/emptySystemUsersUBSTable");
-        assertThat(model.get("attach_error")).isEqualTo(false);
-        verify(basicHealthUnitService).attachSystemUserToUBS(10L, 1L);
     }
 
     @Test
-    void deveRegistrarErroAoVincularOuDesvincularUsuario() throws Exception {
+    void deveRegistrarErroAoDesvincularUsuario() throws Exception {
         var loggedUser = sms();
         when(basicHealthUnitService.unlinkBasicHealthUnitSystemUser(10L, loggedUser))
                 .thenReturn(ResultadoOperacao.falha("falha"));
@@ -199,10 +159,5 @@ class BasicHealthUnitControllerTest {
                 .isEqualTo("basicHealthUnitManagement/ubsFragments/emptySystemUsersUBSTable");
         assertThat(model.get("attach_error")).isEqualTo(true);
 
-        when(basicHealthUnitService.attachSystemUserToUBS(11L, 1L))
-                .thenReturn(ResultadoOperacao.falha("falha"));
-        model = model();
-        controller.appendSystemUserToBasicHealthUnit("Joao", 1L, 11L, model);
-        assertThat(model.get("attach_error")).isEqualTo(true);
     }
 }

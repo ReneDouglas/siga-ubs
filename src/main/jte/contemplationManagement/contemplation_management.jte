@@ -93,15 +93,15 @@
                         <%-- Abas --%>
                         <div class="flex space-x-1 border-b border-slate-300 mt-4 mb-4">
                             <button class="tab-btn w-1/3 py-2 text-sm text-center bg-slate-300 hover:bg-slate-300 rounded-t-lg focus:outline-none transition duration-200"
-                                    onclick="showTab('consultas', this)">
+                                    data-action="show-tab" data-tab-target="consultas">
                                 Consultas
                             </button>
                             <button class="tab-btn w-1/3 py-2 text-sm text-center bg-slate-200 hover:bg-slate-300 rounded-t-lg focus:outline-none transition duration-200"
-                                    onclick="showTab('exames', this)">
+                                    data-action="show-tab" data-tab-target="exames">
                                 Exames
                             </button>
                             <button class="tab-btn w-1/3 py-2 text-sm text-center bg-slate-200 hover:bg-slate-300 rounded-t-lg focus:outline-none transition duration-200"
-                                    onclick="showTab('cirurgias', this)">
+                                    data-action="show-tab" data-tab-target="cirurgias">
                                 Cirurgias
                             </button>
                         </div>
@@ -135,108 +135,4 @@
     <div id="patientAppointment-modal"></div>
 </main>
 </body>
-<script>
-
-    window.addEventListener("DOMContentLoaded", function () {
-        const selectedMonth = document.getElementById("selectedMonth");
-        const monthControl = document.querySelector('input[type="month"]');
-        if (selectedMonth.value !== "") {
-            monthControl.value = selectedMonth.value;
-        } else {
-            const date = new Date();
-            const month = ("0" + (date.getMonth() + 1)).slice(-2);
-            const year = date.getFullYear();
-            monthControl.value = year + "-" + month;
-        }
-    });
-
-    function showTab(tabId, clickedBtn) {
-        document.querySelectorAll('.tab-content').forEach(function (content) {
-            content.classList.add('hidden');
-        });
-        document.getElementById(tabId).classList.remove('hidden');
-
-        clickedBtn.closest('.flex').querySelectorAll('.tab-btn').forEach(function (btn) {
-            btn.classList.remove('bg-slate-300');
-            btn.classList.add('bg-slate-200');
-        });
-        clickedBtn.classList.remove('bg-slate-200');
-        clickedBtn.classList.add('bg-slate-300');
-    }
-
-    function showModalTab(tabId, clickedBtn) {
-        document.getElementById('patient-details').classList.add('hidden');
-        document.getElementById('appointment-details').classList.add('hidden');
-        document.getElementById('status-details').classList.add('hidden');
-        document.getElementById(tabId).classList.remove('hidden');
-
-        clickedBtn.closest('.flex').querySelectorAll('.modal-tab-btn').forEach(function (btn) {
-            btn.classList.remove('bg-slate-300');
-            btn.classList.add('bg-slate-200');
-        });
-        clickedBtn.classList.remove('bg-slate-200');
-        clickedBtn.classList.add('bg-slate-300');
-    }
-
-    function closeModal() {
-        let modal = document.getElementById("patientAppointment-modal");
-        modal.classList.add("opacity-0");
-        modal.classList.add("hidden");
-        modal.classList.remove("flex");
-    }
-
-    function handleCancel() {
-        Swal.fire({
-            title: "Cancelar contemplação",
-            text: "Tem certeza que deseja cancelar?",
-            icon: "warning",
-            showCancelButton: true,
-            confirmButtonColor: "#3085d6",
-            cancelButtonColor: "#d33",
-            confirmButtonText: "Sim",
-            cancelButtonText: "Cancelar"
-        }).then(function (result) {
-            if (result.isConfirmed) {
-                Swal.fire({
-                    title: "Digite o motivo do cancelamento",
-                    input: "textarea",
-                    inputPlaceholder: "Motivo...",
-                    showCancelButton: true,
-                    confirmButtonText: "Enviar",
-                    cancelButtonText: "Cancelar",
-                    inputAttributes: {
-                        maxlength: "255"
-                    },
-                    inputValidator: (value) => {
-                        if (!value) {
-                            return "Você precisa digitar um motivo!";
-                        }
-                    }
-                }).then(function (textResult) {
-                    if (textResult.isConfirmed && textResult.value) {
-                        document.getElementById("reason").value = textResult.value;
-                        document.getElementById("cancelForm").submit();
-                    }
-                });
-            }
-        });
-    }
-
-    function handleConfirmation() {
-        Swal.fire({
-            title: "Confirmar contemplação",
-            text: "Tem certeza que deseja continuar?",
-            icon: "warning",
-            showCancelButton: true,
-            confirmButtonColor: "#3085d6",
-            cancelButtonColor: "#d33",
-            confirmButtonText: "Sim",
-            cancelButtonText: "Cancelar"
-        }).then(function (result) {
-            if (result.isConfirmed) {
-                document.getElementById("confirmForm").submit();
-            }
-        });
-    }
-</script>
 </html>

@@ -29,7 +29,7 @@
                 <h3 class="text-xl font-semibold text-slate-200">
                     Detalhes do paciente
                 </h3>
-                <button type="button" onclick="closeModal()"
+                <button type="button" data-action="close-modal" data-modal-id="patientAppointment-modal"
                     class="text-slate-400 bg-transparent hover:bg-slate-700 hover:text-white rounded-lg text-sm w-8 h-8 ms-auto inline-flex justify-center items-center">
                     <svg class="w-3 h-3" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none"
                         viewBox="0 0 14 14">
@@ -43,24 +43,24 @@
             <div class="flex space-x-1 border-b border-slate-300 mb-4">
                 <button
                     class="modal-tab-btn w-1/3 py-2 text-sm text-center bg-slate-300 hover:bg-slate-300 rounded-t-lg focus:outline-none transition duration-200"
-                    onclick="showModalTab('patient-details', this)">
+                    data-action="show-modal-tab" data-tab-target="patient-details">
                     Informações do paciente
                 </button>
                 <button
                     class="modal-tab-btn w-1/3 py-2 text-sm text-center bg-slate-200 hover:bg-slate-300 rounded-t-lg focus:outline-none transition duration-200"
-                    onclick="showModalTab('appointment-details', this)">
+                    data-action="show-modal-tab" data-tab-target="appointment-details">
                     Informações do agendamento
                 </button>
                 @if(isContemplated)
                 <button
                     class="modal-tab-btn w-1/3 py-2 text-sm text-center bg-slate-200 hover:bg-slate-300 rounded-t-lg focus:outline-none transition duration-200"
-                    onclick="showModalTab('status-details', this)">
+                    data-action="show-modal-tab" data-tab-target="status-details">
                     Historico de Status
                 </button>
                 @else
                 <button
                     class="modal-tab-btn w-1/3 py-2 text-sm text-center bg-slate-200 hover:bg-slate-300 rounded-t-lg focus:outline-none transition duration-200"
-                    onclick="showModalTab('patientHistory-details', this)">
+                    data-action="show-modal-tab" data-tab-target="patientHistory-details">
                     Historico do paciente
                 </button>
                 @endif

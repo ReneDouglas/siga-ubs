@@ -1,6 +1,7 @@
 package br.com.tecsus.sigaubs.services;
 
 import br.com.tecsus.sigaubs.dtos.TenantSearchDTO;
+import br.com.tecsus.sigaubs.dtos.TenantCommandDTO;
 import br.com.tecsus.sigaubs.dtos.ResultadoOperacao;
 import br.com.tecsus.sigaubs.entities.Tenant;
 import br.com.tecsus.sigaubs.enums.TenantStatus;
@@ -74,8 +75,28 @@ public class TenantManagementService {
         tenant.setDomain(normalizeDomainOrDefault(tenant.getDomain(), slug));
         tenant.setStatus(TenantStatus.ACTIVE);
         tenant.setCreationDate(LocalDateTime.now());
-        tenant.setCreationUser(loggedUser.getUsername());
+        tenant.setCreationUser(loggedUser.getLoginUsername());
         return ResultadoOperacao.sucesso(tenantRepository.save(tenant));
+    }
+
+    @CacheEvict(value = "tenants", allEntries = true)
+    @Transactional
+    public ResultadoOperacao<Tenant> create(TenantCommandDTO command, SystemUserDetails loggedUser) {
+        Tenant tenant = new Tenant();
+        tenant.setSlug(command.getSlug());
+        tenant.setName(command.getName());
+        tenant.setDomain(command.getDomain());
+        return create(tenant, loggedUser);
+    }
+
+    @CacheEvict(value = "tenants", allEntries = true)
+    @Transactional
+    public ResultadoOperacao<Tenant> update(TenantCommandDTO command, SystemUserDetails loggedUser) {
+        Tenant tenant = new Tenant();
+        tenant.setId(command.getId());
+        tenant.setName(command.getName());
+        tenant.setDomain(command.getDomain());
+        return update(tenant, loggedUser);
     }
 
     @CacheEvict(value = "tenants", allEntries = true)
@@ -109,7 +130,7 @@ public class TenantManagementService {
         }
         tenant.setStatus(TenantStatus.DISABLED);
         tenant.setDisabledDate(LocalDateTime.now());
-        tenant.setDisabledUser(loggedUser.getUsername());
+        tenant.setDisabledUser(loggedUser.getLoginUsername());
         tenant.setDisabledReason(normalizeBlank(reason));
         tenant.setMaintenanceDate(null);
         tenant.setMaintenanceUser(null);
@@ -151,7 +172,7 @@ public class TenantManagementService {
         }
         tenant.setStatus(TenantStatus.MAINTENANCE);
         tenant.setMaintenanceDate(LocalDateTime.now());
-        tenant.setMaintenanceUser(loggedUser.getUsername());
+        tenant.setMaintenanceUser(loggedUser.getLoginUsername());
         tenant.setMaintenanceMessage(normalizeBlank(message));
         touch(tenant, loggedUser);
         tenantRepository.save(tenant);
@@ -293,6 +314,6 @@ public class TenantManagementService {
 
     private void touch(Tenant tenant, SystemUserDetails loggedUser) {
         tenant.setUpdateDate(LocalDateTime.now());
-        tenant.setUpdateUser(loggedUser.getUsername());
+        tenant.setUpdateUser(loggedUser.getLoginUsername());
     }
 }

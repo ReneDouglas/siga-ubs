@@ -1,7 +1,7 @@
-@import br.com.tecsus.sigaubs.dtos.AvailableMedicalSlotsFormDTO
+@import br.com.tecsus.sigaubs.dtos.MedicalSlotBatchCommandDTO
 @import br.com.tecsus.sigaubs.security.CsrfHelper
 @import br.com.tecsus.sigaubs.utils.TemplateUtils
-@param AvailableMedicalSlotsFormDTO availableMedicalSlotsForm
+@param MedicalSlotBatchCommandDTO availableMedicalSlotsForm
 @param CsrfHelper csrf
 <form id="availableMedicalSlotsFormTable"
       action="/medicalSlot-management/slots/create"
@@ -26,10 +26,10 @@
         <tr class="overflow-hidden border-slate-200 text-slate-600 w-full hover:bg-slate-50 active:bg-slate-200">
             <td class="border-b text-sm py-2 px-4">${TemplateUtils.formatYearMonth(row.getReferenceMonth())}</td>
             <td class="border-b text-sm pl-4 text-center">${row.getTotalSlots()}</td>
-            <td class="border-b text-sm pl-4">${row.getMedicalProcedure().getSpecialty().getTitle()}</td>
-            <td class="border-b text-sm pl-4">${row.getMedicalProcedure().getProcedureType().getDescription()}</td>
-            <td class="border-b text-sm pl-4">${row.getMedicalProcedure().getDescription()}</td>
-            <td class="border-b text-sm pl-4">${row.getBasicHealthUnit().getName()}</td>
+            <td class="border-b text-sm pl-4">${row.getSpecialtyTitle()}</td>
+            <td class="border-b text-sm pl-4">${row.getProcedureTypeDescription()}</td>
+            <td class="border-b text-sm pl-4">${row.getProcedureDescription()}</td>
+            <td class="border-b text-sm pl-4">${row.getBasicHealthUnitName()}</td>
             <td style="display:none;">
                 <input type="hidden" name="availableMedicalSlots[${rowIdx}].referenceMonth" value="${row.getReferenceMonth().toString()}">
             </td>
@@ -44,14 +44,14 @@
             </td>
             <td class="border-b text-sm py-2 px-4">
                 <div class="relative group">
-                    <a hx-get="/medicalSlot-management/slots/${rowIdx}/remove"
+                    <button type="button"
+                       hx-post="/medicalSlot-management/slots/${rowIdx}/remove"
                        hx-target="#availableMedicalSlotsFormTable"
                        hx-include="#availableMedicalSlotsFormTable"
                        hx-swap="outerHTML"
-                       href=""
                        class="inline-flex p-2 rounded-lg hover:bg-slate-200 cursor-pointer transition duration-300">
                         <span class="material-symbols-outlined hover:text-red-500">delete</span>
-                    </a>
+                    </button>
                     <div class="absolute right-full top-1/2 transform -translate-y-1/2 -translate-x-1 hidden group-hover:block bg-slate-800 text-white text-sm rounded px-2 py-1">
                         Remover
                     </div>

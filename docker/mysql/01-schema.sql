@@ -46,7 +46,8 @@ CREATE TABLE system_roles (
     creation_date DATETIME(6) NOT NULL,
     creation_user VARCHAR(255) NOT NULL,
     update_date DATETIME(6),
-    update_user VARCHAR(255)
+    update_user VARCHAR(255),
+    CONSTRAINT uk_system_roles_role UNIQUE (`role`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE system_admins (
@@ -60,6 +61,7 @@ CREATE TABLE system_admins (
     creation_user VARCHAR(255) NOT NULL,
     update_date DATETIME(6),
     update_user VARCHAR(255),
+    version BIGINT NOT NULL DEFAULT 0,
     CONSTRAINT uk_system_admins_username UNIQUE (username)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -72,6 +74,7 @@ CREATE TABLE basic_health_units (
     creation_user VARCHAR(255) NOT NULL,
     update_date DATETIME(6),
     update_user VARCHAR(255),
+    CONSTRAINT uk_bhu_tenant_id UNIQUE (tenant_id, id),
     CONSTRAINT fk_bhu_tenant FOREIGN KEY (tenant_id) REFERENCES tenants(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -88,8 +91,11 @@ CREATE TABLE system_users (
     creation_user VARCHAR(255) NOT NULL,
     update_date DATETIME(6),
     update_user VARCHAR(255),
+    version BIGINT NOT NULL DEFAULT 0,
     CONSTRAINT fk_su_tenant FOREIGN KEY (tenant_id) REFERENCES tenants(id),
-    CONSTRAINT fk_su_bhu FOREIGN KEY (id_basic_health_unit) REFERENCES basic_health_units(id),
+    CONSTRAINT fk_su_bhu_tenant FOREIGN KEY (tenant_id, id_basic_health_unit)
+        REFERENCES basic_health_units(tenant_id, id),
+    CONSTRAINT uk_su_tenant_id UNIQUE (tenant_id, id),
     CONSTRAINT uk_su_tenant_username UNIQUE (tenant_id, username)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -98,7 +104,8 @@ CREATE TABLE system_users_roles (
     id_system_user BIGINT NOT NULL,
     id_system_role BIGINT NOT NULL,
     CONSTRAINT fk_sur_user FOREIGN KEY (id_system_user) REFERENCES system_users(id),
-    CONSTRAINT fk_sur_role FOREIGN KEY (id_system_role) REFERENCES system_roles(id)
+    CONSTRAINT fk_sur_role FOREIGN KEY (id_system_role) REFERENCES system_roles(id),
+    CONSTRAINT uk_sur_user_role UNIQUE (id_system_user, id_system_role)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE specialties (
@@ -116,7 +123,8 @@ CREATE TABLE basic_health_units_specialties (
     id_basic_health_unit BIGINT NOT NULL,
     id_specialties BIGINT NOT NULL,
     CONSTRAINT fk_bhus_tenant FOREIGN KEY (tenant_id) REFERENCES tenants(id),
-    CONSTRAINT fk_bhus_bhu FOREIGN KEY (id_basic_health_unit) REFERENCES basic_health_units(id),
+    CONSTRAINT fk_bhus_bhu_tenant FOREIGN KEY (tenant_id, id_basic_health_unit)
+        REFERENCES basic_health_units(tenant_id, id),
     CONSTRAINT fk_bhus_spec FOREIGN KEY (id_specialties) REFERENCES specialties(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -137,23 +145,28 @@ CREATE TABLE patients (
     birth_date DATE NOT NULL,
     gender VARCHAR(100) NOT NULL,
     social_sit_rating INT NOT NULL,
-    sus_card_number VARCHAR(20),
-    cpf VARCHAR(14),
-    phone_number VARCHAR(20),
+    sus_card_number CHAR(15) NOT NULL,
+    cpf CHAR(11) NOT NULL,
+    phone_number VARCHAR(11) NOT NULL,
     address_street VARCHAR(255),
     address_number VARCHAR(50),
     address_complement VARCHAR(255),
     address_ref VARCHAR(255),
     acs_name VARCHAR(150),
-    id_basic_health_unit BIGINT,
+    id_basic_health_unit BIGINT NOT NULL,
     creation_date DATETIME(6) NOT NULL,
     creation_user VARCHAR(255) NOT NULL,
     update_date DATETIME(6),
     update_user VARCHAR(255),
     CONSTRAINT fk_pat_tenant FOREIGN KEY (tenant_id) REFERENCES tenants(id),
-    CONSTRAINT fk_pat_bhu FOREIGN KEY (id_basic_health_unit) REFERENCES basic_health_units(id),
+    CONSTRAINT fk_pat_bhu_tenant FOREIGN KEY (tenant_id, id_basic_health_unit)
+        REFERENCES basic_health_units(tenant_id, id),
+    CONSTRAINT uk_pat_tenant_id UNIQUE (tenant_id, id),
     CONSTRAINT uk_pat_tenant_sus UNIQUE (tenant_id, sus_card_number),
-    CONSTRAINT uk_pat_tenant_cpf UNIQUE (tenant_id, cpf)
+    CONSTRAINT uk_pat_tenant_cpf UNIQUE (tenant_id, cpf),
+    CONSTRAINT chk_pat_sus_digits CHECK (sus_card_number REGEXP '^[0-9]{15}$'),
+    CONSTRAINT chk_pat_cpf_digits CHECK (cpf REGEXP '^[0-9]{11}$'),
+    CONSTRAINT chk_pat_phone_digits CHECK (phone_number REGEXP '^[0-9]{10,11}$')
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 ALTER TABLE patients ADD FULLTEXT INDEX idx_fulltext_patient (name, sus_card_number, cpf);
@@ -164,16 +177,21 @@ CREATE TABLE medical_slots (
     tenant_id BIGINT NOT NULL,
     reference_month DATE NOT NULL,
     total_slots INT NOT NULL,
-    current_slots INT DEFAULT 0,
+    current_slots INT NOT NULL DEFAULT 0,
     id_medical_procedure BIGINT NOT NULL,
     id_basic_health_unit BIGINT NOT NULL,
     creation_date DATETIME(6) NOT NULL,
     creation_user VARCHAR(255) NOT NULL,
     update_date DATETIME(6),
     update_user VARCHAR(255),
+    version BIGINT NOT NULL DEFAULT 0,
     CONSTRAINT fk_ms_tenant FOREIGN KEY (tenant_id) REFERENCES tenants(id),
     CONSTRAINT fk_ms_procedure FOREIGN KEY (id_medical_procedure) REFERENCES medical_procedures(id),
-    CONSTRAINT available_medical_slots_FK FOREIGN KEY (id_basic_health_unit) REFERENCES basic_health_units(id)
+    CONSTRAINT fk_ms_bhu_tenant FOREIGN KEY (tenant_id, id_basic_health_unit)
+        REFERENCES basic_health_units(tenant_id, id),
+    CONSTRAINT uk_ms_tenant_id UNIQUE (tenant_id, id),
+    CONSTRAINT chk_ms_total_positive CHECK (total_slots > 0),
+    CONSTRAINT chk_ms_balance CHECK (current_slots >= 0 AND current_slots <= total_slots)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- contemplations: id_appointment foi REMOVIDO na v1.6 (appointments agora aponta para contemplations)
@@ -183,13 +201,15 @@ CREATE TABLE contemplations (
     contemplation_date DATETIME(6) NOT NULL,
     contemplated_by INT NOT NULL,
     id_available_medical_slot BIGINT NOT NULL,
-    observation VARCHAR(255),
+    observation VARCHAR(2000),
     creation_date DATETIME(6) NOT NULL,
     creation_user VARCHAR(255) NOT NULL,
     update_date DATETIME(6),
     update_user VARCHAR(255),
     CONSTRAINT fk_cont_tenant FOREIGN KEY (tenant_id) REFERENCES tenants(id),
-    CONSTRAINT fk_cont_slot FOREIGN KEY (id_available_medical_slot) REFERENCES medical_slots(id)
+    CONSTRAINT fk_cont_slot_tenant FOREIGN KEY (tenant_id, id_available_medical_slot)
+        REFERENCES medical_slots(tenant_id, id),
+    CONSTRAINT uk_cont_tenant_id UNIQUE (tenant_id, id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- appointments: status (varchar 50) substituiu canceled na v1.5; id_contemplation adicionado na v1.6
@@ -203,13 +223,18 @@ CREATE TABLE appointments (
     creation_user VARCHAR(255) NOT NULL,
     update_date DATETIME(6),
     update_user VARCHAR(255),
+    version BIGINT NOT NULL DEFAULT 0,
     id_medical_procedure BIGINT NOT NULL,
     id_patient BIGINT NOT NULL,
     id_contemplation BIGINT,
     CONSTRAINT fk_appt_tenant FOREIGN KEY (tenant_id) REFERENCES tenants(id),
     CONSTRAINT fk_appt_procedure FOREIGN KEY (id_medical_procedure) REFERENCES medical_procedures(id),
-    CONSTRAINT fk_appt_patient FOREIGN KEY (id_patient) REFERENCES patients(id),
-    CONSTRAINT appointments_FK FOREIGN KEY (id_contemplation) REFERENCES contemplations(id)
+    CONSTRAINT fk_appt_patient_tenant FOREIGN KEY (tenant_id, id_patient)
+        REFERENCES patients(tenant_id, id),
+    CONSTRAINT fk_appt_contemplation_tenant FOREIGN KEY (tenant_id, id_contemplation)
+        REFERENCES contemplations(tenant_id, id),
+    CONSTRAINT uk_appt_tenant_id UNIQUE (tenant_id, id),
+    CONSTRAINT uk_appt_tenant_contemplation UNIQUE (tenant_id, id_contemplation)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- appointment_status_history: adicionada na v1.6.0
@@ -222,7 +247,8 @@ CREATE TABLE appointment_status_history (
     creation_user VARCHAR(100) NOT NULL,
     PRIMARY KEY (id),
     CONSTRAINT fk_ash_tenant FOREIGN KEY (tenant_id) REFERENCES tenants(id),
-    CONSTRAINT fk_ash_appt FOREIGN KEY (id_appointment) REFERENCES appointments(id)
+    CONSTRAINT fk_ash_appt_tenant FOREIGN KEY (tenant_id, id_appointment)
+        REFERENCES appointments(tenant_id, id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE patient_history (
@@ -234,8 +260,146 @@ CREATE TABLE patient_history (
     update_date DATETIME(6),
     update_user VARCHAR(255),
     CONSTRAINT fk_ph_tenant FOREIGN KEY (tenant_id) REFERENCES tenants(id),
-    CONSTRAINT fk_ph_appt FOREIGN KEY (id_appointment) REFERENCES appointments(id)
+    CONSTRAINT fk_ph_appt_tenant FOREIGN KEY (tenant_id, id_appointment)
+        REFERENCES appointments(tenant_id, id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE contemplation_job_executions (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    tenant_id BIGINT NOT NULL,
+    execution_key VARCHAR(100) NOT NULL,
+    window_start DATETIME(6) NOT NULL,
+    status VARCHAR(20) NOT NULL,
+    started_at DATETIME(6) NOT NULL,
+    finished_at DATETIME(6),
+    lock_token CHAR(36) NOT NULL,
+    lease_until DATETIME(6) NOT NULL,
+    CONSTRAINT fk_cje_tenant FOREIGN KEY (tenant_id) REFERENCES tenants(id),
+    CONSTRAINT uk_cje_tenant_execution UNIQUE (tenant_id, execution_key),
+    CONSTRAINT chk_cje_status CHECK (status IN ('RUNNING', 'COMPLETED', 'FAILED')),
+    INDEX idx_cje_tenant_started (tenant_id, started_at DESC)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Spring Session JDBC faz parte do DDL inicial; o auto-initializer permanece desabilitado.
+CREATE TABLE SPRING_SESSION (
+    PRIMARY_ID CHAR(36) NOT NULL,
+    SESSION_ID CHAR(36) NOT NULL,
+    CREATION_TIME BIGINT NOT NULL,
+    LAST_ACCESS_TIME BIGINT NOT NULL,
+    MAX_INACTIVE_INTERVAL INT NOT NULL,
+    EXPIRY_TIME BIGINT NOT NULL,
+    PRINCIPAL_NAME VARCHAR(200),
+    CONSTRAINT SPRING_SESSION_PK PRIMARY KEY (PRIMARY_ID),
+    CONSTRAINT SPRING_SESSION_IX1 UNIQUE (SESSION_ID)
+) ENGINE=InnoDB ROW_FORMAT=DYNAMIC;
+
+CREATE INDEX SPRING_SESSION_IX2 ON SPRING_SESSION (EXPIRY_TIME);
+CREATE INDEX SPRING_SESSION_IX3 ON SPRING_SESSION (PRINCIPAL_NAME);
+
+CREATE TABLE SPRING_SESSION_ATTRIBUTES (
+    SESSION_PRIMARY_ID CHAR(36) NOT NULL,
+    ATTRIBUTE_NAME VARCHAR(200) NOT NULL,
+    ATTRIBUTE_BYTES LONGBLOB NOT NULL,
+    CONSTRAINT SPRING_SESSION_ATTRIBUTES_PK PRIMARY KEY (SESSION_PRIMARY_ID, ATTRIBUTE_NAME),
+    CONSTRAINT SPRING_SESSION_ATTRIBUTES_FK FOREIGN KEY (SESSION_PRIMARY_ID)
+        REFERENCES SPRING_SESSION(PRIMARY_ID) ON DELETE CASCADE
+) ENGINE=InnoDB ROW_FORMAT=DYNAMIC;
+
+DELIMITER $$
+
+CREATE TRIGGER trg_contemplations_validate_insert
+BEFORE INSERT ON contemplations
+FOR EACH ROW
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1
+        FROM medical_slots slot
+        WHERE slot.id = NEW.id_available_medical_slot
+          AND slot.tenant_id = NEW.tenant_id
+    ) THEN
+        SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT = 'Contemplação e vaga devem pertencer ao mesmo tenant';
+    END IF;
+END$$
+
+CREATE TRIGGER trg_contemplations_validate_update
+BEFORE UPDATE ON contemplations
+FOR EACH ROW
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1
+        FROM medical_slots slot
+        WHERE slot.id = NEW.id_available_medical_slot
+          AND slot.tenant_id = NEW.tenant_id
+    ) THEN
+        SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT = 'Contemplação e vaga devem pertencer ao mesmo tenant';
+    END IF;
+END$$
+
+CREATE TRIGGER trg_appointments_validate_insert
+BEFORE INSERT ON appointments
+FOR EACH ROW
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1
+        FROM patients patient
+        WHERE patient.id = NEW.id_patient
+          AND patient.tenant_id = NEW.tenant_id
+    ) THEN
+        SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT = 'Consulta e paciente devem pertencer ao mesmo tenant';
+    END IF;
+
+    IF NEW.id_contemplation IS NOT NULL AND NOT EXISTS (
+        SELECT 1
+        FROM contemplations contemplation
+        JOIN medical_slots slot ON slot.id = contemplation.id_available_medical_slot
+            AND slot.tenant_id = contemplation.tenant_id
+        JOIN patients patient ON patient.id = NEW.id_patient
+            AND patient.tenant_id = NEW.tenant_id
+        WHERE contemplation.id = NEW.id_contemplation
+          AND contemplation.tenant_id = NEW.tenant_id
+          AND slot.id_medical_procedure = NEW.id_medical_procedure
+          AND slot.id_basic_health_unit = patient.id_basic_health_unit
+    ) THEN
+        SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT = 'Procedimento ou UBS da contemplação diverge da consulta';
+    END IF;
+END$$
+
+CREATE TRIGGER trg_appointments_validate_update
+BEFORE UPDATE ON appointments
+FOR EACH ROW
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1
+        FROM patients patient
+        WHERE patient.id = NEW.id_patient
+          AND patient.tenant_id = NEW.tenant_id
+    ) THEN
+        SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT = 'Consulta e paciente devem pertencer ao mesmo tenant';
+    END IF;
+
+    IF NEW.id_contemplation IS NOT NULL AND NOT EXISTS (
+        SELECT 1
+        FROM contemplations contemplation
+        JOIN medical_slots slot ON slot.id = contemplation.id_available_medical_slot
+            AND slot.tenant_id = contemplation.tenant_id
+        JOIN patients patient ON patient.id = NEW.id_patient
+            AND patient.tenant_id = NEW.tenant_id
+        WHERE contemplation.id = NEW.id_contemplation
+          AND contemplation.tenant_id = NEW.tenant_id
+          AND slot.id_medical_procedure = NEW.id_medical_procedure
+          AND slot.id_basic_health_unit = patient.id_basic_health_unit
+    ) THEN
+        SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT = 'Procedimento ou UBS da contemplação diverge da consulta';
+    END IF;
+END$$
+
+DELIMITER ;
 
 -- =============================================================================
 -- Índices de performance — colunas de alta frequência em queries e filtros
