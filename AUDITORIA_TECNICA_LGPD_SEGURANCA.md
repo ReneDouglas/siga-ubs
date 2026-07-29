@@ -17,7 +17,7 @@ O repositório contém controles positivos — Spring Security, CSRF, BCrypt, se
 - exposição de nome, CPF e filtros de pesquisa em logs e URLs;
 - ataques automatizados contra autenticação pública sem MFA ou limitação de tentativas;
 - execução concorrente ou induzida da rotina de contemplação;
-- decisões automatizadas de acesso à saúde sem explicação fiel, versionamento e mecanismo técnico de revisão;
+- decisões automatizadas de acesso à saúde sem governança, versionamento, explicação reproduzível e mecanismo técnico de revisão;
 - perda de até uma semana de dados no cenário de backup informado;
 - acesso direto à origem e contorno da Cloudflare, caso o firewall da VPS não esteja restrito;
 - comprometimento ampliado do banco por configuração insegura disponível no projeto;
@@ -184,7 +184,7 @@ Dados de saúde são dados pessoais sensíveis. CPF e CNS não pertencem automat
 | IAM-03 | Alta | Sessões não revogadas após eventos de risco | Confirmado |
 | IAM-04 | Alta | Reautenticação sensível aplicada somente no frontend | Confirmado |
 | APP-03 | Alta | Binding direto de entidades e ausência de validação no servidor | Confirmado |
-| BUS-01 | Alta | Decisão automatizada sem explicação fiel e revisão estruturada | Confirmado |
+| BUS-01 | Alta | Decisão automatizada sem governança, versionamento e revisão estruturada | Parcialmente corrigido |
 | BUS-02 | Alta | GET com efeito de escrita e concorrência na contemplação | Confirmado |
 | DB-01 | Alta | Integridade tenant/UBS não garantida pelas FKs | Confirmado |
 | DB-02 | Alta | Defaults e exemplo de produção permitem banco como root | Confirmado no projeto; produção informada como diferente |
@@ -525,23 +525,25 @@ A interface chama um endpoint de validação de senha antes de contemplar, mas o
 
 ---
 
-### BUS-01 — Decisão automatizada sem explicação fiel
+### BUS-01 — Decisão automatizada sem governança e explicação reproduzível
 
 **Severidade:** Alta<br>
-**Estado:** Confirmado
+**Estado:** Parcialmente corrigido; alinhamento do critério de gênero confirmado no worktree atual
 
 #### Evidência
 
 - `src/main/java/br/com/tecsus/sigaubs/repositories/Impl/AppointmentRepositoryCustomImpl.java:137`
+- `src/main/java/br/com/tecsus/sigaubs/repositories/Impl/AppointmentRepositoryCustomImpl.java:186`
 - `src/main/java/br/com/tecsus/sigaubs/services/ContemplationScheduleService.java:208`
 
-A fila usa, em ordem, tempo superior a quatro meses, prioridade, idade, situação social e data de solicitação. O método de explicação pode registrar `SEXO`, apesar de sexo não participar do `ORDER BY`.
+A fila usa, em ordem, tempo superior a quatro meses, prioridade, idade, situação social, gênero e data de solicitação. O critério `p.gender ASC` foi incluído tanto na consulta paginada de IDs quanto na consulta dos DTOs. O job já retorna `Priorities.SEXO` quando compara uma paciente com gênero `Feminino` a um paciente com gênero `Masculino`. Portanto, a divergência específica anteriormente apontada entre o `ORDER BY` e o motivo `SEXO` está corrigida no worktree atual.
+
+Permanecem pendentes a governança e a capacidade de reprodução. O registro da contemplação guarda o motivo final, mas não demonstra persistência da versão da regra, posição, conjunto de candidatos, valores usados em cada critério e contexto de desempate. Alterações posteriores nos dados ou no algoritmo podem impedir a reprodução exata da decisão.
 
 #### Impacto
 
-- motivo registrado incorretamente;
-- incapacidade de explicar a decisão;
-- risco de discriminação ou regra sem fundamento clínico;
+- incapacidade de reproduzir e auditar integralmente uma decisão passada;
+- risco de discriminação caso o uso de gênero não possua fundamento assistencial formal, necessidade e validação;
 - contestação sem evidência reproduzível;
 - impacto ampliado para crianças e grupos vulneráveis.
 
@@ -559,7 +561,7 @@ A fila usa, em ordem, tempo superior a quatro meses, prioridade, idade, situaç�
    - horário;
    - vagas disponíveis;
    - resultado.
-5. Corrigir a divergência entre ordenação e motivo.
+5. Documentar e aprovar o uso de gênero como critério de desempate, incluindo finalidade, ordem exata, fundamento assistencial, tratamento de valor nulo/inválido e testes de não discriminação.
 6. Disponibilizar explicação clara e processo de solicitação de revisão.
 7. A revisão não precisa ocorrer em toda decisão, mas deve existir quando solicitada e para exceções.
 8. Criar override manual com motivo obrigatório e auditoria.
@@ -576,6 +578,8 @@ A fila usa, em ordem, tempo superior a quatro meses, prioridade, idade, situaç�
 
 - uma decisão pode ser reproduzida exatamente;
 - o motivo exibido corresponde ao algoritmo executado;
+- o critério de gênero aparece na mesma posição em todas as consultas da fila e possui testes de regressão;
+- a utilização de gênero foi formalmente aprovada e justificada pelo controlador e responsáveis assistenciais;
 - há canal e workflow de revisão;
 - mudanças de regra exigem aprovação e nova versão.
 

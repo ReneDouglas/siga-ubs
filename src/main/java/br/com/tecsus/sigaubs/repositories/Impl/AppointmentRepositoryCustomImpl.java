@@ -142,6 +142,7 @@ public class AppointmentRepositoryCustomImpl implements AppointmentRepositoryCus
                 a.priority ASC,
                 p.birthDate ASC,
                 p.socialSituationRating ASC,
+                p.gender ASC,
                 a.requestDate ASC
         """, Long.class);
 
@@ -190,6 +191,7 @@ public class AppointmentRepositoryCustomImpl implements AppointmentRepositoryCus
                 a.priority ASC,
                 p.birthDate ASC,
                 p.socialSituationRating ASC,
+                p.gender ASC,
                 a.requestDate ASC
         """, PatientOpenAppointmentDTO.class);
 
