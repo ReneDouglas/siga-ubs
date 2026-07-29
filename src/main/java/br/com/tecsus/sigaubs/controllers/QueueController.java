@@ -3,15 +3,15 @@ package br.com.tecsus.sigaubs.controllers;
 import br.com.tecsus.sigaubs.dtos.PatientOpenAppointmentDTO;
 import br.com.tecsus.sigaubs.entities.*;
 import br.com.tecsus.sigaubs.enums.ProcedureType;
+import br.com.tecsus.sigaubs.security.ActorContext;
 import br.com.tecsus.sigaubs.security.SystemUserDetails;
 import br.com.tecsus.sigaubs.security.ReauthenticationService;
 import br.com.tecsus.sigaubs.services.*;
-import br.com.tecsus.sigaubs.utils.DefaultValues;
+import br.com.tecsus.sigaubs.utils.PaginationPolicy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.http.MediaType;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -66,11 +66,20 @@ public class QueueController {
 
         addFilterOptions(model);
         model.addAttribute("consultasPage",
-                new PageImpl<PatientOpenAppointmentDTO>(List.of(), PageRequest.of(0, DefaultValues.PAGE_SIZE), 0));
+                new PageImpl<PatientOpenAppointmentDTO>(
+                        List.of(),
+                        PaginationPolicy.defaultPageRequest(),
+                        0));
         model.addAttribute("examesPage",
-                new PageImpl<PatientOpenAppointmentDTO>(List.of(), PageRequest.of(0, DefaultValues.PAGE_SIZE), 0));
+                new PageImpl<PatientOpenAppointmentDTO>(
+                        List.of(),
+                        PaginationPolicy.defaultPageRequest(),
+                        0));
         model.addAttribute("cirurgiasPage",
-                new PageImpl<PatientOpenAppointmentDTO>(List.of(), PageRequest.of(0, DefaultValues.PAGE_SIZE), 0));
+                new PageImpl<PatientOpenAppointmentDTO>(
+                        List.of(),
+                        PaginationPolicy.defaultPageRequest(),
+                        0));
         model.addAttribute("hide", "hidden");
 
         return "queueManagement/queue_management";
@@ -84,8 +93,8 @@ public class QueueController {
             @RequestParam(required = false) String procedureType,
             @AuthenticationPrincipal SystemUserDetails loggedUser) {
 
-        boolean isAdminOrSms = loggedUser.getAuthorities().stream()
-                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN") || a.getAuthority().equals("ROLE_SMS"));
+        boolean isAdminOrSms = ActorContext.from(loggedUser)
+                .canAccessAllBasicHealthUnits();
 
         if (!isAdminOrSms) {
             basicHealthUnit = loggedUser.getBasicHealthUnitId();
@@ -104,7 +113,7 @@ public class QueueController {
                         basicHealthUnit,
                         specialty,
                         medicalProcedure,
-                        PageRequest.of(0, DefaultValues.PAGE_SIZE));
+                        PaginationPolicy.defaultPageRequest());
 
         model.addAttribute("queuePage", queuePage);
         model.addAttribute("selectedUBS", basicHealthUnit);
@@ -128,19 +137,19 @@ public class QueueController {
                         ProcedureType.CONSULTA,
                         basicHealthUnit,
                         specialty,
-                        PageRequest.of(0, DefaultValues.PAGE_SIZE));
+                        PaginationPolicy.defaultPageRequest());
         var exames = appointmentService
                 .findOpenAppointmentsQueuePaginated(
                         ProcedureType.EXAME,
                         basicHealthUnit,
                         specialty,
-                        PageRequest.of(0, DefaultValues.PAGE_SIZE));
+                        PaginationPolicy.defaultPageRequest());
         var cirurgias = appointmentService
                 .findOpenAppointmentsQueuePaginated(
                         ProcedureType.CIRURGIA,
                         basicHealthUnit,
                         specialty,
-                        PageRequest.of(0, DefaultValues.PAGE_SIZE));
+                        PaginationPolicy.defaultPageRequest());
 
         var totalProceduresType = appointmentService.findProcedureTypeTotal(basicHealthUnit, specialty);
         var totalMedicalProcedures = appointmentService.findMedicalProceduresTotal(basicHealthUnit, specialty);
@@ -167,8 +176,8 @@ public class QueueController {
             Model model,
             @AuthenticationPrincipal SystemUserDetails loggedUser) {
 
-        boolean isAdminOrSms = loggedUser.getAuthorities().stream()
-                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN") || a.getAuthority().equals("ROLE_SMS"));
+        boolean isAdminOrSms = ActorContext.from(loggedUser)
+                .canAccessAllBasicHealthUnits();
 
         if (!isAdminOrSms) {
             basicHealthUnit = loggedUser.getBasicHealthUnitId();
@@ -179,7 +188,7 @@ public class QueueController {
                         basicHealthUnit,
                         specialty,
                         medicalProcedure,
-                        PageRequest.of(0, DefaultValues.PAGE_SIZE));
+                        PaginationPolicy.defaultPageRequest());
 
         model.addAttribute("selectedUBS", basicHealthUnit);
         model.addAttribute("basicHealthUnits", basicHealthUnitService.findAllUBS());
@@ -197,11 +206,11 @@ public class QueueController {
     public String getOpenAppointmentsQueuePaginated(Model model,
             @RequestParam(value = "page", defaultValue = "0", required = false) int currentPage,
             @RequestParam(value = "consultasPageSize", defaultValue = ""
-                    + DefaultValues.PAGE_SIZE, required = false) int consultasPageSize,
+                    + PaginationPolicy.DEFAULT_PAGE_SIZE, required = false) int consultasPageSize,
             @RequestParam(value = "examesPageSize", defaultValue = ""
-                    + DefaultValues.PAGE_SIZE, required = false) int examesPageSize,
+                    + PaginationPolicy.DEFAULT_PAGE_SIZE, required = false) int examesPageSize,
             @RequestParam(value = "cirurgiasPageSize", defaultValue = ""
-                    + DefaultValues.PAGE_SIZE, required = false) int cirurgiasPageSize,
+                    + PaginationPolicy.DEFAULT_PAGE_SIZE, required = false) int cirurgiasPageSize,
             @RequestParam(value = "ubs") Long ubs,
             @RequestParam(value = "specialty") Long specialty,
             @RequestParam(value = "type") String procedureType) {
@@ -215,7 +224,7 @@ public class QueueController {
                             ProcedureType.CONSULTA,
                             ubs,
                             specialty,
-                            PageRequest.of(Math.max(0, currentPage), Math.clamp(consultasPageSize, 1, 100))));
+                            PaginationPolicy.pageRequest(currentPage, consultasPageSize)));
             return "queueManagement/queueFragments/queue_tabs_consultas";
         } else if (procedureType.equals(ProcedureType.EXAME.toString())) {
             model.addAttribute("examesPage", appointmentService
@@ -223,7 +232,7 @@ public class QueueController {
                             ProcedureType.EXAME,
                             ubs,
                             specialty,
-                            PageRequest.of(Math.max(0, currentPage), Math.clamp(examesPageSize, 1, 100))));
+                            PaginationPolicy.pageRequest(currentPage, examesPageSize)));
             return "queueManagement/queueFragments/queue_tabs_exames";
         } else if (procedureType.equals(ProcedureType.CIRURGIA.toString())) {
             model.addAttribute("cirurgiasPage", appointmentService
@@ -231,7 +240,7 @@ public class QueueController {
                             ProcedureType.CIRURGIA,
                             ubs,
                             specialty,
-                            PageRequest.of(Math.max(0, currentPage), Math.clamp(cirurgiasPageSize, 1, 100))));
+                            PaginationPolicy.pageRequest(currentPage, cirurgiasPageSize)));
             return "queueManagement/queueFragments/queue_tabs_cirurgias";
 
         }
@@ -241,15 +250,16 @@ public class QueueController {
     @GetMapping("/queue-management/v2/paginated")
     public String getOpenAppointmentsQueuePaginatedV2(Model model,
             @RequestParam(value = "page", defaultValue = "0", required = false) int page,
-            @RequestParam(value = "size", defaultValue = "" + DefaultValues.PAGE_SIZE, required = false) int size,
+            @RequestParam(value = "size", defaultValue = ""
+                    + PaginationPolicy.DEFAULT_PAGE_SIZE, required = false) int size,
             @RequestParam(value = "ubs", required = false) Long ubs,
             @RequestParam(value = "specialty", required = false) Long specialty,
             @RequestParam(value = "medicalProcedure", required = false) Long medicalProcedure,
             @RequestParam(value = "procedureType", required = false) String procedureType,
             @AuthenticationPrincipal SystemUserDetails loggedUser) {
 
-        boolean isAdminOrSms = loggedUser.getAuthorities().stream()
-                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN") || a.getAuthority().equals("ROLE_SMS"));
+        boolean isAdminOrSms = ActorContext.from(loggedUser)
+                .canAccessAllBasicHealthUnits();
 
         if (!isAdminOrSms) {
             ubs = loggedUser.getBasicHealthUnitId();
@@ -265,7 +275,7 @@ public class QueueController {
                         ubs,
                         specialty,
                         medicalProcedure,
-                        PageRequest.of(Math.max(0, page), Math.clamp(size, 1, 100))));
+                        PaginationPolicy.pageRequest(page, size)));
 
         return "queueManagement/queueFragments/queue_datatable";
     }

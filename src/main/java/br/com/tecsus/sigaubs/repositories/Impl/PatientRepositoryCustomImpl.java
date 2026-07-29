@@ -4,6 +4,7 @@ import br.com.tecsus.sigaubs.dtos.PatientAppointmentsHistoryDTO;
 import br.com.tecsus.sigaubs.entities.Patient;
 import br.com.tecsus.sigaubs.repositories.PatientRepositoryCustom;
 import br.com.tecsus.sigaubs.tenancy.TenantContextHolder;
+import br.com.tecsus.sigaubs.utils.AutocompletePolicy;
 import br.com.tecsus.sigaubs.utils.ValidationUtils;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.Query;
@@ -42,13 +43,13 @@ public class PatientRepositoryCustomImpl implements PatientRepositoryCustom {
                 WHERE MATCH(p.name, p.sus_card_number, p.cpf) AGAINST(:terms IN BOOLEAN MODE)
                 AND p.tenant_id = :tenantId
                 AND (:id IS NULL OR p.id_basic_health_unit = :id)
-                LIMIT 5
                 """;
 
         Query nativeQuery = em.createNativeQuery(jpql, Patient.class);
         nativeQuery.setParameter("terms", "*" + terms + "*");
         nativeQuery.setParameter("tenantId", tenantId);
         nativeQuery.setParameter("id", idUBS);
+        nativeQuery.setMaxResults(AutocompletePolicy.MAXIMUM_RESULTS);
 
         var list = (List<Patient>) nativeQuery.getResultList();
         return list;

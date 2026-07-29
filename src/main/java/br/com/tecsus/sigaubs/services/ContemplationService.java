@@ -10,6 +10,7 @@ import br.com.tecsus.sigaubs.enums.ProcedureType;
 import br.com.tecsus.sigaubs.repositories.ContemplationRepository;
 import br.com.tecsus.sigaubs.security.SystemUserDetails;
 import br.com.tecsus.sigaubs.security.AuthorizationScopeService;
+import br.com.tecsus.sigaubs.utils.ContemplationLimits;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,6 +27,7 @@ import java.time.format.DateTimeFormatter;
 public class ContemplationService {
 
     private static final Logger log = LoggerFactory.getLogger(ContemplationService.class);
+    private static final String AUTOMATED_JOB_USER = "ROTINA";
 
     private final ContemplationRepository contemplationRepository;
     private final DateTimeFormatter formatter;
@@ -107,7 +109,7 @@ public class ContemplationService {
         }
         String normalizedReason = normalizeReason(reason);
         if (normalizedReason == null) {
-            return ResultadoOperacao.falha("Motivo obrigatório e limitado a 500 caracteres.");
+            return invalidContemplationReason();
         }
 
         var slotResult = medicalSlotService.addSlot(contemplated.getMedicalSlot());
@@ -125,7 +127,8 @@ public class ContemplationService {
         } else {
             contemplated.setObservation(truncate(contemplated.getObservation() + " -- Cancelado por "
                     + loggedUser.getName() + " em " + LocalDateTime.now().format(formatter)
-                    + " -- Motivo: " + normalizedReason, 2_000));
+                    + " -- Motivo: " + normalizedReason,
+                    ContemplationLimits.MAXIMUM_OBSERVATION_LENGTH));
         }
 
         contemplationRepository.save(contemplated);
@@ -165,7 +168,7 @@ public class ContemplationService {
 
         String normalizedReason = normalizeReason(reason);
         if (normalizedReason == null) {
-            return ResultadoOperacao.falha("Motivo obrigatório e limitado a 500 caracteres.");
+            return invalidContemplationReason();
         }
         return contemplateAtomically(
                 appointmentId,
@@ -187,8 +190,8 @@ public class ContemplationService {
                 medicalSlotId,
                 contemplatedBy,
                 AppointmentStatus.PACIENTE_CONTEMPLADO,
-                "ROTINA",
-                "ROTINA",
+                AUTOMATED_JOB_USER,
+                AUTOMATED_JOB_USER,
                 null,
                 null);
     }
@@ -243,7 +246,8 @@ public class ContemplationService {
         contemplation.setCreationUser(auditUser);
         contemplation.setAppointment(appointment);
         contemplation.setMedicalSlot(slotResult.valor());
-        contemplation.setObservation(truncate(observation, 2_000));
+        contemplation.setObservation(truncate(
+                observation, ContemplationLimits.MAXIMUM_OBSERVATION_LENGTH));
         contemplation = contemplationRepository.save(contemplation);
 
         appointment.setContemplation(contemplation);
@@ -265,7 +269,16 @@ public class ContemplationService {
             return null;
         }
         String normalized = reason.trim();
-        return normalized.length() <= 500 ? normalized : null;
+        return normalized.length() <= ContemplationLimits.MAXIMUM_REASON_LENGTH
+                ? normalized
+                : null;
+    }
+
+    private ResultadoOperacao<Void> invalidContemplationReason() {
+        return ResultadoOperacao.falha(
+                "Motivo obrigatório e limitado a "
+                        + ContemplationLimits.MAXIMUM_REASON_LENGTH
+                        + " caracteres.");
     }
 
     private String truncate(String value, int maximumLength) {

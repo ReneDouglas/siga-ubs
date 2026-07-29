@@ -1,11 +1,12 @@
 package br.com.tecsus.sigaubs.dtos;
 
+import br.com.tecsus.sigaubs.utils.SpecialtyLimits;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
 public class ProcedureDTO {
     @NotBlank
-    @Size(max = 255)
+    @Size(max = SpecialtyLimits.MAXIMUM_PROCEDURE_DESCRIPTION_LENGTH)
     private String description;
     @NotBlank
     @Size(max = 50)

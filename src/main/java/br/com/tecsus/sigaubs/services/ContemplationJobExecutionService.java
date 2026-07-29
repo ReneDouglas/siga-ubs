@@ -1,6 +1,7 @@
 package br.com.tecsus.sigaubs.services;
 
 import br.com.tecsus.sigaubs.entities.ContemplationJobExecution;
+import br.com.tecsus.sigaubs.enums.ContemplationJobStatus;
 import br.com.tecsus.sigaubs.repositories.ContemplationJobExecutionRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -22,6 +23,7 @@ public class ContemplationJobExecutionService {
     private static final Duration DEFAULT_LEASE_DURATION = Duration.ofMinutes(30);
     private static final Duration MINIMUM_LEASE_DURATION = Duration.ofMinutes(1);
     private static final Duration MAXIMUM_LEASE_DURATION = Duration.ofHours(24);
+    private static final int LEASE_RENEWAL_DIVISOR = 3;
     private static final ZoneId BUSINESS_ZONE = ZoneId.of("America/Sao_Paulo");
 
     private final ContemplationJobExecutionRepository repository;
@@ -52,7 +54,7 @@ public class ContemplationJobExecutionService {
         }
         this.repository = repository;
         this.leaseDuration = leaseDuration;
-        this.renewalInterval = leaseDuration.dividedBy(3);
+        this.renewalInterval = leaseDuration.dividedBy(LEASE_RENEWAL_DIVISOR);
         this.clock = clock;
     }
 
@@ -64,16 +66,28 @@ public class ContemplationJobExecutionService {
         String lockToken = UUID.randomUUID().toString();
 
         boolean acquired = repository.retryFailed(
-                tenantId, executionKey, now, lockToken, leaseUntil) == 1;
+                tenantId,
+                executionKey,
+                ContemplationJobStatus.RUNNING.name(),
+                ContemplationJobStatus.FAILED.name(),
+                now,
+                lockToken,
+                leaseUntil) == 1;
         if (!acquired) {
             acquired = repository.reclaimExpired(
-                    tenantId, executionKey, now, lockToken, leaseUntil) == 1;
+                    tenantId,
+                    executionKey,
+                    ContemplationJobStatus.RUNNING.name(),
+                    now,
+                    lockToken,
+                    leaseUntil) == 1;
         }
         if (!acquired) {
             acquired = repository.insertIfAbsent(
                     tenantId,
                     executionKey,
                     windowStart,
+                    ContemplationJobStatus.RUNNING.name(),
                     now,
                     lockToken,
                     leaseUntil) == 1;
@@ -89,6 +103,7 @@ public class ContemplationJobExecutionService {
         int updated = repository.renewLease(
                 lease.tenantId(),
                 lease.executionKey(),
+                ContemplationJobStatus.RUNNING.name(),
                 lease.lockToken(),
                 renewedAt,
                 renewedAt.plus(leaseDuration));
@@ -104,7 +119,8 @@ public class ContemplationJobExecutionService {
                 lease.tenantId(),
                 lease.executionKey(),
                 lease.lockToken(),
-                "COMPLETED",
+                ContemplationJobStatus.COMPLETED.name(),
+                ContemplationJobStatus.RUNNING.name(),
                 now());
         if (updated != 1) {
             throw new IllegalStateException(
@@ -118,7 +134,8 @@ public class ContemplationJobExecutionService {
                 lease.tenantId(),
                 lease.executionKey(),
                 lease.lockToken(),
-                "FAILED",
+                ContemplationJobStatus.FAILED.name(),
+                ContemplationJobStatus.RUNNING.name(),
                 now());
     }
 

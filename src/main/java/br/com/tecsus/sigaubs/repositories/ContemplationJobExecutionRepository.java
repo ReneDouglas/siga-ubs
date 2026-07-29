@@ -18,13 +18,14 @@ public interface ContemplationJobExecutionRepository
                 (tenant_id, execution_key, window_start, status, started_at,
                  lock_token, lease_until)
             VALUES
-                (:tenantId, :executionKey, :windowStart, 'RUNNING', :startedAt,
+                (:tenantId, :executionKey, :windowStart, :status, :startedAt,
                  :lockToken, :leaseUntil)
             """, nativeQuery = true)
     int insertIfAbsent(
             @Param("tenantId") Long tenantId,
             @Param("executionKey") String executionKey,
             @Param("windowStart") LocalDateTime windowStart,
+            @Param("status") String status,
             @Param("startedAt") LocalDateTime startedAt,
             @Param("lockToken") String lockToken,
             @Param("leaseUntil") LocalDateTime leaseUntil);
@@ -32,18 +33,20 @@ public interface ContemplationJobExecutionRepository
     @Modifying
     @Query("""
             UPDATE ContemplationJobExecution execution
-               SET execution.status = 'RUNNING',
+               SET execution.status = :runningStatus,
                    execution.startedAt = :startedAt,
                    execution.finishedAt = null,
                    execution.lockToken = :lockToken,
                    execution.leaseUntil = :leaseUntil
              WHERE execution.tenantId = :tenantId
                AND execution.executionKey = :executionKey
-               AND execution.status = 'FAILED'
+               AND execution.status = :failedStatus
             """)
     int retryFailed(
             @Param("tenantId") Long tenantId,
             @Param("executionKey") String executionKey,
+            @Param("runningStatus") String runningStatus,
+            @Param("failedStatus") String failedStatus,
             @Param("startedAt") LocalDateTime startedAt,
             @Param("lockToken") String lockToken,
             @Param("leaseUntil") LocalDateTime leaseUntil);
@@ -57,12 +60,13 @@ public interface ContemplationJobExecutionRepository
                    execution.leaseUntil = :leaseUntil
              WHERE execution.tenantId = :tenantId
                AND execution.executionKey = :executionKey
-               AND execution.status = 'RUNNING'
+               AND execution.status = :runningStatus
                AND execution.leaseUntil < :startedAt
             """)
     int reclaimExpired(
             @Param("tenantId") Long tenantId,
             @Param("executionKey") String executionKey,
+            @Param("runningStatus") String runningStatus,
             @Param("startedAt") LocalDateTime startedAt,
             @Param("lockToken") String lockToken,
             @Param("leaseUntil") LocalDateTime leaseUntil);
@@ -73,13 +77,14 @@ public interface ContemplationJobExecutionRepository
                SET execution.leaseUntil = :leaseUntil
              WHERE execution.tenantId = :tenantId
                AND execution.executionKey = :executionKey
-               AND execution.status = 'RUNNING'
+               AND execution.status = :runningStatus
                AND execution.lockToken = :lockToken
                AND execution.leaseUntil >= :renewedAt
             """)
     int renewLease(
             @Param("tenantId") Long tenantId,
             @Param("executionKey") String executionKey,
+            @Param("runningStatus") String runningStatus,
             @Param("lockToken") String lockToken,
             @Param("renewedAt") LocalDateTime renewedAt,
             @Param("leaseUntil") LocalDateTime leaseUntil);
@@ -91,7 +96,7 @@ public interface ContemplationJobExecutionRepository
                    execution.finishedAt = :finishedAt
              WHERE execution.tenantId = :tenantId
                AND execution.executionKey = :executionKey
-               AND execution.status = 'RUNNING'
+               AND execution.status = :runningStatus
                AND execution.lockToken = :lockToken
             """)
     int finish(
@@ -99,6 +104,7 @@ public interface ContemplationJobExecutionRepository
             @Param("executionKey") String executionKey,
             @Param("lockToken") String lockToken,
             @Param("status") String status,
+            @Param("runningStatus") String runningStatus,
             @Param("finishedAt") LocalDateTime finishedAt);
 
     Optional<ContemplationJobExecution>

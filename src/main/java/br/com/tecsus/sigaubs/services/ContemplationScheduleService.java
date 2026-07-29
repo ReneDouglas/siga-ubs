@@ -24,15 +24,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import static br.com.tecsus.sigaubs.utils.DefaultValues.QUATRO_MESES;
-
 @Service
 public class ContemplationScheduleService {
 
     private static final Logger log = LoggerFactory.getLogger(ContemplationScheduleService.class);
 
     private static final int NEXT_PATIENT = 1;
-    private static final String USERNAME_JOB = "ROTINA";
     private static final ZoneId BUSINESS_ZONE = ZoneId.of("America/Sao_Paulo");
     private static final Runnable NO_OP_HEARTBEAT = () -> {
     };
@@ -252,7 +249,8 @@ public class ContemplationScheduleService {
     private Priorities contemplatedBy(PatientOpenAppointmentDTO currentPatient,
             PatientOpenAppointmentDTO nextPatient) {
 
-        if (currentPatient.requestDate().isBefore(LocalDateTime.now().minusMonths(QUATRO_MESES))) {
+        if (QueuePriorityPolicy.hasLongWaitingTime(
+                currentPatient.requestDate(), LocalDateTime.now())) {
             return Priorities.MAIS_DE_QUATRO_MESES;
         } else if (currentPatient.priority().getValue() < nextPatient.priority().getValue()) {
             return currentPatient.priority();
@@ -261,8 +259,8 @@ public class ContemplationScheduleService {
         } else if (currentPatient.patientSocialSituationRating().getPriority() < nextPatient
                 .patientSocialSituationRating().getPriority()) {
             return Priorities.SITUACAO_SOCIAL;
-        } else if (currentPatient.patientGender().equals("Feminino")
-                && nextPatient.patientGender().equals("Masculino")) {
+        } else if (QueuePriorityPolicy.hasGenderPriority(
+                currentPatient.patientGender(), nextPatient.patientGender())) {
             return Priorities.SEXO;
         } else {
             return Priorities.DATA_DA_MARCACAO;

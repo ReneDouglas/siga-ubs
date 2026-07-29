@@ -1,6 +1,7 @@
 package br.com.tecsus.sigaubs.dtos;
 
 import br.com.tecsus.sigaubs.enums.Priorities;
+import br.com.tecsus.sigaubs.utils.ContemplationLimits;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -18,7 +19,7 @@ public class AppointmentCommandDTO {
     @NotNull
     private Priorities priority;
 
-    @Size(max = 2_000)
+    @Size(max = ContemplationLimits.MAXIMUM_OBSERVATION_LENGTH)
     private String observation;
 
     public EntityIdDTO getPatient() {

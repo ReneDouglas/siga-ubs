@@ -26,8 +26,12 @@ class EnumsTest {
         assertThat(ProcedureType.getProcedureTypeByDescription("Consulta")).isEqualTo(ProcedureType.CONSULTA);
         assertThat(ProcedureType.getMedicalProceduresDescription())
                 .containsExactly("Consulta", "Exame", "Cirurgia");
+        assertThat(ProcedureType.fromPersistenceCode(2)).isEqualTo(ProcedureType.EXAME);
+        assertThat(ProcedureType.CIRURGIA.getPersistenceCode()).isEqualTo(3);
         assertThatThrownBy(() -> ProcedureType.getProcedureTypeByDescription("Outro"))
                 .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> ProcedureType.fromPersistenceCode(99))
+                .isInstanceOf(IllegalStateException.class);
     }
 
     @Test
@@ -42,6 +46,10 @@ class EnumsTest {
         assertThat(SocialSituationRating.getDescriptionSortedByRating())
                 .first()
                 .isEqualTo("1/4 salário mínimo (R$ 353,00)");
+        assertThat(SocialSituationRating.fromPriority(1))
+                .isEqualTo(SocialSituationRating.UM_QUARTO_DE_SALARIO_MINIMO);
+        assertThatThrownBy(() -> SocialSituationRating.fromPriority(99))
+                .isInstanceOf(IllegalStateException.class);
     }
 
     @Test

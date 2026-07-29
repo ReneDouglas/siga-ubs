@@ -10,6 +10,7 @@ import br.com.tecsus.sigaubs.repositories.BasicHealthUnitRepository;
 import br.com.tecsus.sigaubs.repositories.MedicalProcedureRepository;
 import br.com.tecsus.sigaubs.repositories.MedicalSlotRepository;
 import br.com.tecsus.sigaubs.security.SystemUserDetails;
+import br.com.tecsus.sigaubs.utils.MedicalSlotLimits;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
@@ -56,8 +57,12 @@ public class MedicalSlotService {
                 || batch.getAvailableMedicalSlots().isEmpty()) {
             return ResultadoOperacao.falha("Informe ao menos uma vaga.");
         }
-        if (batch.getAvailableMedicalSlots().size() > 100) {
-            return ResultadoOperacao.falha("O lote não pode exceder 100 vagas.");
+        if (batch.getAvailableMedicalSlots().size()
+                > MedicalSlotLimits.MAXIMUM_BATCH_SIZE) {
+            return ResultadoOperacao.falha(
+                    "O lote não pode exceder "
+                            + MedicalSlotLimits.MAXIMUM_BATCH_SIZE
+                            + " vagas.");
         }
 
         Long referenceUbsId = batch.getAvailableMedicalSlots().getFirst().getBasicHealthUnit().getId();

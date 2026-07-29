@@ -1,6 +1,7 @@
 package br.com.tecsus.sigaubs.services;
 
 import br.com.tecsus.sigaubs.dtos.*;
+import br.com.tecsus.sigaubs.enums.ContemplationJobStatus;
 import br.com.tecsus.sigaubs.repositories.DashboardRepository;
 import br.com.tecsus.sigaubs.tenancy.TenantContextHolder;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -90,18 +91,19 @@ public class DashboardService {
         }
 
         var execution = latestExecution.get();
-        String status = execution.getStatus();
+        ContemplationJobStatus status =
+                ContemplationJobStatus.valueOf(execution.getStatus());
         String startTime = format(execution.getStartedAt());
         String endTime = format(execution.getFinishedAt());
-        if ("RUNNING".equals(status)
+        if (status == ContemplationJobStatus.RUNNING
                 && execution.getLeaseUntil() != null
                 && execution.getLeaseUntil().isBefore(
                         LocalDateTime.now(BUSINESS_ZONE))) {
-            status = "INTERRUPTED";
+            status = ContemplationJobStatus.INTERRUPTED;
             endTime = format(execution.getLeaseUntil());
         }
         return new ContemplationStatusDTO(
-                status, startTime, endTime, totalToday);
+                status.name(), startTime, endTime, totalToday);
     }
 
     private String format(LocalDateTime value) {

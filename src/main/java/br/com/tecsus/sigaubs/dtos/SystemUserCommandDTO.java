@@ -1,5 +1,6 @@
 package br.com.tecsus.sigaubs.dtos;
 
+import br.com.tecsus.sigaubs.config.SecurityProperties;
 import br.com.tecsus.sigaubs.utils.DocumentValidationUtils;
 import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.Email;
@@ -14,9 +15,9 @@ public class SystemUserCommandDTO {
     private Long id;
     @Size(min = 3, max = 100)
     private String username;
-    @Size(max = 64)
+    @Size(max = SecurityProperties.Password.MAXIMUM_SUPPORTED_LENGTH)
     private String password;
-    @Size(max = 64)
+    @Size(max = SecurityProperties.Password.MAXIMUM_SUPPORTED_LENGTH)
     private String confirmPassword;
     @NotBlank
     @Size(max = 255)
@@ -39,7 +40,10 @@ public class SystemUserCommandDTO {
         }
         return password != null
                 && password.equals(confirmPassword)
-                && DocumentValidationUtils.isAcceptablePassword(password, 8, 64);
+                && DocumentValidationUtils.isAcceptablePassword(
+                        password,
+                        SecurityProperties.Password.MINIMUM_SUPPORTED_LENGTH,
+                        SecurityProperties.Password.MAXIMUM_SUPPORTED_LENGTH);
     }
 
     @AssertTrue(message = "Login obrigatório.")

@@ -1,5 +1,6 @@
 package br.com.tecsus.sigaubs.dtos;
 
+import br.com.tecsus.sigaubs.utils.MedicalSlotLimits;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Size;
 
@@ -9,7 +10,7 @@ import java.util.List;
 public class MedicalSlotBatchCommandDTO {
 
     @Valid
-    @Size(max = 100)
+    @Size(max = MedicalSlotLimits.MAXIMUM_BATCH_SIZE)
     private List<MedicalSlotCommandDTO> availableMedicalSlots = new ArrayList<>();
 
     public List<MedicalSlotCommandDTO> getAvailableMedicalSlots() {

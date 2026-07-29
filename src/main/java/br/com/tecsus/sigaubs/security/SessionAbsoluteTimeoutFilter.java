@@ -1,6 +1,7 @@
 package br.com.tecsus.sigaubs.security;
 
 import br.com.tecsus.sigaubs.config.SecurityProperties;
+import br.com.tecsus.sigaubs.enums.Roles;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -43,7 +44,8 @@ public class SessionAbsoluteTimeoutFilter extends OncePerRequestFilter {
                 && authentication.isAuthenticated()
                 && authentication.getPrincipal() instanceof SystemUserDetails user) {
             boolean admin = user.getAuthorities().stream()
-                    .anyMatch(authority -> "ROLE_ADMIN".equals(authority.getAuthority()));
+                    .anyMatch(authority ->
+                            Roles.ROLE_ADMIN.name().equals(authority.getAuthority()));
             Duration maximumLifetime = admin
                     ? properties.getSession().getAdminAbsolute()
                     : properties.getSession().getTenantAbsolute();

@@ -5,14 +5,20 @@ import java.util.List;
 import java.util.Optional;
 
 public enum ProcedureType {
-    CONSULTA("Consulta"),
-    EXAME("Exame"),
-    CIRURGIA("Cirurgia");
+    CONSULTA(1, "Consulta"),
+    EXAME(2, "Exame"),
+    CIRURGIA(3, "Cirurgia");
 
+    private final int persistenceCode;
     private final String description;
 
-    ProcedureType(String description) {
+    ProcedureType(int persistenceCode, String description) {
+        this.persistenceCode = persistenceCode;
         this.description = description;
+    }
+
+    public int getPersistenceCode() {
+        return persistenceCode;
     }
 
     public String getDescription() {
@@ -29,6 +35,15 @@ public enum ProcedureType {
                 .stream(values())
                 .filter(type -> type.description.equals(d))
                 .findAny();
+    }
+
+    public static ProcedureType fromPersistenceCode(int persistenceCode) {
+        return Arrays.stream(values())
+                .filter(type -> type.persistenceCode == persistenceCode)
+                .findFirst()
+                .orElseThrow(() -> new IllegalStateException(
+                        "Tipo de procedimento não encontrado para o código: "
+                                + persistenceCode));
     }
 
     public static List<String> getMedicalProceduresDescription() {

@@ -12,11 +12,22 @@ import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.Period;
 import java.util.List;
 
 @Repository
 @Transactional(readOnly = true)
 public class DashboardRepository {
+
+        private static final int MAXIMUM_BOTTLENECK_RESULTS = 10;
+        private static final Period MONTHLY_HISTORY_PERIOD = Period.ofMonths(6);
+        private static final Period DAILY_HISTORY_PERIOD = Period.ofDays(7);
+        private static final List<Integer> ACTIVE_PRIORITY_CODES =
+                        java.util.Arrays.stream(Priorities.values())
+                                        .filter(priority -> Boolean.TRUE.equals(priority.getManual()))
+                                        .map(Priorities::getValue)
+                                        .toList();
 
         @PersistenceContext
         private EntityManager em;
@@ -45,7 +56,7 @@ public class DashboardRepository {
                                     FROM appointments a
                                     JOIN patients p ON a.id_patient = p.id AND p.tenant_id = a.tenant_id
                                     WHERE a.tenant_id = :tenantId
-                                      AND a.status = 'Aguardando Contemplação'
+                                      AND a.status = :openStatus
                                     GROUP BY p.id_basic_health_unit
                                 ) open_appts ON open_appts.ubs_id = bhu.id
                                 LEFT JOIN (
@@ -78,7 +89,7 @@ public class DashboardRepository {
                                     JOIN appointments a ON a.id_contemplation = c.id AND a.tenant_id = c.tenant_id
                                     JOIN patients p ON a.id_patient = p.id AND p.tenant_id = a.tenant_id
                                     WHERE c.tenant_id = :tenantId
-                                      AND c.contemplation_date >= DATE_SUB(NOW(), INTERVAL 6 MONTH)
+                                      AND c.contemplation_date >= :historyStart
                                     GROUP BY p.id_basic_health_unit
                                 ) wait_times ON wait_times.ubs_id = bhu.id
                                 WHERE bhu.tenant_id = :tenantId
@@ -87,6 +98,14 @@ public class DashboardRepository {
 
                 List<Object[]> results = em.createNativeQuery(sql)
                                 .setParameter("tenantId", tenantId)
+                                .setParameter(
+                                                "openStatus",
+                                                AppointmentStatus.AGUARDANDO_CONTEMPLACAO
+                                                                .getDescription())
+                                .setParameter(
+                                                "historyStart",
+                                                LocalDateTime.now()
+                                                                .minus(MONTHLY_HISTORY_PERIOD))
                                 .setParameter("startOfMonth", startOfMonth)
                                 .setParameter("startOfNextMonth", startOfNextMonth)
                                 .getResultList();
@@ -115,13 +134,17 @@ public class DashboardRepository {
                                 SELECT DATE_FORMAT(a.request_date, '%d/%m') AS dia, COUNT(a.id) AS total
                                 FROM appointments a
                                 WHERE a.tenant_id = :tenantId
-                                AND a.request_date >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+                                AND a.request_date >= :historyStart
                                 GROUP BY DATE(a.request_date), DATE_FORMAT(a.request_date, '%d/%m')
                                 ORDER BY DATE(a.request_date)
                                 """;
 
                 List<Object[]> results = em.createNativeQuery(sql)
                                 .setParameter("tenantId", tenantId)
+                                .setParameter(
+                                                "historyStart",
+                                                LocalDateTime.now()
+                                                                .minus(DAILY_HISTORY_PERIOD))
                                 .getResultList();
 
                 return results.stream()
@@ -142,14 +165,22 @@ public class DashboardRepository {
                                 SELECT DATE_FORMAT(a.request_date, '%b/%Y') AS mes, COUNT(a.id) AS total
                                 FROM appointments a
                                 WHERE a.tenant_id = :tenantId
-                                AND a.status = 'Aguardando Contemplação'
-                                AND a.request_date >= DATE_SUB(NOW(), INTERVAL 6 MONTH)
+                                AND a.status = :openStatus
+                                AND a.request_date >= :historyStart
                                 GROUP BY DATE_FORMAT(a.request_date, '%Y-%m'), DATE_FORMAT(a.request_date, '%b/%Y')
                                 ORDER BY DATE_FORMAT(a.request_date, '%Y-%m')
                                 """;
 
                 List<Object[]> results = em.createNativeQuery(sql)
                                 .setParameter("tenantId", tenantId)
+                                .setParameter(
+                                                "openStatus",
+                                                AppointmentStatus.AGUARDANDO_CONTEMPLACAO
+                                                                .getDescription())
+                                .setParameter(
+                                                "historyStart",
+                                                LocalDateTime.now()
+                                                                .minus(MONTHLY_HISTORY_PERIOD))
                                 .getResultList();
 
                 return results.stream()
@@ -170,13 +201,17 @@ public class DashboardRepository {
                                 SELECT DATE_FORMAT(c.contemplation_date, '%b/%Y') AS mes, COUNT(c.id) AS total
                                 FROM contemplations c
                                 WHERE c.tenant_id = :tenantId
-                                AND c.contemplation_date >= DATE_SUB(NOW(), INTERVAL 6 MONTH)
+                                AND c.contemplation_date >= :historyStart
                                 GROUP BY DATE_FORMAT(c.contemplation_date, '%Y-%m'), DATE_FORMAT(c.contemplation_date, '%b/%Y')
                                 ORDER BY DATE_FORMAT(c.contemplation_date, '%Y-%m')
                                 """;
 
                 List<Object[]> results = em.createNativeQuery(sql)
                                 .setParameter("tenantId", tenantId)
+                                .setParameter(
+                                                "historyStart",
+                                                LocalDateTime.now()
+                                                                .minus(MONTHLY_HISTORY_PERIOD))
                                 .getResultList();
 
                 return results.stream()
@@ -197,14 +232,19 @@ public class DashboardRepository {
                                 SELECT a.priority AS prioridade, COUNT(a.id) AS total
                                 FROM appointments a
                                 WHERE a.tenant_id = :tenantId
-                                AND a.status = 'Aguardando Contemplação'
-                                AND a.priority IN (2, 3, 4, 8, 9)
+                                AND a.status = :openStatus
+                                AND a.priority IN (:activePriorities)
                                 GROUP BY a.priority
                                 ORDER BY total DESC
                                 """;
 
                 List<Object[]> results = em.createNativeQuery(sql)
                                 .setParameter("tenantId", tenantId)
+                                .setParameter(
+                                                "openStatus",
+                                                AppointmentStatus.AGUARDANDO_CONTEMPLACAO
+                                                                .getDescription())
+                                .setParameter("activePriorities", ACTIVE_PRIORITY_CODES)
                                 .getResultList();
 
                 return results.stream()
@@ -232,13 +272,17 @@ public class DashboardRepository {
                                 FROM appointments a
                                 JOIN medical_procedures mp ON a.id_medical_procedure = mp.id
                                 WHERE a.tenant_id = :tenantId
-                                AND a.status = 'Aguardando Contemplação'
+                                AND a.status = :openStatus
                                 GROUP BY mp.type
                                 ORDER BY total DESC
                                 """;
 
                 List<Object[]> results = em.createNativeQuery(sql)
                                 .setParameter("tenantId", tenantId)
+                                .setParameter(
+                                                "openStatus",
+                                                AppointmentStatus.AGUARDANDO_CONTEMPLACAO
+                                                                .getDescription())
                                 .getResultList();
 
                 return results.stream()
@@ -283,7 +327,7 @@ public class DashboardRepository {
                                      JOIN patients p ON a.id_patient = p.id AND p.tenant_id = a.tenant_id
                                      WHERE p.id_basic_health_unit = :ubsId
                                      AND a.tenant_id = :tenantId
-                                     AND a.status = 'Aguardando Contemplação') AS total_open,
+                                     AND a.status = :openStatus) AS total_open,
                                     (SELECT COUNT(c.id) FROM contemplations c
                                      JOIN medical_slots ms ON c.id_available_medical_slot = ms.id AND ms.tenant_id = c.tenant_id
                                      WHERE ms.id_basic_health_unit = :ubsId
@@ -301,6 +345,10 @@ public class DashboardRepository {
                 List<Tuple> results = em.createNativeQuery(sql, Tuple.class)
                                 .setParameter("ubsId", ubsId)
                                 .setParameter("tenantId", tenantId)
+                                .setParameter(
+                                                "openStatus",
+                                                AppointmentStatus.AGUARDANDO_CONTEMPLACAO
+                                                                .getDescription())
                                 .setParameter("startOfMonth", startOfMonth)
                                 .setParameter("startOfNextMonth", startOfNextMonth)
                                 .getResultList();
@@ -373,14 +421,18 @@ public class DashboardRepository {
                                 JOIN medical_procedures mp ON a.id_medical_procedure = mp.id
                                 JOIN specialties s ON mp.id_specialty = s.id
                                 WHERE a.tenant_id = :tenantId
-                                AND a.status = 'Aguardando Contemplação'
+                                AND a.status = :openStatus
                                 GROUP BY s.title, mp.description
                                 ORDER BY total_fila DESC
-                                LIMIT 10
                                 """;
 
                 List<Object[]> results = em.createNativeQuery(sql)
                                 .setParameter("tenantId", tenantId)
+                                .setParameter(
+                                                "openStatus",
+                                                AppointmentStatus.AGUARDANDO_CONTEMPLACAO
+                                                                .getDescription())
+                                .setMaxResults(MAXIMUM_BOTTLENECK_RESULTS)
                                 .getResultList();
 
                 return results.stream()

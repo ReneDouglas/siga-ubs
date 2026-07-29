@@ -19,6 +19,7 @@ public class ContemplationScheduleV2 {
     private final ContemplationScheduleService contemplationScheduleService;
 
     private static final int MAX_ATTEMPTS = 4;
+    private static final long RETRY_BACKOFF_MILLIS = 5_000L;
 
     @Autowired
     public ContemplationScheduleV2(
@@ -27,7 +28,10 @@ public class ContemplationScheduleV2 {
     }
 
     @Scheduled(cron = "${schedule.cron.contemplation}", zone = "${schedule.cron.contemplation.zone}")
-    @Retryable(retryFor = RuntimeException.class, maxAttempts = MAX_ATTEMPTS, backoff = @Backoff(delay = 5000))
+    @Retryable(
+            retryFor = RuntimeException.class,
+            maxAttempts = MAX_ATTEMPTS,
+            backoff = @Backoff(delay = RETRY_BACKOFF_MILLIS))
     public void processContemplationTask() throws RuntimeException {
 
         if (RetrySynchronizationManager.getContext().getRetryCount() > 0) {

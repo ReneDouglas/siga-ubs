@@ -1,15 +1,17 @@
 package br.com.tecsus.sigaubs.controllers;
 
+import br.com.tecsus.sigaubs.config.SecurityProperties;
 import br.com.tecsus.sigaubs.dtos.SystemUserCommandDTO;
 import br.com.tecsus.sigaubs.dtos.SystemUserSearchDTO;
 import br.com.tecsus.sigaubs.dtos.DashboardDTO;
 import br.com.tecsus.sigaubs.entities.SystemUser;
+import br.com.tecsus.sigaubs.security.ActorContext;
 import br.com.tecsus.sigaubs.security.SystemUserDetails;
 import br.com.tecsus.sigaubs.security.ReauthenticationService;
 import br.com.tecsus.sigaubs.services.BasicHealthUnitService;
 import br.com.tecsus.sigaubs.services.DashboardService;
 import br.com.tecsus.sigaubs.services.SystemUserService;
-import br.com.tecsus.sigaubs.utils.DefaultValues;
+import br.com.tecsus.sigaubs.utils.PaginationPolicy;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
@@ -18,7 +20,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -42,26 +43,34 @@ public class SessionController {
     private final BasicHealthUnitService basicHealthUnitService;
     private final DashboardService dashboardService;
     private final ReauthenticationService reauthenticationService;
+    private final SecurityProperties securityProperties;
 
     @Autowired
     public SessionController(SystemUserService systemUserService, BasicHealthUnitService basicHealthUnitService,
             DashboardService dashboardService,
-            ReauthenticationService reauthenticationService) {
+            ReauthenticationService reauthenticationService,
+            SecurityProperties securityProperties) {
         this.systemUserService = systemUserService;
         this.basicHealthUnitService = basicHealthUnitService;
         this.dashboardService = dashboardService;
         this.reauthenticationService = reauthenticationService;
+        this.securityProperties = securityProperties;
     }
 
     SessionController(SystemUserService systemUserService, BasicHealthUnitService basicHealthUnitService,
             DashboardService dashboardService) {
-        this(systemUserService, basicHealthUnitService, dashboardService, null);
+        this(
+                systemUserService,
+                basicHealthUnitService,
+                dashboardService,
+                null,
+                new SecurityProperties());
     }
 
     @GetMapping("/")
     public String getHomePage(Model model, @AuthenticationPrincipal SystemUserDetails loggedUser) {
-        boolean isAdminOrSms = loggedUser.getAuthorities().stream()
-                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN") || a.getAuthority().equals("ROLE_SMS"));
+        boolean isAdminOrSms = ActorContext.from(loggedUser)
+                .canAccessAllBasicHealthUnits();
 
         if (isAdminOrSms) {
             model.addAttribute("dashboard", dashboardService.loadDashboardData());
@@ -120,7 +129,8 @@ public class SessionController {
             @Valid @ModelAttribute("searchUser") SystemUserSearchDTO searchUser,
             BindingResult bindingResult,
             @RequestParam(value = "page", defaultValue = "0", required = false) int currentPage,
-            @RequestParam(value = "size", defaultValue = "" + DefaultValues.PAGE_SIZE, required = false) int pageSize,
+            @RequestParam(value = "size", defaultValue = ""
+                    + PaginationPolicy.DEFAULT_PAGE_SIZE, required = false) int pageSize,
             HttpServletRequest request) {
 
         Page<SystemUser> systemUsersPage;
@@ -132,9 +142,13 @@ public class SessionController {
 
         SystemUser systemUser = searchUser.toFilterEntity();
         systemUsersPage = systemUserService
-                .findAllUsersByCreationUserPaginated(systemUser,
-                        PageRequest.of(Math.max(0, currentPage), Math.clamp(pageSize, 1, 100),
-                                Sort.Direction.DESC, "creationDate"));
+                .findAllUsersByCreationUserPaginated(
+                        systemUser,
+                        PaginationPolicy.pageRequest(
+                                currentPage,
+                                pageSize,
+                                Sort.Direction.DESC,
+                                "creationDate"));
         model.addAttribute("systemUsersPage", systemUsersPage);
 
         if ("searchRequest".equals(request.getHeader("X-Requested-With"))) {
@@ -196,7 +210,9 @@ public class SessionController {
 
         Page<SystemUser> systemUsersPage = systemUserService
                 .findAllUsersByCreationUserPaginated(su,
-                        PageRequest.of(0, DefaultValues.PAGE_SIZE, Sort.Direction.valueOf("DESC"), "creationDate"));
+                        PaginationPolicy.defaultPageRequest(
+                                Sort.Direction.DESC,
+                                "creationDate"));
         model.addAttribute("systemUsersPage", systemUsersPage);
 
         return "sessionManagement/systemUser_management";
@@ -269,7 +285,9 @@ public class SessionController {
             HttpSession session) {
 
         try {
-            if (password == null || password.length() > 64
+            if (password == null
+                    || password.length()
+                            > securityProperties.getPassword().getMaximumLength()
                     || !ReauthenticationService.MANUAL_CONTEMPLATION.equals(action)
                     || objectId == null) {
                 return ResponseEntity.badRequest().body("Solicitação de reautenticação inválida.");

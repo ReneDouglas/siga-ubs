@@ -31,4 +31,17 @@ class UtilsTest {
         assertThat(TemplateUtils.formatYearMonth(null)).isEmpty();
     }
 
+    @Test
+    void deveAplicarPoliticasDePaginacaoEAutocomplete() {
+        assertThat(PaginationPolicy.normalizePageNumber(-1)).isZero();
+        assertThat(PaginationPolicy.normalizePageSize(0)).isEqualTo(1);
+        assertThat(PaginationPolicy.normalizePageSize(101)).isEqualTo(100);
+        assertThat(PaginationPolicy.defaultPageRequest().getPageSize()).isEqualTo(15);
+
+        assertThat(AutocompletePolicy.isPatientTermTooShort("abc")).isTrue();
+        assertThat(AutocompletePolicy.isPatientTermTooShort("abcd")).isFalse();
+        assertThat(AutocompletePolicy.isUserTermTooShort("ab")).isTrue();
+        assertThat(AutocompletePolicy.isUserTermTooShort("abc")).isFalse();
+    }
+
 }

@@ -7,11 +7,10 @@ import br.com.tecsus.sigaubs.security.SystemUserDetails;
 import br.com.tecsus.sigaubs.services.BasicHealthUnitService;
 import br.com.tecsus.sigaubs.services.ContemplationService;
 import br.com.tecsus.sigaubs.services.SpecialtyService;
-import br.com.tecsus.sigaubs.utils.DefaultValues;
+import br.com.tecsus.sigaubs.utils.PaginationPolicy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
@@ -54,7 +53,7 @@ public class ContemplationController {
                         null,
                         "",
                         "",
-                        PageRequest.of(0, DefaultValues.PAGE_SIZE));
+                        PaginationPolicy.defaultPageRequest());
         var exames = contemplationService
                 .findContemplationsByUBSAndSpecialty(
                         ProcedureType.EXAME,
@@ -62,7 +61,7 @@ public class ContemplationController {
                         null,
                         "",
                         "",
-                        PageRequest.of(0, DefaultValues.PAGE_SIZE));
+                        PaginationPolicy.defaultPageRequest());
         var cirurgias = contemplationService
                 .findContemplationsByUBSAndSpecialty(
                         ProcedureType.CIRURGIA,
@@ -70,7 +69,7 @@ public class ContemplationController {
                         null,
                         YearMonth.now().toString(),
                         "",
-                        PageRequest.of(0, DefaultValues.PAGE_SIZE));
+                        PaginationPolicy.defaultPageRequest());
 
         addFilterOptions(model);
         model.addAttribute("consultasPage", consultas);
@@ -96,7 +95,7 @@ public class ContemplationController {
                         specialty,
                         referenceMonth,
                         status,
-                        PageRequest.of(0, DefaultValues.PAGE_SIZE));
+                        PaginationPolicy.defaultPageRequest());
         var exames = contemplationService
                 .findContemplationsByUBSAndSpecialty(
                         ProcedureType.EXAME,
@@ -104,7 +103,7 @@ public class ContemplationController {
                         specialty,
                         referenceMonth,
                         status,
-                        PageRequest.of(0, DefaultValues.PAGE_SIZE));
+                        PaginationPolicy.defaultPageRequest());
         var cirurgias = contemplationService
                 .findContemplationsByUBSAndSpecialty(
                         ProcedureType.CIRURGIA,
@@ -112,7 +111,7 @@ public class ContemplationController {
                         specialty,
                         referenceMonth,
                         status,
-                        PageRequest.of(0, DefaultValues.PAGE_SIZE));
+                        PaginationPolicy.defaultPageRequest());
 
         model.addAttribute("selectedUBS", basicHealthUnit);
         model.addAttribute("basicHealthUnits", basicHealthUnitService.findAllUBS());
@@ -140,9 +139,12 @@ public class ContemplationController {
     @GetMapping("/contemplation-management/paginated")
     public String getMedicalSlotsPaginated(Model model,
                                            @RequestParam(value = "page", defaultValue = "0", required = false) int currentPage,
-                                           @RequestParam(value = "consultasPageSize", defaultValue = "" + DefaultValues.PAGE_SIZE, required = false) int consultasPageSize,
-                                           @RequestParam(value = "examesPageSize", defaultValue = "" + DefaultValues.PAGE_SIZE, required = false) int examesPageSize,
-                                           @RequestParam(value = "cirurgiasPageSize", defaultValue = "" + DefaultValues.PAGE_SIZE, required = false) int cirurgiasPageSize,
+                                           @RequestParam(value = "consultasPageSize", defaultValue = ""
+                                                   + PaginationPolicy.DEFAULT_PAGE_SIZE, required = false) int consultasPageSize,
+                                           @RequestParam(value = "examesPageSize", defaultValue = ""
+                                                   + PaginationPolicy.DEFAULT_PAGE_SIZE, required = false) int examesPageSize,
+                                           @RequestParam(value = "cirurgiasPageSize", defaultValue = ""
+                                                   + PaginationPolicy.DEFAULT_PAGE_SIZE, required = false) int cirurgiasPageSize,
                                            @RequestParam(value = "ubs", required = false) Long ubs,
                                            @RequestParam(value = "specialty", required = false) Long specialty,
                                            @RequestParam(value = "month", required = false) String referenceMonth,
@@ -162,7 +164,7 @@ public class ContemplationController {
                             specialty,
                             referenceMonth,
                             status,
-                            PageRequest.of(Math.max(0, currentPage), Math.clamp(consultasPageSize, 1, 100))));
+                            PaginationPolicy.pageRequest(currentPage, consultasPageSize)));
             return "contemplationManagement/contemplationFragments/consultas_datatable";
         } else if (procedureType.equals(ProcedureType.EXAME.toString())) {
             model.addAttribute("examesPage", contemplationService
@@ -172,7 +174,7 @@ public class ContemplationController {
                             specialty,
                             referenceMonth,
                             status,
-                            PageRequest.of(Math.max(0, currentPage), Math.clamp(examesPageSize, 1, 100))));
+                            PaginationPolicy.pageRequest(currentPage, examesPageSize)));
             return "contemplationManagement/contemplationFragments/exames_datatable";
         } else if (procedureType.equals(ProcedureType.CIRURGIA.toString())) {
             model.addAttribute("cirurgiasPage", contemplationService
@@ -182,7 +184,7 @@ public class ContemplationController {
                             specialty,
                             referenceMonth,
                             status,
-                            PageRequest.of(Math.max(0, currentPage), Math.clamp(cirurgiasPageSize, 1, 100))));
+                            PaginationPolicy.pageRequest(currentPage, cirurgiasPageSize)));
             return "contemplationManagement/contemplationFragments/cirurgias_datatable";
 
         }

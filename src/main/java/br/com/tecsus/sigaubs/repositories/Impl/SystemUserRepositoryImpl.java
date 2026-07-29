@@ -3,6 +3,7 @@ package br.com.tecsus.sigaubs.repositories.Impl;
 import br.com.tecsus.sigaubs.dtos.UBSsystemUserDTO;
 import br.com.tecsus.sigaubs.entities.SystemUser;
 import br.com.tecsus.sigaubs.repositories.SystemUserRepositoryCustom;
+import br.com.tecsus.sigaubs.utils.AutocompletePolicy;
 import br.com.tecsus.sigaubs.utils.ValidationUtils;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.Query;
@@ -46,7 +47,7 @@ public class SystemUserRepositoryImpl implements SystemUserRepositoryCustom {
 
         TypedQuery<UBSsystemUserDTO> usersQuery = em.createQuery(jpql, UBSsystemUserDTO.class);
         usersQuery.setParameter("name", name);
-        usersQuery.setMaxResults(5);
+        usersQuery.setMaxResults(AutocompletePolicy.MAXIMUM_RESULTS);
 
         return usersQuery.getResultList();
     }

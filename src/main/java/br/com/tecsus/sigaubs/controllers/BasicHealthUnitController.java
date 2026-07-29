@@ -7,6 +7,7 @@ import br.com.tecsus.sigaubs.security.SystemUserDetails;
 import br.com.tecsus.sigaubs.services.BasicHealthUnitService;
 import br.com.tecsus.sigaubs.services.SpecialtyService;
 import br.com.tecsus.sigaubs.services.SystemUserService;
+import br.com.tecsus.sigaubs.utils.AutocompletePolicy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -172,8 +173,7 @@ public class BasicHealthUnitController {
             return "basicHealthUnitManagement/ubsFragments/dropdownUserUBS";
         }
 
-        final int THRESHOLD = 3;
-        if (systemUser.length() < THRESHOLD) {
+        if (AutocompletePolicy.isUserTermTooShort(systemUser)) {
             model.addAttribute("users", List.of());
             return "basicHealthUnitManagement/ubsFragments/dropdownUserUBS";
         }

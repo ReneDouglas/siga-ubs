@@ -1,5 +1,6 @@
 package br.com.tecsus.sigaubs.services;
 
+import br.com.tecsus.sigaubs.config.CacheNames;
 import br.com.tecsus.sigaubs.dtos.TenantSearchDTO;
 import br.com.tecsus.sigaubs.dtos.TenantCommandDTO;
 import br.com.tecsus.sigaubs.dtos.ResultadoOperacao;
@@ -51,7 +52,7 @@ public class TenantManagementService {
                 .orElseGet(() -> ResultadoOperacao.falha("Tenant não encontrado."));
     }
 
-    @CacheEvict(value = "tenants", allEntries = true)
+    @CacheEvict(value = CacheNames.TENANTS, allEntries = true)
     @Transactional
     public ResultadoOperacao<Tenant> create(Tenant tenant, SystemUserDetails loggedUser) {
         String slug = normalizeSlug(tenant.getSlug());
@@ -79,7 +80,7 @@ public class TenantManagementService {
         return ResultadoOperacao.sucesso(tenantRepository.save(tenant));
     }
 
-    @CacheEvict(value = "tenants", allEntries = true)
+    @CacheEvict(value = CacheNames.TENANTS, allEntries = true)
     @Transactional
     public ResultadoOperacao<Tenant> create(TenantCommandDTO command, SystemUserDetails loggedUser) {
         Tenant tenant = new Tenant();
@@ -89,7 +90,7 @@ public class TenantManagementService {
         return create(tenant, loggedUser);
     }
 
-    @CacheEvict(value = "tenants", allEntries = true)
+    @CacheEvict(value = CacheNames.TENANTS, allEntries = true)
     @Transactional
     public ResultadoOperacao<Tenant> update(TenantCommandDTO command, SystemUserDetails loggedUser) {
         Tenant tenant = new Tenant();
@@ -99,7 +100,7 @@ public class TenantManagementService {
         return update(tenant, loggedUser);
     }
 
-    @CacheEvict(value = "tenants", allEntries = true)
+    @CacheEvict(value = CacheNames.TENANTS, allEntries = true)
     @Transactional
     public ResultadoOperacao<Tenant> update(Tenant tenant, SystemUserDetails loggedUser) {
         Tenant persisted = tenantRepository.findById(tenant.getId()).orElse(null);
@@ -121,7 +122,7 @@ public class TenantManagementService {
         return ResultadoOperacao.sucesso(tenantRepository.save(persisted));
     }
 
-    @CacheEvict(value = "tenants", allEntries = true)
+    @CacheEvict(value = CacheNames.TENANTS, allEntries = true)
     @Transactional
     public ResultadoOperacao<Void> disable(Long id, String reason, SystemUserDetails loggedUser) {
         Tenant tenant = tenantRepository.findById(id).orElse(null);
@@ -141,7 +142,7 @@ public class TenantManagementService {
         return ResultadoOperacao.sucessoSemValor();
     }
 
-    @CacheEvict(value = "tenants", allEntries = true)
+    @CacheEvict(value = CacheNames.TENANTS, allEntries = true)
     @Transactional
     public ResultadoOperacao<Void> reactivate(Long id, SystemUserDetails loggedUser) {
         Tenant tenant = tenantRepository.findById(id).orElse(null);
@@ -160,7 +161,7 @@ public class TenantManagementService {
         return ResultadoOperacao.sucessoSemValor();
     }
 
-    @CacheEvict(value = "tenants", allEntries = true)
+    @CacheEvict(value = CacheNames.TENANTS, allEntries = true)
     @Transactional
     public ResultadoOperacao<Void> startMaintenance(Long id, String message, SystemUserDetails loggedUser) {
         Tenant tenant = tenantRepository.findById(id).orElse(null);
@@ -180,7 +181,7 @@ public class TenantManagementService {
         return ResultadoOperacao.sucessoSemValor();
     }
 
-    @CacheEvict(value = "tenants", allEntries = true)
+    @CacheEvict(value = CacheNames.TENANTS, allEntries = true)
     @Transactional
     public ResultadoOperacao<Void> endMaintenance(Long id, SystemUserDetails loggedUser) {
         Tenant tenant = tenantRepository.findById(id).orElse(null);
@@ -199,7 +200,7 @@ public class TenantManagementService {
         return ResultadoOperacao.sucessoSemValor();
     }
 
-    @CacheEvict(value = "tenants", allEntries = true)
+    @CacheEvict(value = CacheNames.TENANTS, allEntries = true)
     @Transactional
     public ResultadoOperacao<Tenant> updateSlug(Long id,
             String newSlug,

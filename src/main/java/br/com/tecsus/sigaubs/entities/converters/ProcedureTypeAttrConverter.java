@@ -14,11 +14,7 @@ public class ProcedureTypeAttrConverter implements AttributeConverter<ProcedureT
             return null;
         }
 
-        return switch (attribute) {
-            case CONSULTA -> 1;
-            case EXAME -> 2;
-            case CIRURGIA -> 3;
-        };
+        return attribute.getPersistenceCode();
     }
 
     @Override
@@ -28,11 +24,6 @@ public class ProcedureTypeAttrConverter implements AttributeConverter<ProcedureT
             return null;
         }
 
-        return switch (dbData) {
-            case 1 -> ProcedureType.CONSULTA;
-            case 2 -> ProcedureType.EXAME;
-            case 3 -> ProcedureType.CIRURGIA;
-            default -> throw new IllegalStateException("Unexpected value: " + dbData);
-        };
+        return ProcedureType.fromPersistenceCode(dbData);
     }
 }

@@ -76,7 +76,9 @@ class TenantSessionServiceTest {
 
         service.expireTenantScopedSessions();
 
-        verify(jdbc).update("DELETE FROM SPRING_SESSION WHERE PRINCIPAL_NAME LIKE 'tenant:%'");
+        verify(jdbc).update(
+                "DELETE FROM SPRING_SESSION WHERE PRINCIPAL_NAME LIKE ?",
+                "tenant:%");
         verify(active).expireNow();
         verify(registry, never()).getAllSessions(admin, false);
     }

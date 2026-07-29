@@ -1,5 +1,6 @@
 package br.com.tecsus.sigaubs.tenancy;
 
+import br.com.tecsus.sigaubs.config.CacheNames;
 import br.com.tecsus.sigaubs.entities.Tenant;
 import br.com.tecsus.sigaubs.enums.TenantStatus;
 import br.com.tecsus.sigaubs.repositories.TenantRepository;
@@ -43,7 +44,7 @@ public class TenantResolverService {
     }
 
     @Cacheable(
-            value = "tenants",
+            value = CacheNames.TENANTS,
             key = "'context:' + (#slug == null ? '' : #slug.trim().toLowerCase(T(java.util.Locale).ROOT))",
             unless = "#result == null")
     @Transactional(readOnly = true)
@@ -61,7 +62,7 @@ public class TenantResolverService {
     }
 
     @Cacheable(
-            value = "tenants",
+            value = CacheNames.TENANTS,
             key = "'active:' + (#slug == null ? '' : #slug.trim().toLowerCase(T(java.util.Locale).ROOT))",
             unless = "#result == null")
     @Transactional(readOnly = true)

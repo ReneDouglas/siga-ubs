@@ -1,5 +1,6 @@
 package br.com.tecsus.sigaubs.dtos;
 
+import br.com.tecsus.sigaubs.utils.SpecialtyLimits;
 import java.util.ArrayList;
 import java.util.List;
 import jakarta.validation.Valid;
@@ -17,7 +18,7 @@ public class SpecialtyDTO {
     private String description;
     private Boolean active;
     @Valid
-    @Size(max = 100)
+    @Size(max = SpecialtyLimits.MAXIMUM_PROCEDURES)
     private List<ProcedureDTO> procedures = new ArrayList<>();
 
     public Long getId() {

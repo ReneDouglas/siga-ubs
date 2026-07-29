@@ -2,6 +2,7 @@ package br.com.tecsus.sigaubs.security.config;
 
 import br.com.tecsus.sigaubs.services.SystemUserService;
 import br.com.tecsus.sigaubs.services.AdminUserDetailsService;
+import br.com.tecsus.sigaubs.enums.Roles;
 import br.com.tecsus.sigaubs.tenancy.TenantResolutionFilter;
 import br.com.tecsus.sigaubs.tenancy.TenantResolverService;
 import br.com.tecsus.sigaubs.tenancy.TenantSessionValidationFilter;
@@ -12,6 +13,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
+import org.springframework.http.HttpHeaders;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.Customizer;
@@ -41,6 +43,12 @@ import static org.springframework.security.web.header.writers.ClearSiteDataHeade
 @EnableWebSecurity
 @EnableMethodSecurity
 public class WebSecurityConfig {
+
+    private static final String SERVLET_SESSION_COOKIE = "JSESSIONID";
+    private static final String SPRING_SESSION_COOKIE = "SESSION";
+    private static final String APPLICATION_SESSION_COOKIE = "SIGAUBS_SESSION";
+    private static final String SECURE_APPLICATION_SESSION_COOKIE =
+            "__Host-SIGAUBS_SESSION";
 
     private final TenantResolutionFilter tenantResolutionFilter;
     private final TenantSessionValidationFilter tenantSessionValidationFilter;
@@ -78,7 +86,8 @@ public class WebSecurityConfig {
             AdminUserDetailsService adminUserDetailsService,
             SessionRegistry sessionRegistry) throws Exception {
 
-        http.securityMatcher(request -> tenantResolverService.isAdminHost(request.getHeader("Host")));
+        http.securityMatcher(request ->
+                tenantResolverService.isAdminHost(request.getHeader(HttpHeaders.HOST)));
         http.authorizeHttpRequests(authConfig -> {
             authConfig.requestMatchers(
                     "/css/**",
@@ -93,7 +102,8 @@ public class WebSecurityConfig {
                     "/webjars/**",
                     "/favicon.ico",
                     "/actuator/health").permitAll();
-            authConfig.requestMatchers("/admin/**").hasRole("ADMIN");
+            authConfig.requestMatchers("/admin/**")
+                    .hasAuthority(Roles.ROLE_ADMIN.name());
             authConfig.anyRequest().denyAll();
         });
         http.formLogin(login -> {
@@ -110,7 +120,10 @@ public class WebSecurityConfig {
             logout.addLogoutHandler(new HeaderWriterLogoutHandler(new ClearSiteDataHeaderWriter(COOKIES)));
             logout.clearAuthentication(true);
             logout.deleteCookies(
-                    "JSESSIONID", "SESSION", "SIGAUBS_SESSION", "__Host-SIGAUBS_SESSION");
+                    SERVLET_SESSION_COOKIE,
+                    SPRING_SESSION_COOKIE,
+                    APPLICATION_SESSION_COOKIE,
+                    SECURE_APPLICATION_SESSION_COOKIE);
             logout.invalidateHttpSession(true);
         });
         http.csrf(Customizer.withDefaults());
@@ -118,7 +131,10 @@ public class WebSecurityConfig {
         http.sessionManagement(session -> {
             session.sessionFixation(fixation -> fixation.newSession());
             session.sessionConcurrency(concurrency -> {
-                concurrency.maximumSessions(3).expiredUrl("/expired").maxSessionsPreventsLogin(true)
+                concurrency.maximumSessions(
+                                securityProperties.getSession().getMaximumConcurrentSessions())
+                        .expiredUrl("/expired")
+                        .maxSessionsPreventsLogin(true)
                         .sessionRegistry(sessionRegistry);
             });
         });
@@ -140,7 +156,8 @@ public class WebSecurityConfig {
         http.authorizeHttpRequests(authConfig -> {
             authConfig.requestMatchers(PUBLIC_MATCHERS).permitAll();
             authConfig.requestMatchers("/actuator/health").permitAll();
-            authConfig.requestMatchers("/actuator/**").hasRole("ADMIN");
+            authConfig.requestMatchers("/actuator/**")
+                    .hasAuthority(Roles.ROLE_ADMIN.name());
             authConfig.requestMatchers("/admin/**").denyAll();
             authConfig.requestMatchers(PRIVATE_MATCHERS).authenticated();
             authConfig.anyRequest().authenticated();
@@ -158,7 +175,10 @@ public class WebSecurityConfig {
             logout.addLogoutHandler(new HeaderWriterLogoutHandler(new ClearSiteDataHeaderWriter(COOKIES)));
             logout.clearAuthentication(true);
             logout.deleteCookies(
-                    "JSESSIONID", "SESSION", "SIGAUBS_SESSION", "__Host-SIGAUBS_SESSION");
+                    SERVLET_SESSION_COOKIE,
+                    SPRING_SESSION_COOKIE,
+                    APPLICATION_SESSION_COOKIE,
+                    SECURE_APPLICATION_SESSION_COOKIE);
             logout.invalidateHttpSession(true);
         });
         http.csrf(Customizer.withDefaults());
@@ -166,7 +186,10 @@ public class WebSecurityConfig {
         http.sessionManagement(session -> {
             session.sessionFixation(fixation -> fixation.newSession());
             session.sessionConcurrency(concurrency -> {
-                concurrency.maximumSessions(3).expiredUrl("/expired").maxSessionsPreventsLogin(true)
+                concurrency.maximumSessions(
+                                securityProperties.getSession().getMaximumConcurrentSessions())
+                        .expiredUrl("/expired")
+                        .maxSessionsPreventsLogin(true)
                         .sessionRegistry(sessionRegistry);
             });
         });

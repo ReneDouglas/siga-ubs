@@ -10,7 +10,8 @@ import br.com.tecsus.sigaubs.enums.SocialSituationRating;
 import br.com.tecsus.sigaubs.security.SystemUserDetails;
 import br.com.tecsus.sigaubs.services.BasicHealthUnitService;
 import br.com.tecsus.sigaubs.services.PatientService;
-import br.com.tecsus.sigaubs.utils.DefaultValues;
+import br.com.tecsus.sigaubs.utils.AutocompletePolicy;
+import br.com.tecsus.sigaubs.utils.PaginationPolicy;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -154,17 +155,21 @@ public class PatientController {
                                   BindingResult bindingResult,
                                   @AuthenticationPrincipal SystemUserDetails loggedUser,
                                   @RequestParam(value = "page", defaultValue = "0", required = false) int currentPage,
-                                  @RequestParam(value = "pageSize", defaultValue = "" + DefaultValues.PAGE_SIZE, required = false) int pageSize,
+                                  @RequestParam(value = "pageSize", defaultValue = ""
+                                          + PaginationPolicy.DEFAULT_PAGE_SIZE, required = false) int pageSize,
                                   @RequestParam(value = "pagination", defaultValue = "false", required = false) boolean isPagination){
 
-        int safePage = Math.max(0, currentPage);
-        int safePageSize = Math.clamp(pageSize, 1, 100);
+        int safePage = PaginationPolicy.normalizePageNumber(currentPage);
+        int safePageSize = PaginationPolicy.normalizePageSize(pageSize);
         Patient patient = patientSearch.toFilterEntity();
         Page<Patient> patientsPage = bindingResult.hasErrors()
                 ? Page.empty(PageRequest.of(safePage, safePageSize))
                 : patientService.findPatientsPage(patient, PageRequest.of(safePage, safePageSize), loggedUser);
         model.addAttribute("patientsPage", patientsPage);
-        model.addAttribute("patientHistoryPage", new PageImpl<>(List.of(), PageRequest.of(0, DefaultValues.PAGE_SIZE), 0));
+        model.addAttribute("patientHistoryPage", new PageImpl<>(
+                List.of(),
+                PaginationPolicy.defaultPageRequest(),
+                0));
         model.addAttribute("patient", patient);
 
         if (!isPagination) {
@@ -179,15 +184,16 @@ public class PatientController {
                                                 @AuthenticationPrincipal SystemUserDetails loggedUser,
                                                 @RequestParam(value = "id", required = false) Long patientId,
                                                 @RequestParam(value = "page", defaultValue = "0", required = false) int currentPage,
-                                                @RequestParam(value = "pageSizeHistory", defaultValue = "" + DefaultValues.PAGE_SIZE, required = false) int pageSizeHistory,
+                                                @RequestParam(value = "pageSizeHistory", defaultValue = ""
+                                                        + PaginationPolicy.DEFAULT_PAGE_SIZE, required = false) int pageSizeHistory,
                                                 @RequestParam(value = "pagination", defaultValue = "false", required = false) boolean isPagination) {
 
         Page<PatientAppointmentsHistoryDTO> patientHistoryPage = patientId != null
                 ? patientService.findPatientAppointmentsHistoryPage(patientId,
-                        PageRequest.of(Math.max(0, currentPage), Math.clamp(pageSizeHistory, 1, 100)),
+                        PaginationPolicy.pageRequest(currentPage, pageSizeHistory),
                         loggedUser)
                 : new PageImpl<>(List.of(),
-                        PageRequest.of(Math.max(0, currentPage), Math.clamp(pageSizeHistory, 1, 100)), 0);
+                        PaginationPolicy.pageRequest(currentPage, pageSizeHistory), 0);
 
         model.addAttribute("patientHistoryPage", patientHistoryPage);
         model.addAttribute("patientHistoryId", patientId);
@@ -208,8 +214,7 @@ public class PatientController {
             return "patientManagement/patientFragments/patient_search_dropdown";
         }
 
-        final int THRESHOLD = 4;
-        if (patient.length() < THRESHOLD) {
+        if (AutocompletePolicy.isPatientTermTooShort(patient)) {
             model.addAttribute("patients", List.of());
             if (autocomplete) {
                 return "patientManagement/patientFragments/patient_search_autocomplete";

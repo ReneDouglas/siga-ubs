@@ -4,6 +4,7 @@ import br.com.tecsus.sigaubs.entities.SystemAdmin;
 import br.com.tecsus.sigaubs.entities.SystemUser;
 import br.com.tecsus.sigaubs.exceptions.ResourceNotFoundException;
 import br.com.tecsus.sigaubs.security.SessionMetadata;
+import br.com.tecsus.sigaubs.security.SessionPrincipalKey;
 import br.com.tecsus.sigaubs.security.SystemUserDetails;
 import br.com.tecsus.sigaubs.services.AdminSmsUserService;
 import br.com.tecsus.sigaubs.services.AdminUserManagementService;
@@ -81,7 +82,8 @@ public class SessionManagementController {
             Model model) {
         SystemUser target = requireManageableTenantUser(userId, loggedUser);
         return renderPage(
-                tenantPrincipalKey(loggedUser.getTenantId(), target.getId()),
+                SessionPrincipalKey.forTenantUser(
+                        loggedUser.getTenantId(), target.getId()),
                 null,
                 target.getName(),
                 "/systemUser-management/" + target.getId() + "/sessions",
@@ -100,7 +102,8 @@ public class SessionManagementController {
             RedirectAttributes redirectAttributes) {
         SystemUser target = requireManageableTenantUser(userId, loggedUser);
         revoke(
-                tenantPrincipalKey(loggedUser.getTenantId(), target.getId()),
+                SessionPrincipalKey.forTenantUser(
+                        loggedUser.getTenantId(), target.getId()),
                 managementId,
                 redirectAttributes);
         return "redirect:/systemUser-management/" + target.getId() + "/sessions";
@@ -149,7 +152,7 @@ public class SessionManagementController {
             Model model) {
         SystemAdmin target = requireAdmin(adminId);
         return renderPage(
-                adminPrincipalKey(target.getId()),
+                SessionPrincipalKey.forAdmin(target.getId()),
                 Objects.equals(target.getId(), loggedUser.getUserId())
                         ? currentSession.getId()
                         : null,
@@ -175,7 +178,7 @@ public class SessionManagementController {
             addRevocationResult(true, redirectAttributes);
         } else {
             revoke(
-                    adminPrincipalKey(target.getId()),
+                    SessionPrincipalKey.forAdmin(target.getId()),
                     managementId,
                     redirectAttributes);
         }
@@ -190,7 +193,7 @@ public class SessionManagementController {
             Model model) {
         SystemUser target = requireSmsUser(tenantId, userId);
         return renderPage(
-                tenantPrincipalKey(tenantId, target.getId()),
+                SessionPrincipalKey.forTenantUser(tenantId, target.getId()),
                 null,
                 target.getName(),
                 "/admin/tenant-management/" + tenantId
@@ -210,7 +213,7 @@ public class SessionManagementController {
             RedirectAttributes redirectAttributes) {
         SystemUser target = requireSmsUser(tenantId, userId);
         revoke(
-                tenantPrincipalKey(tenantId, target.getId()),
+                SessionPrincipalKey.forTenantUser(tenantId, target.getId()),
                 managementId,
                 redirectAttributes);
         return "redirect:/admin/tenant-management/" + tenantId
@@ -316,11 +319,4 @@ public class SessionManagementController {
         }
     }
 
-    private String tenantPrincipalKey(Long tenantId, Long userId) {
-        return "tenant:" + tenantId + ":user:" + userId;
-    }
-
-    private String adminPrincipalKey(Long userId) {
-        return "admin:" + userId;
-    }
 }

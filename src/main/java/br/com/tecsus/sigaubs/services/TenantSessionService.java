@@ -2,6 +2,8 @@ package br.com.tecsus.sigaubs.services;
 
 import br.com.tecsus.sigaubs.security.SystemUserDetails;
 import br.com.tecsus.sigaubs.security.SessionMetadata;
+import br.com.tecsus.sigaubs.security.SessionPrincipalKey;
+import br.com.tecsus.sigaubs.enums.Roles;
 import org.springframework.security.core.session.SessionInformation;
 import org.springframework.security.core.session.SessionRegistry;
 import org.springframework.security.core.context.SecurityContext;
@@ -50,7 +52,7 @@ public class TenantSessionService {
         if (jdbcTemplate != null) {
             jdbcTemplate.update(
                     "DELETE FROM SPRING_SESSION WHERE PRINCIPAL_NAME LIKE ?",
-                    "tenant:" + tenantId + ":user:%");
+                    SessionPrincipalKey.forTenantUsersLike(tenantId));
         }
         sessionRegistry.getAllPrincipals().stream()
                 .filter(SystemUserDetails.class::isInstance)
@@ -62,7 +64,8 @@ public class TenantSessionService {
     public void expireTenantScopedSessions() {
         if (jdbcTemplate != null) {
             jdbcTemplate.update(
-                    "DELETE FROM SPRING_SESSION WHERE PRINCIPAL_NAME LIKE 'tenant:%'");
+                    "DELETE FROM SPRING_SESSION WHERE PRINCIPAL_NAME LIKE ?",
+                    SessionPrincipalKey.forAllTenantUsersLike());
         }
         sessionRegistry.getAllPrincipals().stream()
                 .filter(SystemUserDetails.class::isInstance)
@@ -72,11 +75,11 @@ public class TenantSessionService {
     }
 
     public void expireTenantUserSessions(Long tenantId, Long userId) {
-        expireByPrincipalKey("tenant:" + tenantId + ":user:" + userId);
+        expireByPrincipalKey(SessionPrincipalKey.forTenantUser(tenantId, userId));
     }
 
     public void expireAdminUserSessions(Long userId) {
-        expireByPrincipalKey("admin:" + userId);
+        expireByPrincipalKey(SessionPrincipalKey.forAdmin(userId));
     }
 
     public List<SessionSummaryDTO> listSessions(String principalKey, String currentSessionId) {
@@ -149,7 +152,7 @@ public class TenantSessionService {
     }
 
     private void expireByPrincipalKey(String principalKey) {
-        if (sessionRepository == null || principalKey.contains("null")) {
+        if (sessionRepository == null || principalKey == null) {
             return;
         }
         sessionRepository.findByPrincipalName(principalKey)
@@ -182,8 +185,7 @@ public class TenantSessionService {
     }
 
     private boolean isApplicationPrincipalKey(String principalKey) {
-        return principalKey.startsWith("admin:")
-                || principalKey.startsWith("tenant:");
+        return SessionPrincipalKey.isApplicationKey(principalKey);
     }
 
     private SessionSummaryDTO toSummary(Session session, String currentSessionId) {
@@ -202,7 +204,7 @@ public class TenantSessionService {
         }
         String clientDescription = session.getAttribute(SessionMetadata.CLIENT_DESCRIPTION_ATTRIBUTE);
         if (clientDescription == null || clientDescription.isBlank()) {
-            clientDescription = "Cliente não identificado";
+            clientDescription = SessionMetadata.CLIENT_UNIDENTIFIED;
         }
         String locationDescription =
                 session.getAttribute(SessionMetadata.LOCATION_DESCRIPTION_ATTRIBUTE);
@@ -263,15 +265,15 @@ public class TenantSessionService {
         }
         boolean admin = loggedUser.getAuthorities().stream()
                 .anyMatch(authority ->
-                        "ROLE_ADMIN".equals(authority.getAuthority()));
+                        Roles.ROLE_ADMIN.name().equals(authority.getAuthority()));
         if (admin) {
-            return "admin:" + loggedUser.getUserId();
+            return SessionPrincipalKey.forAdmin(loggedUser.getUserId());
         }
         if (loggedUser.getTenantId() == null) {
             return null;
         }
-        return "tenant:" + loggedUser.getTenantId()
-                + ":user:" + loggedUser.getUserId();
+        return SessionPrincipalKey.forTenantUser(
+                loggedUser.getTenantId(), loggedUser.getUserId());
     }
 
     @SuppressWarnings({"rawtypes", "unchecked"})

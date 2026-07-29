@@ -90,4 +90,16 @@ class SecurityHelpersTest {
         provider.setHandlerMap(Map.of());
         assertThat(new StaticResourceModelAdvice(provider).res().url("/x")).isEqualTo("/x");
     }
+
+    @Test
+    void deveConstruirChavesDePrincipalDaAplicacao() {
+        assertThat(SessionPrincipalKey.forAdmin(7L)).isEqualTo("admin:7");
+        assertThat(SessionPrincipalKey.forTenantUser(2L, 7L))
+                .isEqualTo("tenant:2:user:7");
+        assertThat(SessionPrincipalKey.forTenantUsersLike(2L))
+                .isEqualTo("tenant:2:user:%");
+        assertThat(SessionPrincipalKey.isApplicationKey("tenant:2:user:7")).isTrue();
+        assertThat(SessionPrincipalKey.isApplicationKey("usuario")).isFalse();
+        assertThat(SessionPrincipalKey.forTenantUser(null, 7L)).isNull();
+    }
 }

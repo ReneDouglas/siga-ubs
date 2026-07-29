@@ -33,4 +33,13 @@ public enum SocialSituationRating {
     public static List<String> getDescriptionSortedByRating() {
         return Arrays.stream(values()).map(SocialSituationRating :: getDescription).toList();
     }
+
+    public static SocialSituationRating fromPriority(int priority) {
+        return Arrays.stream(values())
+                .filter(rating -> rating.priority == priority)
+                .findFirst()
+                .orElseThrow(() -> new IllegalStateException(
+                        "Classificação social não encontrada para a prioridade: "
+                                + priority));
+    }
 }

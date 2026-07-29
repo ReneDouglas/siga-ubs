@@ -1,6 +1,7 @@
 package br.com.tecsus.sigaubs.services;
 
 import br.com.tecsus.sigaubs.entities.ContemplationJobExecution;
+import br.com.tecsus.sigaubs.enums.ContemplationJobStatus;
 import br.com.tecsus.sigaubs.repositories.ContemplationJobExecutionRepository;
 import org.junit.jupiter.api.Test;
 
@@ -41,7 +42,13 @@ class ContemplationJobExecutionServiceTest {
     @Test
     void deveRetomarFalhaComNovoTokenAntesDeTentarInsercao() {
         when(repository.retryFailed(
-                eq(1L), eq(KEY), eq(NOW), anyString(), eq(LEASE_UNTIL)))
+                eq(1L),
+                eq(KEY),
+                eq(ContemplationJobStatus.RUNNING.name()),
+                eq(ContemplationJobStatus.FAILED.name()),
+                eq(NOW),
+                anyString(),
+                eq(LEASE_UNTIL)))
                 .thenReturn(1);
 
         var lease = service.tryStart(1L, KEY, WINDOW).orElseThrow();
@@ -49,11 +56,17 @@ class ContemplationJobExecutionServiceTest {
         assertThat(lease.lockToken())
                 .matches("[0-9a-f-]{36}");
         verify(repository, never()).reclaimExpired(
-                eq(1L), eq(KEY), eq(NOW), anyString(), eq(LEASE_UNTIL));
+                eq(1L),
+                eq(KEY),
+                eq(ContemplationJobStatus.RUNNING.name()),
+                eq(NOW),
+                anyString(),
+                eq(LEASE_UNTIL));
         verify(repository, never()).insertIfAbsent(
                 eq(1L),
                 eq(KEY),
                 eq(WINDOW),
+                eq(ContemplationJobStatus.RUNNING.name()),
                 eq(NOW),
                 anyString(),
                 eq(LEASE_UNTIL));
@@ -62,7 +75,12 @@ class ContemplationJobExecutionServiceTest {
     @Test
     void deveRecuperarRunningComLeaseExpirada() {
         when(repository.reclaimExpired(
-                eq(1L), eq(KEY), eq(NOW), anyString(), eq(LEASE_UNTIL)))
+                eq(1L),
+                eq(KEY),
+                eq(ContemplationJobStatus.RUNNING.name()),
+                eq(NOW),
+                anyString(),
+                eq(LEASE_UNTIL)))
                 .thenReturn(1);
 
         assertThat(service.tryStart(1L, KEY, WINDOW)).isPresent();
@@ -70,6 +88,7 @@ class ContemplationJobExecutionServiceTest {
                 eq(1L),
                 eq(KEY),
                 eq(WINDOW),
+                eq(ContemplationJobStatus.RUNNING.name()),
                 eq(NOW),
                 anyString(),
                 eq(LEASE_UNTIL));
@@ -81,6 +100,7 @@ class ContemplationJobExecutionServiceTest {
                 eq(1L),
                 eq(KEY),
                 eq(WINDOW),
+                eq(ContemplationJobStatus.RUNNING.name()),
                 eq(NOW),
                 anyString(),
                 eq(LEASE_UNTIL)))
@@ -96,10 +116,20 @@ class ContemplationJobExecutionServiceTest {
         var lease = new ContemplationJobExecutionService.Lease(
                 1L, KEY, "10000000-0000-0000-0000-000000000001");
         when(repository.renewLease(
-                1L, KEY, lease.lockToken(), NOW, LEASE_UNTIL))
+                1L,
+                KEY,
+                ContemplationJobStatus.RUNNING.name(),
+                lease.lockToken(),
+                NOW,
+                LEASE_UNTIL))
                 .thenReturn(1);
         when(repository.finish(
-                1L, KEY, lease.lockToken(), "COMPLETED", NOW))
+                1L,
+                KEY,
+                lease.lockToken(),
+                ContemplationJobStatus.COMPLETED.name(),
+                ContemplationJobStatus.RUNNING.name(),
+                NOW))
                 .thenReturn(1);
 
         service.renewLease(lease);
@@ -107,7 +137,12 @@ class ContemplationJobExecutionServiceTest {
         service.fail(lease);
 
         verify(repository).finish(
-                1L, KEY, lease.lockToken(), "FAILED", NOW);
+                1L,
+                KEY,
+                lease.lockToken(),
+                ContemplationJobStatus.FAILED.name(),
+                ContemplationJobStatus.RUNNING.name(),
+                NOW);
         assertThat(service.newRenewalSchedule().claimIfDue()).isFalse();
     }
 

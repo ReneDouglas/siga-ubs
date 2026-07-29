@@ -1,5 +1,6 @@
 package br.com.tecsus.sigaubs.services;
 
+import br.com.tecsus.sigaubs.config.CacheNames;
 import br.com.tecsus.sigaubs.entities.SystemMaintenance;
 import br.com.tecsus.sigaubs.repositories.SystemMaintenanceRepository;
 import br.com.tecsus.sigaubs.security.SystemUserDetails;
@@ -19,7 +20,7 @@ public class SystemMaintenanceService {
         this.systemMaintenanceRepository = systemMaintenanceRepository;
     }
 
-    @Cacheable("systemMaintenance")
+    @Cacheable(CacheNames.SYSTEM_MAINTENANCE)
     @Transactional(readOnly = true)
     public SystemMaintenance getCurrent() {
         return systemMaintenanceRepository.findById(SystemMaintenance.SINGLETON_ID)
@@ -30,7 +31,7 @@ public class SystemMaintenanceService {
         return getCurrent().isEnabled();
     }
 
-    @CacheEvict(value = "systemMaintenance", allEntries = true)
+    @CacheEvict(value = CacheNames.SYSTEM_MAINTENANCE, allEntries = true)
     @Transactional
     public SystemMaintenance update(Boolean enabled,
             String message,

@@ -4,6 +4,7 @@ import br.com.tecsus.sigaubs.dtos.ProcedureDTO;
 import br.com.tecsus.sigaubs.dtos.SpecialtyDTO;
 import br.com.tecsus.sigaubs.security.SystemUserDetails;
 import br.com.tecsus.sigaubs.services.SpecialtyService;
+import br.com.tecsus.sigaubs.utils.SpecialtyLimits;
 import tools.jackson.core.type.TypeReference;
 import tools.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
@@ -68,7 +69,9 @@ public class SpecialtyController {
                                     RedirectAttributes redirectAttributes) {
 
         try {
-            if (bindingResult.hasErrors() || proceduresJson.length() > 50_000) {
+            if (bindingResult.hasErrors()
+                    || proceduresJson.length()
+                            > SpecialtyLimits.MAXIMUM_FORM_JSON_LENGTH) {
                 throw new IllegalArgumentException("Dados da especialidade inválidos.");
             }
             var procedures = objectMapper.readValue(proceduresJson, new TypeReference<List<ProcedureDTO>>() {});
@@ -99,7 +102,9 @@ public class SpecialtyController {
                                   RedirectAttributes redirectAttributes) {
 
         try {
-            if (bindingResult.hasErrors() || proceduresJson.length() > 50_000) {
+            if (bindingResult.hasErrors()
+                    || proceduresJson.length()
+                            > SpecialtyLimits.MAXIMUM_FORM_JSON_LENGTH) {
                 throw new IllegalArgumentException("Dados da especialidade inválidos.");
             }
             var procedures = objectMapper.readValue(proceduresJson, new TypeReference<List<ProcedureDTO>>() {});

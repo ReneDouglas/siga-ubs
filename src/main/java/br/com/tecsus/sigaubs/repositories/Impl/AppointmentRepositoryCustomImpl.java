@@ -4,6 +4,7 @@ import br.com.tecsus.sigaubs.dtos.PatientOpenAppointmentDTO;
 import br.com.tecsus.sigaubs.entities.Appointment;
 import br.com.tecsus.sigaubs.enums.ProcedureType;
 import br.com.tecsus.sigaubs.repositories.AppointmentRepositoryCustom;
+import br.com.tecsus.sigaubs.services.QueuePriorityPolicy;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.TypedQuery;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,9 +15,6 @@ import org.springframework.data.jpa.repository.JpaContext;
 
 import java.time.LocalDateTime;
 import java.util.List;
-
-import static br.com.tecsus.sigaubs.utils.DefaultValues.QUATRO_MESES;
-
 
 public class AppointmentRepositoryCustomImpl implements AppointmentRepositoryCustom {
 
@@ -124,7 +122,7 @@ public class AppointmentRepositoryCustomImpl implements AppointmentRepositoryCus
     @Override
     public Page<PatientOpenAppointmentDTO> findOpenAppointmentsQueuePaginatedV2(Long ubsId, Long specialtyId, Long medicalProcedureId, Pageable pageable) {
 
-        LocalDateTime dateLimit = LocalDateTime.now().minusMonths(QUATRO_MESES);
+        LocalDateTime dateLimit = QueuePriorityPolicy.longWaitingCutoff(LocalDateTime.now());
         String filters = buildQueueV2Filters(ubsId, specialtyId, medicalProcedureId);
 
         TypedQuery<Long> idsQuery = entityManager.createQuery("""

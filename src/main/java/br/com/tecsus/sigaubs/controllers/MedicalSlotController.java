@@ -10,10 +10,9 @@ import br.com.tecsus.sigaubs.services.AppointmentService;
 import br.com.tecsus.sigaubs.services.BasicHealthUnitService;
 import br.com.tecsus.sigaubs.services.MedicalSlotService;
 import br.com.tecsus.sigaubs.services.SpecialtyService;
-import br.com.tecsus.sigaubs.utils.DefaultValues;
+import br.com.tecsus.sigaubs.utils.PaginationPolicy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.http.MediaType;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -52,7 +51,8 @@ public class MedicalSlotController {
         model.addAttribute("basicHealthUnits", basicHealthUnitService.findAllUBS());
         model.addAttribute("specialties", specialtyService.findSpecialties());
         model.addAttribute("medicalSlotsPage",
-                medicalSlotService.findMedicalSlotsPaginated(PageRequest.of(0, DefaultValues.PAGE_SIZE)));
+                medicalSlotService.findMedicalSlotsPaginated(
+                        PaginationPolicy.defaultPageRequest()));
 
         return "medicalSlotManagement/medicalSlot_management";
     }
@@ -121,11 +121,11 @@ public class MedicalSlotController {
     public String getMedicalSlotsPaginated(Model model,
             @RequestParam(value = "page", defaultValue = "0", required = false) int currentPage,
             @RequestParam(value = "pageSize", defaultValue = ""
-                    + DefaultValues.PAGE_SIZE, required = false) int pageSize) {
+                    + PaginationPolicy.DEFAULT_PAGE_SIZE, required = false) int pageSize) {
 
         model.addAttribute("medicalSlotsPage",
                 medicalSlotService.findMedicalSlotsPaginated(
-                        PageRequest.of(Math.max(0, currentPage), Math.clamp(pageSize, 1, 100))));
+                        PaginationPolicy.pageRequest(currentPage, pageSize)));
         return "medicalSlotManagement/medicalSlotFragments/medicalSlot_datatable";
     }
 

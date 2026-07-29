@@ -19,19 +19,12 @@ public class SecurityProperties {
     @Valid
     private final Password password = new Password();
 
-    @Valid
-    private final Input input = new Input();
-
     public Session getSession() {
         return session;
     }
 
     public Password getPassword() {
         return password;
-    }
-
-    public Input getInput() {
-        return input;
     }
 
     public enum SessionLocationSource {
@@ -53,6 +46,8 @@ public class SecurityProperties {
         private Duration reauthentication = Duration.ofMinutes(5);
         @NotNull
         private SessionLocationSource locationSource = SessionLocationSource.DISABLED;
+        @Min(1)
+        private int maximumConcurrentSessions = 3;
 
         public Duration getTenantIdle() {
             return tenantIdle;
@@ -101,16 +96,32 @@ public class SecurityProperties {
         public void setLocationSource(SessionLocationSource locationSource) {
             this.locationSource = locationSource;
         }
+
+        public int getMaximumConcurrentSessions() {
+            return maximumConcurrentSessions;
+        }
+
+        public void setMaximumConcurrentSessions(int maximumConcurrentSessions) {
+            this.maximumConcurrentSessions = maximumConcurrentSessions;
+        }
     }
 
     public static class Password {
-        @Min(8)
-        private int minimumLength = 8;
-        @Max(64)
-        private int maximumLength = 64;
-        @Min(4)
-        @Max(16)
-        private int bcryptStrength = 12;
+        public static final int MINIMUM_SUPPORTED_LENGTH = 8;
+        public static final int MAXIMUM_SUPPORTED_LENGTH = 64;
+        private static final int MINIMUM_BCRYPT_STRENGTH = 4;
+        private static final int MAXIMUM_BCRYPT_STRENGTH = 16;
+        private static final int DEFAULT_BCRYPT_STRENGTH = 12;
+
+        @Min(MINIMUM_SUPPORTED_LENGTH)
+        @Max(MAXIMUM_SUPPORTED_LENGTH)
+        private int minimumLength = MINIMUM_SUPPORTED_LENGTH;
+        @Min(MINIMUM_SUPPORTED_LENGTH)
+        @Max(MAXIMUM_SUPPORTED_LENGTH)
+        private int maximumLength = MAXIMUM_SUPPORTED_LENGTH;
+        @Min(MINIMUM_BCRYPT_STRENGTH)
+        @Max(MAXIMUM_BCRYPT_STRENGTH)
+        private int bcryptStrength = DEFAULT_BCRYPT_STRENGTH;
 
         public int getMinimumLength() {
             return minimumLength;
@@ -137,39 +148,4 @@ public class SecurityProperties {
         }
     }
 
-    public static class Input {
-        @Min(1)
-        @Max(100)
-        private int maximumPageSize = 100;
-        @Min(1)
-        @Max(100)
-        private int maximumSlotBatchSize = 100;
-        @Min(100)
-        @Max(10_000)
-        private int maximumObservationLength = 2_000;
-
-        public int getMaximumPageSize() {
-            return maximumPageSize;
-        }
-
-        public void setMaximumPageSize(int maximumPageSize) {
-            this.maximumPageSize = maximumPageSize;
-        }
-
-        public int getMaximumSlotBatchSize() {
-            return maximumSlotBatchSize;
-        }
-
-        public void setMaximumSlotBatchSize(int maximumSlotBatchSize) {
-            this.maximumSlotBatchSize = maximumSlotBatchSize;
-        }
-
-        public int getMaximumObservationLength() {
-            return maximumObservationLength;
-        }
-
-        public void setMaximumObservationLength(int maximumObservationLength) {
-            this.maximumObservationLength = maximumObservationLength;
-        }
-    }
 }

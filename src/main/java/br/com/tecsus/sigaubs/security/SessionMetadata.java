@@ -2,6 +2,7 @@ package br.com.tecsus.sigaubs.security;
 
 import br.com.tecsus.sigaubs.config.SecurityProperties;
 import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.http.HttpHeaders;
 
 import java.nio.ByteBuffer;
 import java.nio.charset.CharacterCodingException;
@@ -26,10 +27,20 @@ public final class SessionMetadata {
     public static final String LOCATION_UNAVAILABLE = "Localidade indisponível";
     public static final String LOCAL_DEVELOPMENT_LOCATION =
             "Rede local · Desenvolvimento";
+    public static final String CLIENT_UNIDENTIFIED = "Cliente não identificado";
 
+    private static final String TOR_COUNTRY_CODE = "T1";
+    private static final String UNKNOWN_COUNTRY_CODE = "XX";
+    private static final int MAXIMUM_LOCATION_PART_LENGTH = 80;
+    private static final int MAXIMUM_REGION_CODE_LENGTH = 12;
+    private static final int MAXIMUM_LOCATION_DESCRIPTION_LENGTH = 128;
+    private static final int MAXIMUM_ASCII_CODE_POINT = 0x7F;
+    private static final int MAXIMUM_LATIN_1_CODE_POINT = 0xFF;
     private static final Pattern UNSAFE_LOCATION_CHARACTERS =
             Pattern.compile("[^\\p{L}\\p{N}\\p{Zs}.,'’()-]");
     private static final Pattern REPEATED_WHITESPACE = Pattern.compile("\\s+");
+    private static final Pattern REGION_CODE = Pattern.compile(
+            "[\\p{L}\\p{N}-]{1," + MAXIMUM_REGION_CODE_LENGTH + "}");
 
     private SessionMetadata() {
     }
@@ -39,9 +50,9 @@ public final class SessionMetadata {
     }
 
     public static String describeClient(HttpServletRequest request) {
-        String userAgent = request.getHeader("User-Agent");
+        String userAgent = request.getHeader(HttpHeaders.USER_AGENT);
         if (userAgent == null || userAgent.isBlank()) {
-            return "Cliente não identificado";
+            return CLIENT_UNIDENTIFIED;
         }
 
         String normalized = userAgent.toLowerCase(Locale.ROOT);
@@ -76,20 +87,22 @@ public final class SessionMetadata {
         }
 
         String country = normalizeCountry(request.getHeader(LOCATION_COUNTRY_HEADER));
-        if ("T1".equals(country)) {
+        if (TOR_COUNTRY_CODE.equals(country)) {
             return "Rede Tor · localidade indisponível";
         }
-        if ("XX".equals(country)) {
+        if (UNKNOWN_COUNTRY_CODE.equals(country)) {
             return LOCATION_UNAVAILABLE;
         }
 
         String city = normalizeLocationPart(
-                request.getHeader(LOCATION_CITY_HEADER), 80);
+                request.getHeader(LOCATION_CITY_HEADER), MAXIMUM_LOCATION_PART_LENGTH);
         String regionCode = normalizeRegionCode(
                 request.getHeader(LOCATION_REGION_CODE_HEADER));
         String region = regionCode != null
                 ? regionCode
-                : normalizeLocationPart(request.getHeader(LOCATION_REGION_HEADER), 80);
+                : normalizeLocationPart(
+                        request.getHeader(LOCATION_REGION_HEADER),
+                        MAXIMUM_LOCATION_PART_LENGTH);
 
         StringBuilder description = new StringBuilder();
         if (city != null) {
@@ -110,7 +123,7 @@ public final class SessionMetadata {
         if (description.isEmpty()) {
             return LOCATION_UNAVAILABLE;
         }
-        return truncate(description.toString(), 128);
+        return truncate(description.toString(), MAXIMUM_LOCATION_DESCRIPTION_LENGTH);
     }
 
     private static String normalizeCountry(String value) {
@@ -122,9 +135,9 @@ public final class SessionMetadata {
     }
 
     private static String normalizeRegionCode(String value) {
-        String normalized = normalizeLocationPart(value, 12);
+        String normalized = normalizeLocationPart(value, MAXIMUM_REGION_CODE_LENGTH);
         if (normalized == null
-                || !normalized.matches("[\\p{L}\\p{N}-]{1,12}")) {
+                || !REGION_CODE.matcher(normalized).matches()) {
             return null;
         }
         return normalized.toUpperCase(Locale.ROOT);
@@ -145,8 +158,9 @@ public final class SessionMetadata {
     }
 
     private static String decodeUtf8Header(String value) {
-        if (value.chars().noneMatch(character -> character > 0x7F)
-                || value.chars().anyMatch(character -> character > 0xFF)) {
+        if (value.chars().noneMatch(character -> character > MAXIMUM_ASCII_CODE_POINT)
+                || value.chars().anyMatch(
+                        character -> character > MAXIMUM_LATIN_1_CODE_POINT)) {
             return value;
         }
         byte[] bytes = value.getBytes(StandardCharsets.ISO_8859_1);

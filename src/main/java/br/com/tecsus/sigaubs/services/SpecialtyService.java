@@ -1,5 +1,6 @@
 package br.com.tecsus.sigaubs.services;
 
+import br.com.tecsus.sigaubs.config.CacheNames;
 import br.com.tecsus.sigaubs.dtos.ProcedureDTO;
 import br.com.tecsus.sigaubs.dtos.ResultadoOperacao;
 import br.com.tecsus.sigaubs.dtos.SpecialtyDTO;
@@ -8,6 +9,7 @@ import br.com.tecsus.sigaubs.entities.Specialty;
 import br.com.tecsus.sigaubs.enums.ProcedureType;
 import br.com.tecsus.sigaubs.repositories.MedicalProcedureRepository;
 import br.com.tecsus.sigaubs.repositories.SpecialtyRepository;
+import br.com.tecsus.sigaubs.utils.SpecialtyLimits;
 import br.com.tecsus.sigaubs.security.SystemUserDetails;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
@@ -29,7 +31,8 @@ public class SpecialtyService {
         this.medicalProcedureRepository = medicalProcedureRepository;
     }
 
-    @Cacheable(value = "especialidades", key = "T(br.com.tecsus.sigaubs.tenancy.TenantContextHolder).getRequiredTenantId()")
+    @Cacheable(value = CacheNames.SPECIALTIES,
+            key = "T(br.com.tecsus.sigaubs.tenancy.TenantContextHolder).getRequiredTenantId()")
     public List<Specialty> findSpecialties() {
         return specialtyRepository.findAllByOrderByTitleAsc();
     }
@@ -55,7 +58,7 @@ public class SpecialtyService {
         return specialtyDTO;
     }
 
-    @CacheEvict(value = "especialidades", allEntries = true)
+    @CacheEvict(value = CacheNames.SPECIALTIES, allEntries = true)
     @Transactional
     public ResultadoOperacao<Void> registerSpecialty(SpecialtyDTO specialtyDTO, SystemUserDetails loggedUser) {
 
@@ -89,7 +92,7 @@ public class SpecialtyService {
         return ResultadoOperacao.sucessoSemValor();
     }
 
-    @CacheEvict(value = "especialidades", allEntries = true)
+    @CacheEvict(value = CacheNames.SPECIALTIES, allEntries = true)
     @Transactional
     public ResultadoOperacao<Void> updateSpecialty(SpecialtyDTO specialtyDTO, SystemUserDetails loggedUser) {
 
@@ -127,14 +130,16 @@ public class SpecialtyService {
         if (specialtyDTO.getProcedures() == null) {
             return ResultadoOperacao.falha("Procedimentos obrigatórios.");
         }
-        if (specialtyDTO.getProcedures().size() > 100) {
+        if (specialtyDTO.getProcedures().size()
+                > SpecialtyLimits.MAXIMUM_PROCEDURES) {
             return ResultadoOperacao.falha("Limite de procedimentos excedido.");
         }
         for (ProcedureDTO procedureDTO : specialtyDTO.getProcedures()) {
             if (procedureDTO == null
                     || procedureDTO.getDescription() == null
                     || procedureDTO.getDescription().isBlank()
-                    || procedureDTO.getDescription().length() > 255
+                    || procedureDTO.getDescription().length()
+                            > SpecialtyLimits.MAXIMUM_PROCEDURE_DESCRIPTION_LENGTH
                     || ProcedureType.findByDescription(procedureDTO.getProcedureType()).isEmpty()) {
                 return ResultadoOperacao.falha("Erro ao encontrar procedimento.");
             }

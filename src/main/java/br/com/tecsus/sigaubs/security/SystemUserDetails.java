@@ -1,5 +1,6 @@
 package br.com.tecsus.sigaubs.security;
 
+import br.com.tecsus.sigaubs.enums.Roles;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.User;
 import java.util.Collection;
@@ -117,9 +118,11 @@ public class SystemUserDetails extends User {
             return username;
         }
         boolean admin = authorities.stream()
-                .anyMatch(authority -> "ROLE_ADMIN".equals(authority.getAuthority()));
-        return admin
-                ? "admin:" + userId
-                : "tenant:" + tenantId + ":user:" + userId;
+                .anyMatch(authority ->
+                        Roles.ROLE_ADMIN.name().equals(authority.getAuthority()));
+        String principalKey = admin
+                ? SessionPrincipalKey.forAdmin(userId)
+                : SessionPrincipalKey.forTenantUser(tenantId, userId);
+        return principalKey != null ? principalKey : username;
     }
 }

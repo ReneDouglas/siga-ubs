@@ -6,10 +6,9 @@ import br.com.tecsus.sigaubs.dtos.ResultadoOperacao;
 import br.com.tecsus.sigaubs.entities.SystemAdmin;
 import br.com.tecsus.sigaubs.security.SystemUserDetails;
 import br.com.tecsus.sigaubs.services.AdminUserManagementService;
-import br.com.tecsus.sigaubs.utils.DefaultValues;
+import br.com.tecsus.sigaubs.utils.PaginationPolicy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -46,7 +45,8 @@ public class AdminUserManagementController {
             @ModelAttribute("searchAdmin") AdminUserSearchDTO searchAdmin,
             @RequestParam(value = "adminId", required = false) Long adminId,
             @RequestParam(value = "page", defaultValue = "0", required = false) int currentPage,
-            @RequestParam(value = "pageSize", defaultValue = "" + DefaultValues.PAGE_SIZE, required = false) int pageSize,
+            @RequestParam(value = "pageSize", defaultValue = ""
+                    + PaginationPolicy.DEFAULT_PAGE_SIZE, required = false) int pageSize,
             @RequestParam(value = "sort", defaultValue = "creationDate", required = false) String sort,
             @RequestParam(value = "direction", defaultValue = "DESC", required = false) String direction,
             @RequestParam(value = "pagination", defaultValue = "false", required = false) boolean pagination,
@@ -56,8 +56,8 @@ public class AdminUserManagementController {
         Sort.Direction sortDirection = normalizeDirection(direction);
         model.addAttribute("adminsPage", adminUserManagementService.findAdmins(
                 searchAdmin,
-                PageRequest.of(Math.max(0, currentPage), Math.clamp(pageSize, 1, 100),
-                        sortDirection, sortProperty)));
+                PaginationPolicy.pageRequest(
+                        currentPage, pageSize, sortDirection, sortProperty)));
         model.addAttribute("selectedSort", sortProperty);
         model.addAttribute("selectedDirection", sortDirection.name());
         model.addAttribute("currentUsername", loggedUser.getLoginUsername());
